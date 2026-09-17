@@ -473,6 +473,8 @@ def test_unknown_residency_is_refused(tmp_path):
         Arena(DIM, residency="q4")
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "the sidecar is deliberately NOT unlinked at creation on Windows, which cannot unlink an open file -- tests/test_windows_paths.py asserts the lifecycle it uses there instead"))
 def test_sidecar_is_unlinked_and_released(tmp_path):
     """The fp16 sidecar is a private temp file: never visible, never left behind."""
     d = str(tmp_path / "side")

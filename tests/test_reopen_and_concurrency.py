@@ -235,6 +235,8 @@ def test_readonly_open_of_a_missing_vault_creates_nothing(tmp_path):
     assert not os.path.exists(p)
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "chmod 0600 is a POSIX concept; Windows has no mode bit to assert"))
 def test_vault_file_is_owner_only(vault_path):
     _ingest(vault_path, 10, dim=16, seed=2)
     assert oct(os.stat(vault_path).st_mode & 0o777) == "0o600"

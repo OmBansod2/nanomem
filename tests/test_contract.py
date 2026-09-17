@@ -276,7 +276,15 @@ def test_stats_keys_and_types(vault_path):
     assert s1["max_boost"] == pytest.approx(0.7)      # documented cap on the boosts
     assert s1["max_boost"] == pytest.approx(s1["intent_boost"] + s1["group_hoist"]
                                             + s1["revision_lead"])
-    assert s1["process_peak_rss_kb"] >= s1["active_heap_ram_kb"]
+    # `peak_rss_kb()` reads `resource.getrusage`, which does not exist on
+    # Windows, so the documented value there is None. Asserting a number
+    # unconditionally made the CONTRACT test the one that did not know its
+    # own contract.
+    if s1["process_peak_rss_kb"] is None:
+        assert os.name == "nt", "peak RSS is only unavailable where "\
+                                "resource.getrusage is missing"
+    else:
+        assert s1["process_peak_rss_kb"] >= s1["active_heap_ram_kb"]
     e.close()
 
 

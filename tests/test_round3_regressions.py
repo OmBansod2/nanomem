@@ -126,6 +126,8 @@ print("ok")
 """
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "advisory whole-file locking is weaker on Windows -- msvcrt has no shared lock and file_lock says so -- so simultaneous creation is not serialised the way fcntl serialises it"))
 @pytest.mark.parametrize("procs,each", [(4, 30)])
 def test_concurrent_creation_of_one_vault(tmp_path, procs, each):
     """The vault does NOT exist yet -- the first thing a deployment does.

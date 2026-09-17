@@ -1569,7 +1569,26 @@ class ArenaSnapshot:
                         os.fsync(f.fileno())
                     except OSError:
                         pass
-            os.replace(tmp, path)
+            try:
+                os.replace(tmp, path)
+            except PermissionError as exc:
+                # WINDOWS, AND ONLY WINDOWS: it refuses to replace a path that
+                # anything -- including this process -- still has mapped, and an
+                # arena cache in use is mapped by definition. POSIX swaps the
+                # directory entry and the existing mapping keeps the old file,
+                # which is what makes this safe there.
+                #
+                # `_maybe_write_arena_cache` treats any failure here as a missed
+                # optimisation and records it, so correctness is untouched: the
+                # old cache stays and the next open re-scans the arrears. The
+                # message is specific because a generic PermissionError on this
+                # path reads like a disk or permissions problem and is neither.
+                raise PermissionError(
+                    f"{exc}: the arena cache at {path} is mapped by this "
+                    f"process and this platform will not replace a mapped "
+                    f"file. The cache is left as it was and the next open "
+                    f"re-scans; nothing is lost but the optimisation."
+                ) from exc
             if durable:
                 _fsync_parent(path)
         except BaseException:

@@ -56,6 +56,30 @@ audit used it unguarded — so on 3.9 it raised `AttributeError` instead of
 checking anything, while the other 504 tests passed. The package was fine; the
 test was not. It skips below 3.10, where four other jobs cover the same rule.
 
+**What Windows still cannot do, stated rather than skipped quietly.** Ten tests
+now skip there, each with its own reason rather than a blanket marker, and every
+one is a thing the platform refuses rather than something nanomem gets wrong:
+
+* it will not `os.replace` or delete a file the process has **mapped**, so a
+  live arena cache cannot be rewritten in place. That is recorded as a
+  `write_error` naming the limitation, the old cache stays, and the next open
+  re-scans the arrears — correctness is untouched and the cost is the
+  optimisation;
+* it will not truncate a mapped file, so two tests cannot even set up the
+  torn-tail case they exist to provoke;
+* `chmod 0600` has no meaning there, so the two owner-only assertions have no
+  mode bit to check;
+* `msvcrt` has no shared lock — `container.file_lock` has always said so and
+  warns — so concurrent opens are not serialised the way `fcntl` serialises
+  them.
+
+Four test bugs of our own surfaced with them, all invisible on POSIX:
+`os.getloadavg` decorating a diagnostic print, source read with the platform
+codec (cp1252) instead of UTF-8, a `process_time()` ratio that divides by zero
+where the clock's tick is 15.6 ms and the operation takes 20 µs, and a CONTRACT
+test asserting `process_peak_rss_kb` is a number when its own contract says it
+is `None` wherever `resource.getrusage` is missing.
+
 Suite 521 → 530.
 
 ---

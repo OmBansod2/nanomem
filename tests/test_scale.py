@@ -1,5 +1,6 @@
 """Latency and write-cost smoke tests. Seeded vectors only; no network."""
 
+import io
 import os
 import sys
 import time
@@ -13,6 +14,15 @@ from nanomem.engine import VaultEngine
 
 def _percentile(xs, q):
     return float(np.percentile(np.asarray(xs), q))
+
+
+def _loadavg():
+    """`os.getloadavg` is Unix-only, and this only decorates a print. On Windows
+    the whole test errored on a diagnostic string."""
+    try:
+        return os.getloadavg()[0]
+    except (AttributeError, OSError):
+        return float("nan")
 
 
 @pytest.mark.parametrize("n", [10_000])
@@ -47,7 +57,7 @@ def test_search_latency_at_10k(tmp_path, n):
     p50, p95 = _percentile(lat, 50), _percentile(lat, 95)
     b50 = _percentile(base, 50)
     print(f"\n10k docs: engine p50 {p50:.3f} ms  p95 {p95:.3f} ms | "
-          f"raw matmul p50 {b50:.3f} ms | load {os.getloadavg()[0]:.2f}")
+          f"raw matmul p50 {b50:.3f} ms | load {_loadavg():.2f}")
     assert p50 < max(0.5, 2.5 * b50 + 0.1), f"p50 {p50:.3f} ms vs matmul {b50:.3f} ms"
     assert p50 < 2.0, f"p50 {p50:.3f} ms"
     e.close()
@@ -125,7 +135,21 @@ def test_write_cost_is_flat(tmp_path):
           f"{wall_first * 1e6:.1f} -> {wall_last * 1e6:.1f} us "
           f"({wall_last / wall_first:.2f}x), wall mean "
           f"{float(wall[:500].mean()) * 1e6:.1f} -> {float(wall[-500:].mean()) * 1e6:.1f} us "
-          f"| load {os.getloadavg()[0]:.2f}")
+          f"| load {_loadavg():.2f}")
+    # `time.process_time()` has a ~15.6 ms tick on Windows, so every one of
+    # these ~20 us adds measures as exactly 0.0 and the median with it -- the
+    # ratio below was a ZeroDivisionError there, not a failed assertion. Where
+    # the clock cannot see the interval there is no cpu measurement to make, and
+    # the wall-clock assertions still run.
+    if cpu_first <= 0.0:
+        print("  cpu clock resolution too coarse to time a single add here; "
+              "asserting on wall clock only")
+        assert wall_last < 2.0 * wall_first, (
+            f"wall median {wall_last / wall_first:.2f}x")
+        e.flush()
+        assert e.count() == n
+        e.close()
+        return
     assert cpu_last < 1.5 * cpu_first, (
         f"cpu median {cpu_last / cpu_first:.2f}x (wall median "
         f"{wall_last / wall_first:.2f}x)")
@@ -259,7 +283,11 @@ def test_the_package_imports_nothing_but_numpy_and_the_stdlib():
     for fn in sorted(os.listdir(pkg)):
         if not fn.endswith(".py"):
             continue
-        tree = ast.parse(open(os.path.join(pkg, fn)).read())
+        # encoding= is not optional: the platform default is cp1252 on
+        # Windows and this package's source is UTF-8, so the audit died
+        # on the first non-ASCII byte instead of auditing anything.
+        with io.open(os.path.join(pkg, fn), encoding="utf-8") as fh:
+            tree = ast.parse(fh.read())
         for node in ast.walk(tree):
             if isinstance(node, ast.Import):
                 for a in node.names:

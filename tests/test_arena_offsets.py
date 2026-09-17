@@ -467,6 +467,8 @@ print("exit=clean")
 
 @pytest.mark.parametrize("layout", ["fp32_sidecar", "rec_offsets", "offsets",
                                     "offsets_ram", "shipped_default"])
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "Windows refuses to truncate a mapped file at all, so the truncation this test performs to provoke the error cannot happen there"))
 def test_truncation_under_a_live_mapping_raises_instead_of_killing_the_process(
         tmp_path, layout):
     """Cut the vault in half while the arena is mapped to it, then read.
@@ -501,6 +503,8 @@ def test_truncation_under_a_live_mapping_raises_instead_of_killing_the_process(
         assert out["record"] == "returned", r.stdout
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "the setup truncates a mapped file, which Windows will not do"))
 def test_a_trimmed_torn_tail_under_a_live_mapping_does_not_raise(tmp_path):
     """The guard must not fire on nanomem's OWN recovery.
 

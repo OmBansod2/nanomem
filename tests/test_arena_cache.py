@@ -237,6 +237,8 @@ def test_a_small_append_is_scanned_and_the_cache_is_kept(vault_path):
     e.close()
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "Windows will not os.replace a file this process has mapped, and a live arena cache is mapped by definition -- the write is recorded as a write_error, the old cache stays and the next open re-scans, so nothing is lost but the optimisation"))
 def test_a_large_append_rewrites_the_cache(vault_path):
     fill(vault_path)
     warm(vault_path)
@@ -375,6 +377,8 @@ def test_a_cache_written_for_a_different_row_count_is_refused(vault_path):
     _expect_rebuild(vault_path, "", ROWS)
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "the setup deletes a cache file this process has mapped, which POSIX allows and Windows refuses"))
 def test_deleting_the_cache_mid_run_does_not_disturb_a_live_vault(vault_path):
     """POSIX keeps the inode alive for the mapping; the name is only a name."""
     fill(vault_path)
@@ -388,6 +392,8 @@ def test_deleting_the_cache_mid_run_does_not_disturb_a_live_vault(vault_path):
     e.close()
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "Windows will not remove a file this process has mapped"))
 def test_replace_all_removes_the_cache_it_invalidates(vault_path):
     fill(vault_path)
     warm(vault_path)
@@ -823,6 +829,8 @@ def test_the_cache_temp_name_is_one_the_container_already_sweeps(vault_path):
     assert not os.path.exists(stale)
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "chmod 0600 is a POSIX concept; on Windows the file inherits the directory ACL and there is no mode bit to assert"))
 def test_the_cache_file_is_owner_only(vault_path):
     fill(vault_path)
     warm(vault_path)

@@ -213,6 +213,8 @@ def _open_router(p, q):
         q.put(("FAIL", type(exc).__name__))
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "msvcrt has no shared lock, so concurrent opens are not serialised there the way fcntl serialises them -- container.file_lock says so and warns"))
 def test_concurrent_router_opens_do_not_raise_from_the_constructor(tmp_path):
     p = str(tmp_path / "rr.dat")
     e = VaultEngine(p, embed_dim=D, block_capacity=200)
