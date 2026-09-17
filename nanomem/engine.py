@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.3.4"
+ENGINE_VERSION = "3.4.0"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -2277,8 +2277,23 @@ class VaultEngine:
             return final
         top_entity = _ent.resolve_top_entity(final, ent, self.arena.entity_names, intent)
         explicit = _ent.is_explicit_history(temporal_direction)
-        if not self.gate_on_corpus_only and not _ent.temporal_question(
-                query_text, temporal_direction, intent, personal_corpus=personal):
+        by_wording = _ent.temporal_question(query_text, temporal_direction,
+                                            intent, personal_corpus=personal)
+        # HOW the layer was reached decides whether the newest revision is also
+        # exempt from the relevance floor. Reached by wording, it is, exactly as
+        # before. Reached ONLY because the group is declared, it is not: the
+        # question did not say it was about this fact, and the floor is the
+        # check that it is. Without this split, a declared group's newest
+        # revision could take rank 1 on a question it barely matches --
+        # measured on `temporal_baseline.py`, a document query promoted a
+        # revision at cosine 0.016 over the leader's 0.110.
+        reached_by_wording = bool(self.gate_on_corpus_only or explicit or by_wording)
+        if (not self.gate_on_corpus_only and not by_wording
+                and not self._declared_group_present(ent, mask, top_entity, rows)):
+            # A DECLARED group is exempt from the wording test; see
+            # `_declared_group_present`. Everything below is unchanged and still
+            # describes why the test exists for every other write.
+            #
             # 3.0.2 additionally required the WORDING to look personal or
             # temporal, so "what's the gate code at the wharf?" -- asked of a
             # chat vault holding two revisions of exactly that -- engaged nothing
@@ -2332,7 +2347,8 @@ class VaultEngine:
                 ranks[order] = np.arange(idx.size) / float(idx.size - 1)
                 final[idx] += self.temporal_prior * ((1.0 - ranks) if explicit else ranks)
 
-        group = self._tagged_group(ent, mask, top_entity, rows, cos)
+        group = self._tagged_group(ent, mask, top_entity, rows, cos,
+                                   protect_current=reached_by_wording)
         if intent and group.size and self.group_hoist:
             # The question named an attribute and we hold records tagged with it:
             # direct evidence, worth a bounded lift over untagged candidates.
@@ -2383,7 +2399,8 @@ class VaultEngine:
                                         hist_mode, self.revision_lead)
 
     def _tagged_group(self, ent, mask, top_entity, rows, cos,
-                      apply_floor: bool = True) -> np.ndarray:
+                      apply_floor: bool = True,
+                      protect_current: bool = True) -> np.ndarray:
         """Candidates carrying the question's attribute tag, after the floor.
 
         Split out of :meth:`_resolve_revisions` unchanged so that
@@ -2401,7 +2418,8 @@ class VaultEngine:
                 group = np.flatnonzero(mask & np.isin(ent, ids))
         if apply_floor and not (self.floor_skips_single_valued
                                 and _ent.is_single_valued(top_entity)):
-            group = self._apply_group_floor(group, rows, cos)
+            group = self._apply_group_floor(group, rows, cos,
+                                            protect_current=protect_current)
         return group
 
     def _widen_group(self, group, cos, mask, rows, ent) -> np.ndarray:
@@ -2424,7 +2442,8 @@ class VaultEngine:
                 group = np.union1d(group, win)
         return group
 
-    def _apply_group_floor(self, group, rows, cos) -> np.ndarray:
+    def _apply_group_floor(self, group, rows, cos,
+                           protect_current: bool = True) -> np.ndarray:
         """Which members of a TAGGED group are competing statements of the fact.
 
         ``entities.group_relevance_floor`` asks it one way: does this member
@@ -2498,6 +2517,10 @@ class VaultEngine:
         """
         group = np.asarray(group, dtype=np.int64)
         kept = _ent.group_relevance_floor(group, cos, self.group_cos_delta)
+        if not protect_current:
+            # Reached only because the group is DECLARED, not because the
+            # question said it was temporal or personal. See `_resolve_revisions`.
+            return kept
         keep_current = self.floor_keeps_current
         if (kept.size != group.size and group.size >= 2
                 and self._revisions_comparable(rows, group)):
@@ -2571,17 +2594,81 @@ class VaultEngine:
         g = int(gids[0])
         return bool(0 <= g < len(decl) and decl[g])
 
-    def _revisions_comparable(self, rows, group) -> bool:
-        """True when every member of ``group`` shares one revision-group key.
+    def _declared_group_present(self, ent, mask, top_entity, rows) -> bool:
+        """Does this question resolve to a group the CALLER's schema declared?
 
-        Revision numbers are per ``(user_id, project, entity)`` (see
-        :meth:`add_fact`), so only then do they order anything.
+        The wording gate below compensates for TAGGER IMPRECISION: the entity
+        layer must not fire on a document corpus just because a question happens
+        to contain "first" or "new". A caller that declares its own entities has
+        no imprecision to compensate for, which is the same argument 0.6.5
+        already accepted for the relevance floor in :meth:`_apply_group_floor`.
+
+        Measured before this exemption, with the entity pinned and only the
+        QUESTION's wording differing (`scratch/refound/usecases_findings.json`):
+        third-person `as_of` accuracy was 54.5% on config drift, 53.3% on policy
+        versions and 64.0% on 1,000-entity fleet state, against 100.0% for the
+        same probes with the word "current" in them. An application with an
+        attribute schema does not phrase its queries as a person talking about
+        themselves, so the layer it adopted nanomem FOR never ran.
+
+        Only consulted when the wording test has already failed, so it costs
+        nothing on a query that engages anyway, and it requires two members --
+        one record is not a revision chain and has nothing to resolve.
+        """
+        if not top_entity:
+            return False
+        ids = _ent.matching_ids(top_entity, self.arena.entity_names)
+        if not ids.size:
+            return False
+        group = np.flatnonzero(mask & np.isin(ent, ids))
+        if group.size < 2:
+            return False
+        return self._group_is_declared(rows, group)
+
+    def _revisions_comparable(self, rows, group) -> bool:
+        """True when ``group``'s revision numbers actually order it.
+
+        Two conditions, and both must hold.
+
+        ONE KEY. Revision numbers are per ``(user_id, project, entity)`` (see
+        :meth:`add_fact`), so across keys they order nothing.
+
+        AGREEING WITH TIME. ``add_fact`` numbers a new record ``group_max + 1``,
+        which is INSERTION order -- it cannot be anything else, because the
+        counter is what breaks ties between records written at the same instant.
+        That is right for a chat log, where the two orders are the same. It is
+        wrong the moment a caller BACKFILLS: importing history, replaying a log,
+        migrating from another store or syncing out of order all write an older
+        record after a newer one, and insertion order then says the oldest fact
+        is the newest revision. Measured before this rule, on three addresses
+        written newest-middle-oldest:
+
+            current value  -> "3 Elm Lane"   (the OLDEST, by 350 days)
+            history        -> Oak, Pine, Elm (not time order either)
+
+        So when the caller's own timestamps contradict the counter, the counter
+        is the thing that is wrong: a timestamp is a statement about when the
+        fact was true, and insertion order is an artefact of how it arrived.
+        Concordance is checked rather than assumed, and on disagreement the
+        revision key is dropped exactly as it is for a multi-key group -- the
+        existing rule, applied to the other way revisions can fail to order.
+
+        THIS IS A NO-OP WHENEVER THE TWO ORDERS AGREE, which is every write that
+        arrives in the order it happened.
         """
         g = np.asarray(group, dtype=np.int64)
         if g.size < 2:
             return True
-        gids = self._group_ids(np.asarray(rows)[g])
-        return bool(gids[0] >= 0 and np.all(gids == gids[0]))
+        sel = np.asarray(rows)[g]
+        gids = self._group_ids(sel)
+        if not (gids[0] >= 0 and np.all(gids == gids[0])):
+            return False
+        _ent_col, rv, tsv = self._columns(sel)
+        order = np.argsort(rv, kind="stable")
+        ts_by_rev = tsv[order]
+        # ties on revision cannot invert anything, and equal timestamps are the
+        # case the counter exists to break, so only a strict inversion counts.
+        return bool(np.all(np.diff(ts_by_rev) >= 0.0))
 
     def _group_ids(self, rows) -> np.ndarray:
         """The interned revision-group id of each row (``-1`` when ungrouped)."""

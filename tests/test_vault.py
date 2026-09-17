@@ -476,3 +476,494 @@ def test_prune_keep_current_false_restores_age_alone(tmp_path, offline_embedder)
     hits = v.search("what is my blood type", top_k=1)
     assert not hits or "O negative" not in hits[0]["text"]
     v.close()
+
+
+# --- a value long enough to CHUNK is still one value -----------------------
+
+_FILLER = (" Customers are advised that the terms described herein apply to all "
+           "orders placed through any channel operated by the company. ")
+
+
+def _policy_vault(tmp_path, name="pol.dat", anchor=1_700_000_000.0):
+    """One policy, three versions, each long enough that `add()` chunks it."""
+    v = Vault(str(tmp_path / name))
+    for vi, window in enumerate(("14 days", "30 days", "90 days")):
+        v.add(f"The refund policy states that the eligibility window is {window} "
+              f"from the date of delivery." + _FILLER * 60,
+              metadata={"entity": "refund_policy"}, source="policy_doc",
+              timestamp=anchor + vi * 100 * DAY)
+    v.flush()
+    return v
+
+
+def _answer_present(v):
+    return any("eligibility window is 90 days" in t for t in _texts(v))
+
+
+def test_a_chunked_value_is_chunked_at_all(tmp_path, offline_embedder):
+    """If this stops chunking, the three tests below stop testing anything."""
+    v = _policy_vault(tmp_path)
+    recs = list(v.engine.iter_records())
+    assert len(recs) > 3, "expected several chunk records per version"
+    assert any((r.get("metadata") or {}).get("is_chunked") for r in recs)
+    v.close()
+
+
+def test_forget_superseded_keeps_every_chunk_of_the_current_version(
+        tmp_path, offline_embedder):
+    """keep=1 means one VERSION, not one RECORD.
+
+    Chunks inherit `entity`, so a three-version policy stored as four chunks
+    each looked like twelve revisions. keep=1 kept a single chunk -- and since
+    chunks tie on revision and timestamp, the survivor was a paragraph of
+    boilerplate, not the one holding the answer. Measured before the fix:
+    12 records -> 1, and `eligibility window is 90 days` was gone.
+    """
+    v = _policy_vault(tmp_path)
+    assert _answer_present(v)
+    n_before = len(_texts(v))
+    v.forget_superseded(keep=1)
+    left = len(_texts(v))
+    assert 1 < left < n_before, (n_before, left)
+    assert _answer_present(v), "the current version must survive INTACT"
+    v.close()
+
+
+def test_prune_keep_current_protects_every_chunk_of_the_current_version(
+        tmp_path, offline_embedder):
+    """0.7.1's `keep_current` protected ONE id per group, so a chunked current
+    value lost every chunk but one. 9 records -> 1, answer gone."""
+    import time as _time
+    now = _time.time()
+    v = _policy_vault(tmp_path, name="p2.dat", anchor=now - 900 * DAY)
+    assert _answer_present(v)
+    v.prune(older_than_days=365)
+    assert _answer_present(v), "keep_current must protect the whole value"
+    v.close()
+
+
+def test_min_revisions_counts_versions_not_chunk_records(tmp_path, offline_embedder):
+    """A policy written ONCE has one revision, however many chunks it became."""
+    v = Vault(str(tmp_path / "one.dat"))
+    v.add("The sla policy states that the response window is 4 hours."
+          + _FILLER * 60, metadata={"entity": "sla_policy"},
+          source="policy_doc", timestamp=1_700_000_000.0)
+    v.flush()
+    n = len(_texts(v))
+    assert n > 1, "precondition: it chunked"
+    out = v.forget_superseded(keep=1, min_revisions=2)
+    assert out["deleted"] == 0, "one version is not two revisions"
+    assert len(_texts(v)) == n
+    v.close()
+
+
+# --- backfill: a timestamp beats the arrival counter ------------------------
+
+def test_a_backfilled_older_revision_does_not_become_the_current_value(
+        tmp_path, offline_embedder):
+    """Writing an OLDER record after a newer one must not make it current.
+
+    `add_fact` numbers a new record `group_max + 1`, i.e. arrival order, which
+    is right for a chat log and wrong for an import, a replay or an out-of-order
+    sync. Measured before the fix, on three addresses written newest-middle-
+    oldest: the current value was the OLDEST of the three, by 350 days, and
+    `history` reported them in arrival order rather than time order.
+    """
+    v = Vault(str(tmp_path / "bf.dat"))
+    t = 1_700_000_000.0
+    v.add("My home address is 10 Oak Street.",
+          metadata={"entity": "home_address"}, timestamp=t + 200 * DAY)
+    v.add("My home address is 22 Pine Road.",
+          metadata={"entity": "home_address"}, timestamp=t + 400 * DAY)
+    v.add("My home address is 3 Elm Lane.",          # backfilled, oldest
+          metadata={"entity": "home_address"}, timestamp=t + 50 * DAY)
+    v.flush()
+    got = v.search("what is my current home address", top_k=1)
+    assert got and "22 Pine Road" in got[0]["text"], got
+    chain = [h["text"] for h in v.history("my home address")]
+    assert len(chain) == 3
+    assert "3 Elm Lane" in chain[0], "history must be in TIME order"
+    assert "22 Pine Road" in chain[-1]
+    v.close()
+
+
+def test_the_arrival_counter_still_breaks_a_timestamp_tie(tmp_path, offline_embedder):
+    """The counter exists for this and must keep doing it.
+
+    Equal timestamps are not an inversion, so concordance must still hold and
+    the last write must still win.
+    """
+    v = Vault(str(tmp_path / "tie.dat"))
+    t = 1_700_000_000.0
+    for val in ("AAA", "BBB", "CCC"):
+        v.add(f"My locker code is {val}.",
+              metadata={"entity": "locker_code"}, timestamp=t)
+    v.flush()
+    got = v.search("what is my current locker code", top_k=1)
+    assert got and "CCC" in got[0]["text"], got
+    v.close()
+
+
+# --- top_k means what it says ----------------------------------------------
+
+def test_top_k_zero_or_negative_returns_nothing(tmp_path, offline_embedder):
+    """`max(1, top_k)` turned "give me none" into one phantom row."""
+    v = Vault(str(tmp_path / "k0.dat"))
+    for i in range(5):
+        v.add(f"gardening fact number {i} about soil and compost")
+    v.flush()
+    assert v.search("gardening soil", top_k=0) == []
+    assert v.search("gardening soil", top_k=-5) == []
+    assert len(v.search("gardening soil", top_k=2)) == 2
+    v.close()
+
+
+def test_top_k_above_fifty_is_not_silently_capped(tmp_path, offline_embedder):
+    """A request over 50 was truncated with nothing said, so a caller could not
+    tell "only 50 matched" from "we capped you"."""
+    v = Vault(str(tmp_path / "k50.dat"))
+    for i in range(60):
+        v.add(f"gardening fact number {i} about soil and compost")
+    v.flush()
+    assert len(v.search("gardening soil compost", top_k=60)) == 60
+    # bounded by the corpus, which is the only honest bound
+    assert len(v.search("gardening soil compost", top_k=500)) == 60
+    v.close()
+
+
+# --- a declared schema does not have to phrase its questions personally -----
+
+def _declared_chain(tmp_path, name="decl.dat"):
+    v = Vault(str(tmp_path / name))
+    t = 1_700_000_000.0
+    for i, val in enumerate(("10 seconds", "30 seconds", "60 seconds", "90 seconds")):
+        v.add(f"The checkout service request timeout is {val}.",
+              metadata={"entity": "checkout_timeout"}, source="config_audit",
+              timestamp=t + i * 90 * DAY)
+    v.flush()
+    return v, t
+
+
+def test_a_third_person_question_resolves_a_declared_revision_chain(
+        tmp_path, offline_embedder):
+    """`temporal_question` gated the entity layer on the QUESTION's wording.
+
+    An application with its own attribute schema asks "what is the checkout
+    timeout", not "what is MY checkout timeout", so the layer it adopted nanomem
+    for never ran and search fell back to raw cosine over the chain. Measured
+    before: the correct current value had the LOWEST cosine of the four and
+    ranked last; `as_of` was 2/4. A declared group is now exempt from the
+    wording test, because that test compensates for tagger imprecision and a
+    declared group has none.
+    """
+    v, _t = _declared_chain(tmp_path)
+    for q in ("what is the checkout service request timeout",
+              "what is the checkout timeout",
+              "checkout timeout"):
+        got = v.search(q, top_k=1)
+        assert got and "90 seconds" in got[0]["text"], (q, got)
+    v.close()
+
+
+def test_as_of_works_for_a_third_person_question(tmp_path, offline_embedder):
+    v, t = _declared_chain(tmp_path, name="decl2.dat")
+    q = "what is the checkout service request timeout"
+    for i, val in enumerate(("10 seconds", "30 seconds", "60 seconds", "90 seconds")):
+        got = v.search(q, top_k=1, as_of=t + (i * 90 + 10) * DAY)
+        assert got and val in got[0]["text"], (i, val, got)
+    v.close()
+
+
+def test_the_exemption_does_not_promote_an_irrelevant_newest_revision(
+        tmp_path, offline_embedder):
+    """The regression the first version of this fix caused, pinned.
+
+    Reaching the layer by DECLARATION is weaker evidence than reaching it by
+    wording: the question never said it was about this fact. So the newest
+    revision keeps NO exemption from the relevance floor on that path. Without
+    the split, a question about something else promoted a declared group's
+    newest revision to rank 1 at cosine 0.016 over a leader at 0.110.
+    """
+    v, _t = _declared_chain(tmp_path, name="decl3.dat")
+    for i in range(20):
+        v.add(f"Unrelated archived report paragraph {i} discussing marine biology "
+              f"and tidal patterns in coastal estuaries.", source="document",
+              timestamp=1_600_000_000.0 + i)
+    v.flush()
+    got = v.search("marine biology tidal patterns in coastal estuaries", top_k=1)
+    assert got, "expected a hit"
+    assert "checkout" not in got[0]["text"], (
+        "a declared group's newest revision must not win a question that is "
+        f"not about it: {got[0]['text']!r}")
+    v.close()
+
+
+def test_an_inferred_group_still_needs_the_wording_gate(tmp_path, offline_embedder):
+    """The exemption is for DECLARED entities only.
+
+    A chat write whose entity the tagger guessed keeps the gate exactly as it
+    was measured, because that is the imprecision the gate exists for. This
+    asserts the exemption cannot fire there, which is why the 3-persona chat set
+    scored identically before and after.
+    """
+    v = Vault(str(tmp_path / "inf.dat"))
+    t = 1_700_000_000.0
+    for i, val in enumerate(("111", "222")):
+        v.add(f"My phone number is {val}.", source="chat_session",
+              timestamp=t + i * 90 * DAY)
+    v.flush()
+    recs = list(v.engine.iter_records())
+    assert recs and all(not (r.get("metadata") or {}).get("entity_declared")
+                        for r in recs), "precondition: the tagger inferred these"
+    v.close()
+
+
+# --- surface that had no test, pinned after a sweep found it correct -------
+
+def test_export_from_an_encrypted_vault_stays_encrypted(tmp_path, offline_embedder):
+    """A disclosure, not a defect, so it is checked in raw BYTES.
+
+    `export` defaults to inheriting the source vault's password. The failure
+    this guards against is silent: a readable file containing secrets, with an
+    API that reports success either way.
+    """
+    src = str(tmp_path / "src.dat")
+    v = Vault(src, password="correct horse battery staple")
+    v.add("My swiss bank account number is ZXQ-4417-SECRET.",
+          metadata={"entity": "bank"})
+    v.flush()
+    dst = str(tmp_path / "out.dat")
+    v.export(dst)
+    v.close()
+    with open(dst, "rb") as fh:
+        assert b"ZXQ-4417-SECRET" not in fh.read(), "export leaked plaintext"
+    with pytest.raises(Exception):
+        Vault(dst, password=None).close()
+    # the explicit opt-out still works, because a caller may mean it
+    v = Vault(src, password="correct horse battery staple")
+    plain = str(tmp_path / "plain.dat")
+    v.export(plain, target_password=None)
+    v.close()
+    with open(plain, "rb") as fh:
+        assert b"ZXQ-4417-SECRET" in fh.read()
+
+
+def test_compact_changes_no_answer(tmp_path, offline_embedder):
+    """`compact` is a full rewrite, and full rewrites lost chunked values twice
+    today. This pins that this one does not."""
+    v = _policy_vault(tmp_path, name="comp.dat")
+    v.add("My home address is 22 Pine Road.",
+          metadata={"entity": "home_address"}, timestamp=1_700_000_000.0)
+    v.flush()
+    before = len(_texts(v)), _answer_present(v)
+    v.compact()
+    assert (len(_texts(v)), _answer_present(v)) == before
+    got = v.search("what is my current home address", top_k=1)
+    assert got and "22 Pine Road" in got[0]["text"]
+    v.close()
+
+
+def test_deleting_the_current_revision_promotes_the_previous_one(
+        tmp_path, offline_embedder):
+    """`delete` is older than the revision layer, so this pairing had no test."""
+    v = Vault(str(tmp_path / "del.dat"))
+    t = 1_700_000_000.0
+    ids = [v.add(f"My phone number is {val}.", metadata={"entity": "phone"},
+                 timestamp=t + i * 100 * DAY)
+           for i, val in enumerate(("111", "222", "333"))]
+    v.flush()
+    assert "333" in v.search("what is my current phone number", top_k=1)[0]["text"]
+    assert v.delete(id=ids[-1]) == 1
+    v.flush()
+    got = v.search("what is my current phone number", top_k=1)
+    assert got and "222" in got[0]["text"], got
+    v.close()
+
+
+def test_migrated_v2_records_are_never_read_as_declared(tmp_path):
+    """0.7.5 exempts DECLARED groups from the query-wording gate.
+
+    A v2 vault predates the provenance marker, so its entities were INFERRED by
+    the old tagger. If migration marked them declared, every migrated vault
+    would silently change its ranking on upgrade. It must not.
+    """
+    import shutil
+    from conftest import golden
+    from nanomem.legacy_v2 import migrate_v2_to_v3
+    src = golden("chat_v2.dat")                 # skips when goldens are absent
+    dst = str(tmp_path / "chat_v2.dat")
+    shutil.copy(src, dst)
+    migrate_v2_to_v3(dst, backup=None)
+    v = Vault(dst)
+    recs = list(v.engine.iter_records())
+    assert recs, "migration produced nothing"
+    tagged = [r for r in recs if (r.get("metadata") or {}).get("entity")]
+    assert tagged, "precondition: the v2 vault carried entity tags"
+    declared = [r for r in recs if (r.get("metadata") or {}).get("entity_declared")]
+    assert declared == [], f"{len(declared)} migrated records read as declared"
+    v.close()
+
+
+# --- add_batch is documented for corpora, so it must behave like add() -----
+
+_BULK_FILLER = ("The operations team reviews logistics throughput and warehouse "
+                "staffing levels across all regional distribution centres. ")
+_NEEDLE = "The emergency shutdown code for the Reykjavik plant is PUFFIN-77."
+
+
+def test_add_batch_splits_long_text_like_add_does(tmp_path, offline_embedder):
+    """`add_batch` stored whatever it was given verbatim.
+
+    One embedding then had to stand for a whole document, so the vector
+    represented its BULK and not its details and a fact stated once near the end
+    became unreachable. Measured on a 48,466-character manual against 40
+    competing documents: `add()` returned the needle at rank 1 and `add_batch`
+    could not place it in the top 5.
+    """
+    long_doc = _BULK_FILLER * 400 + " " + _NEEDLE
+    q = "what is the emergency shutdown code for the Reykjavik plant"
+
+    a = Vault(str(tmp_path / "single.dat"))
+    b = Vault(str(tmp_path / "bulk.dat"))
+    for v in (a, b):
+        for i in range(40):
+            v.add(f"Safety bulletin {i}: emergency procedures, shutdown protocols "
+                  f"and plant access codes are reviewed quarterly.", source="document")
+    a.add(long_doc, metadata={"entity": "manual"})
+    b.add_batch([{"text": long_doc, "metadata": {"entity": "manual"}}])
+    a.flush(); b.flush()
+
+    # The invariant is PARITY between the two paths, which does not depend on
+    # which embedder is in use. (Rank 1 for the needle does: measured with
+    # nomic-embed-text, `add` returned it at rank 1 and `add_batch` could not
+    # place it in the top 5. The suite runs the offline lexical encoder, where
+    # neither path ranks it, so asserting rank 1 here would assert the encoder.)
+    assert len(_texts(b)) == len(_texts(a)), "bulk must chunk the same way"
+    assert len(_texts(a)) > 41, "precondition: the long document chunked"
+    assert [h["text"] for h in a.search(q, top_k=5)] == \
+           [h["text"] for h in b.search(q, top_k=5)], \
+           "add_batch must rank identically to add"
+    chunked = [r for r in b.engine.iter_records()
+               if (r.get("metadata") or {}).get("is_chunked")]
+    assert chunked, "add_batch must mark its chunks"
+    assert any("PUFFIN-77" in r["text"] for r in chunked), \
+        "the tail must land in a chunk of its own, not be diluted into one vector"
+    a.close(); b.close()
+
+
+def test_add_batch_does_not_re_split_a_transfer(tmp_path, offline_embedder):
+    """A caller that supplies embeddings is TRANSFERRING whole rows.
+
+    `merge`, `split` and every rebuild go through this path. Re-splitting there
+    would invent records the source never had, so the chunking above must not
+    apply when vectors come with the records.
+    """
+    src = Vault(str(tmp_path / "src.dat"))
+    src.add("The refund policy eligibility window is 90 days."
+            + _BULK_FILLER * 200, metadata={"entity": "refund_policy"})
+    src.add("My phone number is 222.", metadata={"entity": "phone"})
+    src.flush()
+    n_src = len(_texts(src))
+    assert n_src > 2, "precondition: the long record chunked"
+    dst_path = str(tmp_path / "dst.dat")
+    src.export(dst_path)
+    src.close()
+
+    dst = Vault(dst_path)
+    assert len(_texts(dst)) == n_src, "a transfer must not re-chunk"
+    got = dst.search("what is my current phone number", top_k=1)
+    assert got and "222" in got[0]["text"]
+    dst.close()
+
+
+def test_add_batch_agrees_with_add_on_a_declared_chain(tmp_path, offline_embedder):
+    """Bulk ingestion is how an application with a schema actually writes."""
+    t = 1_700_000_000.0
+    vals = ("10 seconds", "30 seconds", "60 seconds", "90 seconds")
+    rows = [{"text": f"The checkout service request timeout is {v}.",
+             "metadata": {"entity": "checkout_timeout"}, "source": "config_audit",
+             "timestamp": t + i * 90 * DAY}
+            for i, v in enumerate(vals)]
+    v = Vault(str(tmp_path / "bulk2.dat"))
+    v.add_batch([rows[1], rows[3], rows[0], rows[2]])      # out of order on purpose
+    v.flush()
+    recs = list(v.engine.iter_records())
+    assert all((r.get("metadata") or {}).get("entity_declared") for r in recs)
+    q = "what is the checkout service request timeout"
+    got = v.search(q, top_k=1)
+    assert got and "90 seconds" in got[0]["text"], got
+    for i, val in enumerate(vals):
+        h = v.search(q, top_k=1, as_of=t + (i * 90 + 10) * DAY)
+        assert h and val in h[0]["text"], (i, val, h)
+    v.close()
+
+
+# --- retention must agree with the ranker about which record is current ----
+
+def _out_of_order_chain(tmp_path, name):
+    """Arrival order A, B, C; A is newest BY TIME, C is newest BY ARRIVAL."""
+    v = Vault(str(tmp_path / name))
+    t = 1_700_000_000.0
+    for val, off in (("A", 400), ("B", 100), ("C", 200)):
+        v.add(f"My phone number is value-{val}.",
+              metadata={"entity": "phone"}, timestamp=t + off * DAY)
+    v.flush()
+    return v
+
+
+def test_forget_superseded_keeps_the_record_search_calls_current(
+        tmp_path, offline_embedder):
+    """Found by the operation fuzzer (scratch/refound/exp_fuzz_ops.py).
+
+    0.7.4 made the RANKER prefer the timestamp when it disagrees with the
+    arrival counter. Retention still sorted by `(revision, timestamp)`, so on a
+    vault written out of order the two halves disagreed about which record was
+    current: `search` returned the newest BY TIME and `forget_superseded` kept
+    the newest BY ARRIVAL, deleting the record search had just called the
+    answer. Measured before the fix: search said value-A, keep=1 kept value-C.
+    """
+    v = _out_of_order_chain(tmp_path, "fs.dat")
+    before = v.search("what is my current phone number", top_k=1,
+                      filter={"entity": "phone"})
+    assert before and "value-A" in before[0]["text"], before
+    v.forget_superseded(keep=1)
+    left = _texts(v)
+    assert len(left) == 1 and "value-A" in left[0], left
+    after = v.search("what is my current phone number", top_k=1,
+                     filter={"entity": "phone"})
+    assert after and "value-A" in after[0]["text"], after
+    v.close()
+
+
+def test_prune_protects_the_record_search_calls_current(tmp_path, offline_embedder):
+    """`_current_value_ids` ranked by `(revision, timestamp)` too, so
+    `keep_current` protected the newest by ARRIVAL and left the real current
+    value exposed to the age cutoff."""
+    import time as _time
+    now = _time.time()
+    v = Vault(str(tmp_path / "pr.dat"))
+    for val, off in (("A", -400), ("B", -900), ("C", -800)):
+        v.add(f"My phone number is value-{val}.",
+              metadata={"entity": "phone"}, timestamp=now + off * DAY)
+    v.flush()
+    v.prune(older_than_days=365)
+    left = _texts(v)
+    assert any("value-A" in t for t in left), (
+        f"the newest by time must survive keep_current: {left}")
+    v.close()
+
+
+def test_the_arrival_counter_still_breaks_a_retention_tie(tmp_path, offline_embedder):
+    """Time first, arrival only to break a tie -- the tie must still break."""
+    v = Vault(str(tmp_path / "tie2.dat"))
+    t = 1_700_000_000.0
+    for val in ("A", "B", "C"):
+        v.add(f"My phone number is value-{val}.",
+              metadata={"entity": "phone"}, timestamp=t)      # identical stamps
+    v.flush()
+    v.forget_superseded(keep=1)
+    left = _texts(v)
+    assert len(left) == 1 and "value-C" in left[0], (
+        f"with equal timestamps the last write is current: {left}")
+    v.close()
+

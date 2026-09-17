@@ -5,6 +5,286 @@ number below is from one of those files.
 
 ---
 
+## 0.7.7 — engine 3.4.0 (unchanged)
+
+**Retention deleted the record `search` calls current.** Found by a randomised
+operation fuzzer (`scratch/refound/exp_fuzz_ops.py`), which churns a vault
+through random sequences of add / add_batch / update / delete / prune /
+forget_superseded / compact / flush / reopen and checks invariants after every
+single step.
+
+0.7.4 taught the RANKER to prefer the caller's timestamp when it disagrees with
+the arrival counter. Retention was never told: `_current_value_ids` and
+`forget_superseded` both still ordered by `(revision, timestamp)`, i.e. arrival.
+So on a vault written out of order — an import, a replay, an out-of-order sync —
+the two halves of the system disagreed about which record was current:
+
+```
+arrival A, B, C; timestamps A=+400d, B=+100d, C=+200d
+
+search                     -> value-A   (newest by time)
+forget_superseded(keep=1)  -> kept C, DELETED A
+search after               -> value-C   (a superseded value)
+```
+
+Both now order by `(timestamp, revision)`: time first, the arrival counter only
+to break a tie. That keeps the tie-break the counter exists for — three writes
+at the identical instant still resolve to the last one — and it has its own
+test, because a fix that disabled it would look correct on every other case.
+
+**The fuzzer has teeth, measured:** against 0.7.2 as published it fails 0 of 12
+seeds, each within 3 to 32 operations. Against this tree, 12 of 12 clean.
+
+Two of its early failures were the HARNESS, not the vault, and are recorded
+because the distinction is the whole value of the technique: the model counted
+each chunk of a long record as a separate value, and it asserted that the newest
+version always wins retrieval even when that version is a paragraph of
+boilerplate and a short fact in the same chain answers the question better. The
+second is the relevance floor behaving exactly as 0.7.5 requires. The fuzzer now
+keeps fact entities and document entities in disjoint pools and asserts of each
+the thing that is actually true of it.
+
+Three tests; two fail against 0.7.2 as published and the third is the tie-break
+guard, which must pass against both.
+
+Suite 567 -> 570.
+
+---
+
+## 0.7.6 — engine 3.4.0 (unchanged)
+
+**`add_batch()` made long documents unretrievable.** It is the method its own
+docstring recommends for "books, datasets, and corpora", and it stored whatever
+it was given verbatim while `add()` split anything over 500 words into
+overlapping chunks. One embedding then had to stand for a whole document, so the
+vector represented the document's BULK and not its details, and a fact stated
+once near the end became unreachable.
+
+Measured with `nomic-embed-text` on a 48,466-character manual containing one
+shutdown code, against 40 documents that merely shared vocabulary:
+
+```
+add()       needle at rank 1
+add_batch   needle NOT IN TOP 5  -- a safety bulletin won instead
+```
+
+The record was in the vault the whole time and search answered with something
+else. The dilution is gradual, which is why nothing caught it: with the document
+alone in the vault the needle still came back, at a score falling from 0.7773
+chunked to 0.4340 unchunked as the document grew.
+
+`add_batch` now splits fresh text exactly as `add()` does, with the same chunk
+metadata. **It does NOT split a transfer:** when the caller supplies embeddings
+the rows are already whole, and `merge`, `split` and every rebuild go through
+that path — re-splitting there would invent records the source never had.
+Verified: export 7 records to 7, merge 7 and 7 to 14, no chunk explosion.
+
+Bulk ingestion also agrees with `add()` on a declared revision chain written out
+of order — every record declared, correct current value, `as_of` 4 of 4 — which
+had never been checked, and is how an application with a schema actually writes.
+
+Three tests; two fail against 0.7.2 as published. The retrieval one asserts
+PARITY between the two paths rather than rank 1, because rank 1 depends on the
+embedder and the suite runs the offline lexical encoder; asserting rank there
+would assert the encoder rather than the fix.
+
+Suite 564 -> 567.
+
+---
+
+## 0.7.5 — engine 3.4.0
+
+**An application with its own attribute schema now gets the feature it adopted
+nanomem for.** Pre-registered in `design/gate_declared_spec.md` with the
+baseline captured before the change and four bars fixed in advance.
+
+`entities.temporal_question()` gated the entity and revision layer on the
+QUESTION's wording — `is_personal_query(q) or has_temporal_cue(q)`. A person
+asks "what is MY phone number"; an application asks "what is the checkout
+timeout". The second never engaged the layer, so `search` fell back to raw
+cosine across the revision chain and returned whichever revision scored highest.
+On a four-deep chain the correct current value had the LOWEST cosine of the four
+(0.90618 against 0.91836) and ranked last.
+
+A group whose entity the CALLER DECLARED is now exempt from the wording test.
+That is the argument 0.6.5 already accepted for the relevance floor: the gate
+compensates for TAGGER IMPRECISION, and a caller with its own schema has none.
+A chat write with an inferred entity is untouched.
+
+`as_of` with the entity pinned, third-person queries, no temporal cue:
+
+```
+config drift (200 entities)     54.5%  ->  100.0%
+policy versioning                53.3%  ->  100.0%
+fleet state (1,000 entities)     64.0%  ->  100.0%
+```
+
+**Cost, measured on the corpus that has rejected changes like this before:**
+3-persona chat set 97.2% gold top-1 and 94.4% end-to-end, IDENTICAL to the
+baseline, per-persona 12/12, 12/12, 11/12 — because the exemption cannot fire on
+an inferred entity. `temporal_baseline.py`: 40 of 520 recorded results changed,
+all five declared chains, all `current`/`present`, every one moving rank 1 to
+the newest revision and staying inside the relevance floor. Zero document
+queries changed.
+
+**The first version of this fix was wrong and is worth recording.** Exempting
+declared groups from the wording gate also handed them the floor exemption, and
+a question about an unrelated document promoted a declared group's newest
+revision to rank 1 at cosine 0.016 over a leader at 0.110 — the exact failure
+the gate exists to prevent. It passed the automated check, which asked whether
+rank 1 moved toward the newest revision and never asked whether rank 1 was still
+relevant. The two exemptions are now separate: reaching the layer by DECLARATION
+is weaker evidence than reaching it by wording, so on that path the newest
+revision keeps no protection from the relevance floor. That regression has its
+own test.
+
+Four tests; two fail against 0.7.2 as published and two are guards that must
+pass against both.
+
+**A sweep of the public API nothing had driven found no further defect**
+(`design/unexplored_surface_spec.md`, results in
+`unexplored_surface_results.json`). Recorded rather than assumed, because a
+clean sweep is a result and three of six predictions were wrong in the direction
+of the code being better than expected:
+
+* `export` from an encrypted vault inherits the encryption. Checked in raw
+  bytes: the secret is absent from the default export and the file will not open
+  without a password. `target_password=None` is the only route to plaintext.
+* `merge(reconcile_revisions=)` returns the newest value BY TIME and a history
+  in time order, in both modes, on vaults whose revisions interleave.
+* `compact()` changes no answer and keeps every chunk of a chunked value.
+* SIGKILL mid-write loses no flushed record. Truncating a vault to 99, 90, 75,
+  50 and 25 percent opens every time, returns only whole records, falls back to
+  block boundaries and warns on each one.
+* Four processes writing one vault and flushing every record: 600 writes
+  acknowledged, 600 on disk, none lost, no duplicate ids.
+* v2 migration preserves every record (14 of 14, 845 of 845) and marks ZERO of
+  them declared -- so 0.7.5's exemption cannot fire on a migrated vault and its
+  ranking is unchanged. Zero revision/timestamp inversions, so 0.7.4's
+  concordance check does not fire either. Both pinned by tests.
+* Deleting the current revision promotes the previous one; a width-mismatched
+  embedding model is refused by name.
+
+Suite 556 -> 564.
+
+---
+
+## 0.7.4 — engine 3.3.5
+
+From a pre-registered edge-case sweep
+(`scratch/refound/design/edge_cases_spec.md`, 14 cases, results in
+`edge_cases_results.json`). 12 of 14 passed as shipped; the two that did not are
+below. Unicode round-trips exactly, a 200,000-character token stores in 0.25 s,
+odd metadata types survive JSON, `as_of` outside the range behaves, and reopening
+after `prune` gives the same answer — all recorded rather than assumed.
+
+**A backfilled older revision became the current value.** `add_fact` numbers a
+new record `group_max + 1`, which is ARRIVAL order. That is correct for a chat
+log, where arrival and time agree, and it is the mechanism that breaks ties
+between records written at the same instant. It is wrong the moment a caller
+writes an older record after a newer one — importing history, replaying a log,
+migrating from another store, syncing out of order. Three addresses written
+newest, middle, oldest:
+
+```
+current value ->  "3 Elm Lane"          the OLDEST of the three, by 350 days
+history       ->  Oak, Pine, Elm        arrival order, not time order
+```
+
+`_revisions_comparable` already encoded the rule "a revision number only orders
+a group under condition X, and otherwise the timestamp is the only order there
+is". It required one group key; it now also requires that the counter AGREE with
+the caller's timestamps. On disagreement the revision key is dropped exactly as
+it is for a multi-key group. A timestamp states when a fact was true; arrival
+order is an artefact of how it reached the store.
+
+**This is a no-op whenever the two orders agree, and that is measured, not
+argued:** `temporal_baseline.py` reports all 520 recorded query results bitwise
+identical before and after. Equal timestamps are not an inversion, so the tie
+break the counter exists for still works and has its own test.
+
+**`top_k` did two silent things.** `max(1, min(50, int(top_k)))` meant `top_k=0`
+returned ONE row — a pagination loop reaching zero got a phantom result — and
+every request above 50 was capped with nothing said, so a caller could not tell
+"only 50 matched" from "we truncated you". On a 120-record corpus `top_k=120`
+returned 50. The cap bought almost nothing: on 2,000 records the engine returns
+`top_k=2000` in 17.0 ms against 7.7 ms for `top_k=50`. Nothing asked for now
+returns nothing, and a request above 50 is honoured, bounded only by the corpus.
+
+Four tests, three failing against 0.7.2 as published; the fourth pins the tie
+break so the concordance rule cannot quietly disable it.
+
+**Also found, NOT fixed:** a query longer than 100 words is silently truncated
+(`" ".join(words[:100])`), so a distinguishing term at the end never reaches the
+embedder and the answer changes with no indication. A limit is defensible —
+`all-minilm` holds ~256 tokens — but 100 words is far under `nomic-embed-text`'s
+8,192 and the truncation is undocumented. Fixing it means choosing a limit per
+model, which needs its own measurement rather than a guess.
+
+Suite 552 -> 556.
+
+---
+
+## 0.7.3 — engine 3.3.4 (unchanged)
+
+Found by driving nanomem through six use cases it had never been used for —
+infra config drift, price tracking, multi-tenant SaaS, agent task state, policy
+versioning and 5,000-entity fleet state. Pre-registered in
+`scratch/refound/design/new_usecases_spec.md`; numbers in
+`scratch/refound/usecases_findings.json`.
+
+**Retention treated the chunks of one long value as separate revisions.**
+`add()` splits a record over ~2 KB into `{parent}_chunk_N`, and every chunk
+inherits `entity` — so four chunks of one policy looked like four revisions of
+it. Measured before the fix, on a refund policy stored in three versions:
+
+```
+forget_superseded(keep=1)                    12 records -> 1
+prune(older_than_days=365, keep_current=True) 9 records -> 1
+```
+
+In both cases the single survivor was a paragraph of boilerplate, because the
+chunks tie on revision and timestamp and the first one won. `eligibility window
+is 90 days` — the thing the vault was being asked for — was gone. This is the
+exact promise `forget_superseded` makes in its own docstring and the exact hole
+0.7.1 closed for single-record facts and left open for chunked ones.
+
+Worse than stated above: a policy written ONCE and never revised still lost two
+of its three chunks, because `min_revisions=2` counted chunk records rather than
+versions.
+
+A version is now the unit that `keep`, `min_revisions` and `keep_current` count,
+and `keep_current` protects every record of the current version rather than one
+arbitrary id. Same corpus after the fix: `12 -> 4`, `9 -> 3`, never-revised
+document `deleted 0`, current version readable end to end in all three.
+
+Four tests, three of which fail against 0.7.2 as published; the fourth asserts
+the precondition that the fixture chunks at all, so the other three cannot
+quietly stop testing anything.
+
+**Also found, NOT fixed here, because it is a ranking change:** the entity and
+revision layer is gated on the QUERY's wording rather than on the data.
+`entities.temporal_question()` requires `is_personal_query(q)` or
+`has_temporal_cue(q)`, so a third-person question — "what is the checkout
+timeout" — never engages it and `search` falls back to raw cosine across the
+revision chain. On a four-deep chain the correct current value had the LOWEST
+cosine of the four (0.90618 against 0.91836) and ranked last. Adding one word:
+
+```
+"what is the checkout timeout"          -> "30 seconds"   (superseded)
+"what is the current checkout timeout"  -> "90 seconds"   (correct)
+```
+
+At corpus scale, `as_of` accuracy with the entity pinned: config drift
+54.5% -> 100.0%, policy versioning 53.3% -> 100.0%, 1,000-entity fleet
+64.0% -> 100.0%. One cause, one workaround. Until it changes, an application
+with a declared schema should put "current", "now" or "latest" in its queries;
+the defect is that nothing tells a caller their query missed the gate.
+
+Suite 548 -> 552.
+
+---
+
 ## 0.7.2 — engine 3.3.4 (unchanged)
 
 Three defects found by driving the PUBLISHED 0.7.1 from outside — a clean venv

@@ -95,7 +95,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.2 · engine 3.3.4 · container format 3 · arena cache format 3.
+Package 0.7.7 · engine 3.4.0 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -126,7 +126,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-548 tests, no network needed.
+570 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

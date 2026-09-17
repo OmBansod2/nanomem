@@ -545,6 +545,42 @@ class Vault:
                 import hashlib
                 doc_id = str(r.get("id") or meta.get("id") or f"doc_{hashlib.md5(f'{texts[j]}_{time.time()}_{j}'.encode()).hexdigest()[:10]}")
                 meta["id"] = doc_id
+                # LONG TEXT IS SPLIT HERE TOO, exactly as `add()` splits it.
+                # This method is documented for "books, datasets and corpora"
+                # and stored whatever it was given verbatim, so one embedding
+                # had to stand for a whole document. The vector then represents
+                # the document's BULK and not its details, and a fact stated once
+                # near the end becomes unreachable: measured on a 48,466-char
+                # manual holding one shutdown code, against 40 competing
+                # documents, `add()` returned it at rank 1 and `add_batch` could
+                # not place it in the top 5 -- a safety bulletin that merely
+                # shared vocabulary won instead. The record was in the vault the
+                # whole time; search answered with something else.
+                #
+                # NOT when the caller supplied embeddings. That is a TRANSFER --
+                # `merge`, `split`, a rebuild -- where the rows are already
+                # whole and re-splitting them would invent records the source
+                # never had.
+                if not has_all_vecs:
+                    pieces = self.split_large_text(
+                        texts[j], max_words=self.MAX_FACT_WORDS,
+                        overlap_words=self.OVERLAP_WORDS)
+                else:
+                    pieces = [texts[j]]
+                if len(pieces) > 1:
+                    piece_vecs = self.embedder.embed_batch(pieces)
+                    for k, piece in enumerate(pieces):
+                        cmeta = dict(meta)
+                        cid = f"{doc_id}_chunk_{k + 1}"
+                        cmeta.update({"id": cid, "chunk_index": k + 1,
+                                      "chunk_total": len(pieces),
+                                      "parent_id": doc_id, "is_chunked": True})
+                        self.engine.add_fact(
+                            text=piece, embedding=piece_vecs[k],
+                            source=r.get("source", "batch_ingestion"),
+                            metadata=cmeta, timestamp=r.get("timestamp"),
+                            revision=r.get("revision"), id=cid)
+                    continue
                 self.engine.add_fact(
                     text=texts[j],
                     embedding=vecs[j],
@@ -651,7 +687,20 @@ class Vault:
             )
 
 
-        safe_top_k = max(1, min(50, int(top_k))) if top_k is not None else 3
+        # ASKING FOR NOTHING GETS NOTHING, AND ASKING FOR MORE THAN 50 GETS IT.
+        # This was `max(1, min(50, int(top_k)))`, which did two silent things.
+        # `top_k=0` returned ONE result, so a pagination loop whose remaining
+        # count reached zero got a phantom row. And every request above 50 was
+        # capped with nothing said, so a caller could not tell "only 50 matched"
+        # from "we truncated you" -- on a 120-record corpus, top_k=120 returned
+        # 50. The cap bought almost nothing: measured on 2,000 records, the
+        # engine returns top_k=2000 in 17.0 ms against 7.7 ms for top_k=50.
+        if top_k is None:
+            safe_top_k = 3
+        else:
+            safe_top_k = int(top_k)
+            if safe_top_k <= 0:
+                return []
         words = str(query).strip().split()
         clean_query = " ".join(words[:100]) if len(words) > 100 else str(query).strip()
         if not clean_query:
@@ -800,7 +849,14 @@ class Vault:
         latent field can be attached without editing this file. The default is
         `TextHopBridge(self.embedder)`.
         """
-        safe_top_k = max(1, min(50, int(top_k))) if top_k is not None else 3
+        # Same rule as `search`: nothing asked for, nothing returned, and no
+        # silent cap at 50.
+        if top_k is None:
+            safe_top_k = 3
+        else:
+            safe_top_k = int(top_k)
+            if safe_top_k <= 0:
+                return []
         words = str(query).strip().split()
         clean_query = " ".join(words[:100]) if len(words) > 100 else str(query).strip()
         if not clean_query:
@@ -1644,23 +1700,48 @@ class Vault:
             return f"[Context retrieved ({len(candidates)} facts). LLM call skipped: {e}]"
 
     def _current_value_ids(self, records) -> frozenset:
-        """Ids that are the NEWEST revision of a tagged fact.
+        """Ids that make up the NEWEST revision of a tagged fact.
 
         These are the records that answer a question. Everything else is either
         a superseded value or an untagged document, and neither is what a
         caller loses an answer by deleting.
+
+        ALL of them, not one: a value long enough to be chunked is spread over
+        several records that share an entity, a revision and a timestamp, and
+        protecting one of them protects an arbitrary quarter of a document.
         """
-        newest = {}
+        newest: Dict[tuple, tuple] = {}
+        by_version: Dict[tuple, list] = {}
         for r in records:
             meta = r.get("metadata") or {}
             ent = meta.get("entity")
             if not ent:
                 continue
             key = (meta.get("user_id"), meta.get("project"), ent)
-            rank = (int(r.get("revision", 1)), float(r.get("timestamp", 0.0)))
+            # A CHUNKED VALUE IS ONE VALUE. `add()` splits a long record into
+            # `{parent}_chunk_N` and every chunk inherits `entity`, so a policy
+            # stored as four chunks used to look like four revisions of itself.
+            # Keeping one ID per group then kept ONE CHUNK -- and since the
+            # chunks tie on revision and timestamp, the survivor was whichever
+            # came first, routinely a paragraph of boilerplate rather than the
+            # one holding the answer. Measured before this: a three-version
+            # refund policy went 12 records -> 1, and the surviving record did
+            # not contain the eligibility window the vault was being asked for.
+            version = meta.get("parent_id") or r.get("id")
+            # TIME FIRST, ARRIVAL ONLY TO BREAK A TIE -- the same order 0.7.4
+            # gave the ranker. This was (revision, timestamp), i.e. arrival
+            # order, so on a vault written out of order the two halves of the
+            # system disagreed about which record was current: `search` returned
+            # the newest BY TIME and retention protected the newest BY ARRIVAL,
+            # then deleted the one search had just called the answer.
+            rank = (float(r.get("timestamp", 0.0)), int(r.get("revision", 1)))
+            by_version.setdefault((key, version), []).append(r.get("id"))
             if key not in newest or rank > newest[key][0]:
-                newest[key] = (rank, r.get("id"))
-        return frozenset(v[1] for v in newest.values() if v[1] is not None)
+                newest[key] = (rank, version)
+        out = set()
+        for key, (_rank, version) in newest.items():
+            out.update(i for i in by_version.get((key, version), ()) if i is not None)
+        return frozenset(out)
 
     def forget_superseded(self, keep: int = 1, older_than_days: Optional[float] = None,
                           min_revisions: int = 2, dry_run: bool = False) -> Dict[str, Any]:
@@ -1714,18 +1795,34 @@ class Vault:
         doomed = []
         touched = 0
         for key, recs in groups.items():
-            if len(recs) < max(2, int(min_revisions)):
+            # COLLAPSE CHUNKS INTO VERSIONS FIRST. `add()` splits a long record
+            # into `{parent}_chunk_N`, each inheriting `entity`, so counting
+            # RECORDS counted one policy's four paragraphs as four revisions of
+            # it. keep=1 then kept a single chunk of the current version and
+            # deleted the rest of it -- the precise thing this method's own
+            # docstring promises never to do. A version is what a caller wrote
+            # once, so that is the unit `keep` and `min_revisions` now count.
+            versions: Dict[Any, list] = {}
+            for r in recs:
+                meta = r.get("metadata") or {}
+                versions.setdefault(meta.get("parent_id") or r.get("id"), []).append(r)
+            # Newest LAST, by time, with the arrival counter breaking ties --
+            # see `_current_value_ids`. Sorting by revision first deleted the
+            # record `search` calls current whenever the two disagreed.
+            ordered = sorted(
+                versions.values(),
+                key=lambda rs: (float(rs[0].get("timestamp", 0.0)),
+                                int(rs[0].get("revision", 1))))
+            if len(ordered) < max(2, int(min_revisions)):
                 continue
-            # newest LAST, by the same order `history` reports
-            recs.sort(key=lambda r: (int(r.get("revision", 1)),
-                                     float(r.get("timestamp", 0.0))))
-            older = recs[:-keep]               # everything but the newest `keep`
+            older = ordered[:-keep]            # every version but the newest `keep`
             if cutoff is not None:
-                older = [r for r in older
-                         if float(r.get("timestamp", 0.0)) < cutoff]
+                # a version goes only if ALL of it is past the cutoff
+                older = [rs for rs in older
+                         if all(float(r.get("timestamp", 0.0)) < cutoff for r in rs)]
             if older:
                 touched += 1
-                doomed.extend(r["id"] for r in older)
+                doomed.extend(r["id"] for rs in older for r in rs)
 
         # ``deleted`` is what this call describes, on a dry run as much as a real
         # one. 0.7.1 reported 0 for a dry run, which read as "nothing to clean"
