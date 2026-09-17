@@ -246,6 +246,13 @@ def test_the_package_imports_nothing_but_numpy_and_the_stdlib():
     import ast
     pkg = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))),
                        "nanomem")
+    # `sys.stdlib_module_names` arrived in 3.10 and the package supports 3.9,
+    # so on 3.9 this test errored out instead of checking anything. The package
+    # itself was fine there -- 504 of 505 passed -- which is the tell: a test
+    # that cannot run is not a test that passed, and only a 3.9 runner said so.
+    if not hasattr(sys, "stdlib_module_names"):
+        pytest.skip("sys.stdlib_module_names needs 3.10; the 3.10+ jobs cover "
+                    "this check and the rule it enforces is not per-version")
     stdlib = set(sys.stdlib_module_names)
     local = {f[:-3] for f in os.listdir(pkg) if f.endswith(".py")}
     found = {}
