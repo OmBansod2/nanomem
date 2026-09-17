@@ -301,3 +301,113 @@ def test_cli_ingest_accepts_an_explicit_row_count(tmp_path, offline_embedder, mo
     assert 5000 in seen                        # the typed count reached the arena
     with Vault(vault_path) as v:
         assert len(v) > 0
+
+
+# --- retention: dropping old revisions without losing current facts ---------
+
+DAY = 86400.0
+
+
+def _dump(tmp_path, offline_embedder, name="dump.dat"):
+    """A vault used as a dump: one fact restated a lot, one restated once, one
+    never restated and very old, and one record that is not a fact at all."""
+    v = Vault(str(tmp_path / name))
+    t = 1_700_000_000.0
+    for i, ago in enumerate((400, 300, 200, 100, 5)):
+        v.add(f"My locker code is {i}.", metadata={"entity": "locker_code"},
+              timestamp=t - ago * DAY)
+    for i, ago in enumerate((500, 20)):
+        v.add(f"My home address is place-{i}.", metadata={"entity": "home_address"},
+              timestamp=t - ago * DAY)
+    v.add("My blood type is O negative.", metadata={"entity": "blood_type"},
+          timestamp=t - 700 * DAY)
+    v.add("A note that is not a fact about anything.", source="document",
+          timestamp=t - 900 * DAY)
+    return v, t
+
+
+def _texts(v):
+    return [r["text"] for r in v.engine.iter_records()]
+
+
+def test_forget_superseded_keeps_the_current_value_of_every_fact(tmp_path, offline_embedder):
+    v, _t = _dump(tmp_path, offline_embedder)
+    out = v.forget_superseded(keep=1)
+    assert out["deleted"] == 5                      # 4 locker + 1 address
+    for q, want in (("what is my locker code", "locker code is 4"),
+                    ("what is my home address", "place-1"),
+                    ("what is my blood type", "O negative")):
+        assert want in v.search(q, top_k=1)[0]["text"]
+    v.close()
+
+
+def test_forget_superseded_never_touches_a_fact_that_never_changed(tmp_path, offline_embedder):
+    """The blood type is 700 days old and still true. Age is not the rule."""
+    v, _t = _dump(tmp_path, offline_embedder)
+    v.forget_superseded(keep=1)
+    assert any("O negative" in x for x in _texts(v))
+    v.close()
+
+
+def test_forget_superseded_never_touches_an_untagged_record(tmp_path, offline_embedder):
+    """A record with no entity is in no chain, so nothing supersedes it."""
+    v, _t = _dump(tmp_path, offline_embedder)
+    v.forget_superseded(keep=1)
+    assert any("not a fact about anything" in x for x in _texts(v))
+    v.close()
+
+
+def test_forget_superseded_keep_n_leaves_n(tmp_path, offline_embedder):
+    v, _t = _dump(tmp_path, offline_embedder)
+    v.forget_superseded(keep=2)
+    assert len(v.history("locker code")) == 2
+    v.close()
+
+
+def test_forget_superseded_dry_run_writes_nothing(tmp_path, offline_embedder):
+    v, _t = _dump(tmp_path, offline_embedder)
+    before = len(_texts(v))
+    out = v.forget_superseded(keep=1, dry_run=True)
+    assert out["deleted"] == 0 and out["ids"], "it must say what it would remove"
+    assert len(_texts(v)) == before
+    v.close()
+
+
+def test_forget_superseded_respects_older_than_days(tmp_path, offline_embedder):
+    """Only revisions past the age are eligible; recent ones stay even when
+    superseded."""
+    v, t = _dump(tmp_path, offline_embedder)
+    import time as _time
+    # the fixture's timestamps are anchored at T0, so age is measured from now;
+    # 365 days before NOW is far in the future of T0 -- use the vault's own clock
+    out = v.forget_superseded(keep=1, older_than_days=(_time.time() - t) / DAY + 365)
+    assert out["deleted"] == 2, out            # the 400-day locker and 500-day address
+    assert len(v.history("locker code")) == 4
+    v.close()
+
+
+def test_prune_by_age_is_revision_blind_and_forget_superseded_is_not(tmp_path,
+                                                                    offline_embedder):
+    """Pinned so nobody 'fixes' prune by accident, and so the difference is
+    written down somewhere a reader will find it.
+
+    `prune(older_than_days=N)` selects on age alone. On a memory vault that
+    deletes facts that are still true, and the query that used to answer them
+    then returns the nearest OTHER fact -- a wrong answer where there was a
+    right one. That is why `forget_superseded` exists.
+    """
+    v, _t = _dump(tmp_path, offline_embedder)
+    assert "O negative" in v.search("what is my blood type", top_k=1)[0]["text"]
+    v.prune(older_than_days=365)
+    hits = v.search("what is my blood type", top_k=1)
+    assert not hits or "O negative" not in hits[0]["text"], (
+        "prune has become revision-aware -- if that was deliberate, this test "
+        "and the docstrings that warn about it both need rewriting")
+    v.close()
+
+    # a SEPARATE file: reusing the first would reopen the pruned vault and add
+    # a second copy of everything on top of it
+    v2, _t2 = _dump(tmp_path, offline_embedder, name="dump_b.dat")
+    v2.forget_superseded(keep=1)
+    assert "O negative" in v2.search("what is my blood type", top_k=1)[0]["text"]
+    v2.close()

@@ -1643,9 +1643,88 @@ class Vault:
         except Exception as e:
             return f"[Context retrieved ({len(candidates)} facts). LLM call skipped: {e}]"
 
-    def prune(self, target_freed_bytes: Optional[int] = None, older_than_days: Optional[int] = None) -> int:
+    def forget_superseded(self, keep: int = 1, older_than_days: Optional[float] = None,
+                          min_revisions: int = 2, dry_run: bool = False) -> Dict[str, Any]:
+        """Drop OLD REVISIONS of facts that have been restated, keeping the newest.
+
+        The retention rule this store actually wants. A vault used as a dump
+        grows a long tail of values that were true once: five addresses, four
+        phone numbers, three employers. Only the newest of each answers a
+        question, and the rest are there so `history` and `as_of` can answer
+        "what was it before". Past a point you stop wanting all of them.
+
+        ``keep=1`` leaves only the current value of each fact. ``keep=3`` leaves
+        the current one and the two before it. A fact restated fewer than
+        ``min_revisions`` times is not touched at all, and ``older_than_days``
+        restricts it further to revisions older than that.
+
+        WHAT IT WILL NEVER DELETE, which is the entire reason it exists rather
+        than you calling :meth:`prune`:
+
+        * the CURRENT value of any fact, at any age. `prune(older_than_days=N)`
+          selects on age alone and is blind to revisions, so it will happily
+          delete a fact that has been true and unchanged for two years -- and
+          the search that used to answer it then returns a DIFFERENT fact
+          rather than nothing, which is worse than an empty result.
+        * any record with no entity, since a record that is not part of a
+          revision chain has no newer version to be superseded by.
+
+        Returns ``{"groups", "deleted", "kept", "ids"}``. With ``dry_run=True``
+        nothing is written and ``ids`` is what would go -- worth using first on
+        a vault you care about, because deletion here is a full rewrite and
+        there is no undo.
         """
-        Reclaim physical disk space by safely removing oldest blocks and records.
+        keep = max(1, int(keep))
+        self.flush()
+        cutoff = (time.time() - float(older_than_days) * 86400.0
+                  if older_than_days is not None else None)
+
+        groups: Dict[tuple, list] = {}
+        for r in self.engine.iter_records():
+            meta = r.get("metadata") or {}
+            ent = meta.get("entity")
+            if not ent:
+                continue                       # not a revision chain
+            key = (meta.get("user_id"), meta.get("project"), ent)
+            groups.setdefault(key, []).append(r)
+
+        doomed = []
+        touched = 0
+        for key, recs in groups.items():
+            if len(recs) < max(2, int(min_revisions)):
+                continue
+            # newest LAST, by the same order `history` reports
+            recs.sort(key=lambda r: (int(r.get("revision", 1)),
+                                     float(r.get("timestamp", 0.0))))
+            older = recs[:-keep]               # everything but the newest `keep`
+            if cutoff is not None:
+                older = [r for r in older
+                         if float(r.get("timestamp", 0.0)) < cutoff]
+            if older:
+                touched += 1
+                doomed.extend(r["id"] for r in older)
+
+        out = {"groups": touched, "deleted": 0 if dry_run else len(doomed),
+               "kept": keep, "ids": doomed}
+        if doomed and not dry_run:
+            self.delete(ids=doomed)
+        return out
+
+    def prune(self, target_freed_bytes: Optional[int] = None, older_than_days: Optional[int] = None) -> int:
+        """Reclaim disk space by removing the OLDEST records, by age alone.
+
+        READ THIS BEFORE USING IT ON A MEMORY VAULT. The selection is age and
+        nothing else: it does not know a revision from a current value, so
+        ``prune(older_than_days=365)`` deletes a fact that has been true and
+        unchanged for two years exactly as readily as a superseded one. Worse
+        than losing it, the query that used to answer it then returns the
+        NEAREST OTHER FACT rather than nothing -- a wrong answer where there
+        used to be a right one.
+
+        It is the right call for a document corpus you are ageing out. For
+        dropping old values of facts that changed, use
+        :meth:`forget_superseded`, which keeps the current value by
+        construction.
         """
         self.flush()
         if not os.path.exists(self.path):

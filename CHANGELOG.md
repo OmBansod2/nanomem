@@ -5,6 +5,48 @@ number below is from one of those files.
 
 ---
 
+## 0.7.0 — engine 3.3.4 (unchanged)
+
+**`forget_superseded()` — retention that knows a revision from a fact.**
+
+Used as a dump, a vault grows a tail of values that were true once: five
+addresses, four phone numbers, three employers. Only the newest of each answers
+a question; the rest exist so `history` and `as_of` can say what it was before.
+Past some point you stop wanting all of them.
+
+```python
+v.forget_superseded(keep=1)                      # only the current value of each fact
+v.forget_superseded(keep=3)                      # current plus the two before it
+v.forget_superseded(keep=1, older_than_days=365) # and only revisions over a year old
+v.forget_superseded(keep=1, dry_run=True)        # what would go, without going
+```
+
+It will never delete the current value of a fact at any age, and never touches a
+record with no entity, because a record in no chain has nothing superseding it.
+
+**Why it had to exist: `prune(older_than_days=N)` selects on age alone.** On a
+memory vault that is a trap, and an easy one to walk into while looking for
+exactly this feature. Measured:
+
+```
+before  prune(older_than_days=365):  "what is my blood type" -> "My blood type is O negative."
+after   prune(older_than_days=365):  "what is my blood type" -> "My locker code is 5555."
+```
+
+The blood type had not changed in 700 days and was still true. Deleting it is
+bad; the query then returning **a different fact** is worse than returning
+nothing, because the caller has no way to tell. `prune` is the right call for a
+document corpus you are ageing out, and its docstring now says so in those
+words instead of the single line it had.
+
+Seven tests, including one that pins `prune`'s revision-blindness deliberately —
+so that if anyone ever makes it revision-aware, the test and the warnings both
+have to be rewritten together rather than drifting apart.
+
+Suite 533 → 540.
+
+---
+
 ## 0.6.9 — engine 3.3.4 (unchanged)
 
 **Two revisions on the same day were indistinguishable through MCP.** Which is

@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.6.9 · engine 3.3.4 · container format 3 · arena cache format 3.
+Package 0.7.0 · engine 3.3.4 · container format 3 · arena cache format 3.
 
 Every performance number in this manual comes from a results JSON in
 `scratch/refound/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.6.9 3.3.4
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.0 3.3.4
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -781,7 +781,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**533 tests**, no network required, nothing skipped when a local embedder is
+**540 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 
