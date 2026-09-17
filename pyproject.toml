@@ -44,11 +44,15 @@ dependencies = [
 [project.scripts]
 nanomem = "nanomem.cli:main"
 
-# [project.urls] is intentionally absent until a real one exists. It used to
-# carry Homepage = https://nanomem.dev (does not resolve) and Repository =
-# https://github.com/nanomem-ai/nanomem (404). Two dead links on a PyPI page
-# read as abandoned before anyone installs anything. release_preflight.py
-# refuses to publish if placeholder URLs come back.
+# Every URL here is checked for a 200 by release_preflight.py before publish.
+# Until 0.6.3 this block carried Homepage = https://nanomem.dev (does not
+# resolve) and Repository = https://github.com/nanomem-ai/nanomem (404): two
+# dead links on a PyPI page read as abandoned before anyone installs anything.
+[project.urls]
+Homepage = "https://github.com/OmBansod2/nanomem"
+Repository = "https://github.com/OmBansod2/nanomem"
+Changelog = "https://github.com/OmBansod2/nanomem/blob/main/CHANGELOG.md"
+Issues = "https://github.com/OmBansod2/nanomem/issues"
 
 [tool.setuptools]
 packages = ["nanomem"]
