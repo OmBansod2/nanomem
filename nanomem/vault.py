@@ -1643,6 +1643,25 @@ class Vault:
         except Exception as e:
             return f"[Context retrieved ({len(candidates)} facts). LLM call skipped: {e}]"
 
+    def _current_value_ids(self, records) -> frozenset:
+        """Ids that are the NEWEST revision of a tagged fact.
+
+        These are the records that answer a question. Everything else is either
+        a superseded value or an untagged document, and neither is what a
+        caller loses an answer by deleting.
+        """
+        newest = {}
+        for r in records:
+            meta = r.get("metadata") or {}
+            ent = meta.get("entity")
+            if not ent:
+                continue
+            key = (meta.get("user_id"), meta.get("project"), ent)
+            rank = (int(r.get("revision", 1)), float(r.get("timestamp", 0.0)))
+            if key not in newest or rank > newest[key][0]:
+                newest[key] = (rank, r.get("id"))
+        return frozenset(v[1] for v in newest.values() if v[1] is not None)
+
     def forget_superseded(self, keep: int = 1, older_than_days: Optional[float] = None,
                           min_revisions: int = 2, dry_run: bool = False) -> Dict[str, Any]:
         """Drop OLD REVISIONS of facts that have been restated, keeping the newest.
@@ -1710,21 +1729,36 @@ class Vault:
             self.delete(ids=doomed)
         return out
 
-    def prune(self, target_freed_bytes: Optional[int] = None, older_than_days: Optional[int] = None) -> int:
-        """Reclaim disk space by removing the OLDEST records, by age alone.
+    def prune(self, target_freed_bytes: Optional[int] = None,
+              older_than_days: Optional[int] = None,
+              keep_current: bool = True) -> int:
+        """Reclaim disk space by removing the oldest records.
 
-        READ THIS BEFORE USING IT ON A MEMORY VAULT. The selection is age and
-        nothing else: it does not know a revision from a current value, so
-        ``prune(older_than_days=365)`` deletes a fact that has been true and
-        unchanged for two years exactly as readily as a superseded one. Worse
-        than losing it, the query that used to answer it then returns the
-        NEAREST OTHER FACT rather than nothing -- a wrong answer where there
-        used to be a right one.
+        ``keep_current=True``, the default, exempts the CURRENT value of every
+        tagged fact whatever its age. Until 0.7.1 there was no such exemption
+        and the selection was age alone, which on a memory vault destroyed
+        answers silently:
 
-        It is the right call for a document corpus you are ageing out. For
-        dropping old values of facts that changed, use
-        :meth:`forget_superseded`, which keeps the current value by
-        construction.
+            before  prune(older_than_days=365):
+              "what is my blood type" -> "My blood type is O negative."
+            after:
+              "what is my blood type" -> "My locker code is 5555."
+
+        That fact had been true and unchanged for 700 days. Losing it is bad;
+        the query then returning A DIFFERENT FACT is worse, because nothing
+        tells the caller an answer went missing. 0.7.0 shipped a safe
+        alternative and a warning in this docstring, which was the wrong call --
+        a documented trap is still a trap.
+
+        THE DEFAULT COSTS THE DOCUMENT CASE NOTHING. Only a record that is the
+        newest revision of a tagged chain is exempt, and an ingested document
+        carries no entity, so a corpus being aged out prunes exactly as it did.
+        The behaviour changes only where it used to delete the answer.
+
+        ``keep_current=False`` restores age-alone selection for a caller who
+        means it. To drop old values while keeping current ones, prefer
+        :meth:`forget_superseded`, which is built for it and can keep more than
+        one.
         """
         self.flush()
         if not os.path.exists(self.path):
@@ -1735,9 +1769,10 @@ class Vault:
             return 0
 
         now = time.time()
+        protected = self._current_value_ids(records) if keep_current else frozenset()
         kept_records = []
         for r in records:
-            if older_than_days is not None:
+            if older_than_days is not None and r.get("id") not in protected:
                 age_days = (now - r.get("timestamp", now)) / 86400.0
                 if age_days > older_than_days:
                     continue
@@ -1747,7 +1782,15 @@ class Vault:
             bytes_to_free = min(current_sz, target_freed_bytes)
             avg_rec_sz = max(100, current_sz // max(1, len(records)))
             recs_to_drop = min(len(kept_records), max(1, bytes_to_free // avg_rec_sz))
-            kept_records = kept_records[recs_to_drop:]
+            # Drop from the front as before, but step over anything protected:
+            # freeing bytes is a budget, and no budget is worth an answer.
+            dropped, head = 0, []
+            for r in kept_records:
+                if dropped < recs_to_drop and r.get("id") not in protected:
+                    dropped += 1
+                    continue
+                head.append(r)
+            kept_records = head
 
         if len(kept_records) == len(records):
             return 0

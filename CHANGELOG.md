@@ -5,6 +5,44 @@ number below is from one of those files.
 
 ---
 
+## 0.7.1 — engine 3.3.4 (unchanged)
+
+**`prune()` no longer deletes the answer.** 0.7.0 documented this and shipped an
+alternative. That was the wrong call — a documented trap is still a trap, and
+the whole standard this project has been held to is that a confident wrong
+answer is the worst outcome available.
+
+```
+before  prune(older_than_days=365):  "what is my blood type" -> "My blood type is O negative."
+0.7.0                                "what is my blood type" -> "My locker code is 5555."
+0.7.1                                "what is my blood type" -> "My blood type is O negative."
+```
+
+`keep_current=True` is now the default and exempts the newest revision of every
+tagged fact, whatever its age.
+
+**It costs the case prune was built for nothing.** Only a record that is the
+newest revision of a tagged chain is exempt, and an ingested document carries no
+entity — so ageing out a corpus prunes exactly as it did. Verified: six
+paragraphs in, six paragraphs out. What changed is only the case where it used
+to destroy an answer.
+
+It is also not a no-op on facts. Superseded revisions are still the oldest
+records in the vault and still go: a five-deep locker-code chain came back four
+deep, with the current value intact.
+
+`keep_current=False` restores age-alone selection for a caller who means it.
+`forget_superseded` remains the better tool for retention, because it can keep
+more than one revision and says what it would remove before removing it.
+
+Four tests replace the one that pinned the old behaviour on purpose. That test
+was written yesterday to stop anyone changing `prune` by accident; the right
+answer was to change it deliberately.
+
+Suite 540 → 543.
+
+---
+
 ## 0.7.0 — engine 3.3.4 (unchanged)
 
 **`forget_superseded()` — retention that knows a revision from a fact.**
@@ -39,9 +77,10 @@ nothing, because the caller has no way to tell. `prune` is the right call for a
 document corpus you are ageing out, and its docstring now says so in those
 words instead of the single line it had.
 
-Seven tests, including one that pins `prune`'s revision-blindness deliberately —
-so that if anyone ever makes it revision-aware, the test and the warnings both
-have to be rewritten together rather than drifting apart.
+Seven tests, including one that pinned `prune`'s revision-blindness
+deliberately. **0.7.1 removed that blindness instead** — see above; pinning the
+defect rather than fixing it was the wrong instinct, and the pin lasted one
+release.
 
 Suite 533 → 540.
 

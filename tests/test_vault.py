@@ -386,28 +386,54 @@ def test_forget_superseded_respects_older_than_days(tmp_path, offline_embedder):
     v.close()
 
 
-def test_prune_by_age_is_revision_blind_and_forget_superseded_is_not(tmp_path,
-                                                                    offline_embedder):
-    """Pinned so nobody 'fixes' prune by accident, and so the difference is
-    written down somewhere a reader will find it.
+def test_prune_keeps_the_current_value_of_a_fact_it_would_have_deleted(
+        tmp_path, offline_embedder):
+    """The case this was found on, pinned so it cannot come back.
 
-    `prune(older_than_days=N)` selects on age alone. On a memory vault that
-    deletes facts that are still true, and the query that used to answer them
-    then returns the nearest OTHER fact -- a wrong answer where there was a
-    right one. That is why `forget_superseded` exists.
+    `prune(older_than_days=365)` used to select on age alone, so a blood type
+    unchanged for 700 days was deleted and "what is my blood type" then returned
+    a LOCKER CODE -- a wrong answer where there had been a right one, with
+    nothing to signal it. 0.7.0 documented that and shipped an alternative,
+    which was not good enough: a documented trap is still a trap.
     """
     v, _t = _dump(tmp_path, offline_embedder)
     assert "O negative" in v.search("what is my blood type", top_k=1)[0]["text"]
     v.prune(older_than_days=365)
-    hits = v.search("what is my blood type", top_k=1)
-    assert not hits or "O negative" not in hits[0]["text"], (
-        "prune has become revision-aware -- if that was deliberate, this test "
-        "and the docstrings that warn about it both need rewriting")
+    assert "O negative" in v.search("what is my blood type", top_k=1)[0]["text"]
     v.close()
 
-    # a SEPARATE file: reusing the first would reopen the pruned vault and add
-    # a second copy of everything on top of it
-    v2, _t2 = _dump(tmp_path, offline_embedder, name="dump_b.dat")
-    v2.forget_superseded(keep=1)
-    assert "O negative" in v2.search("what is my blood type", top_k=1)[0]["text"]
-    v2.close()
+
+def test_prune_still_removes_superseded_revisions(tmp_path, offline_embedder):
+    """Protecting current values must not turn prune into a no-op: the old
+    values of a fact that DID change are still the oldest records there are."""
+    v, _t = _dump(tmp_path, offline_embedder, name="still_prunes.dat")
+    before = len(v.history("locker code"))
+    v.prune(older_than_days=365)
+    assert len(v.history("locker code")) < before
+    v.close()
+
+
+def test_prune_still_ages_out_a_document_corpus(tmp_path, offline_embedder):
+    """The use case prune was built for is unaffected, because an ingested
+    document carries no entity and so is never the current value of a chain.
+    If this ever fails, the new default has started costing the case it was
+    supposed to leave alone."""
+    v = Vault(str(tmp_path / "corpus.dat"))
+    t = 1_700_000_000.0
+    for i in range(6):
+        v.add(f"An ingested paragraph number {i}.", source="corpus.txt",
+              timestamp=t - (800 + i) * DAY)
+    import time as _time
+    v.prune(older_than_days=(_time.time() - t) / DAY + 365)
+    assert not [r for r in v.engine.iter_records() if "ingested paragraph" in r["text"]]
+    v.close()
+
+
+def test_prune_keep_current_false_restores_age_alone(tmp_path, offline_embedder):
+    """The escape hatch, for a caller who means it -- and the proof that the
+    protection is what changed the outcome rather than something else."""
+    v, _t = _dump(tmp_path, offline_embedder, name="age_alone.dat")
+    v.prune(older_than_days=365, keep_current=False)
+    hits = v.search("what is my blood type", top_k=1)
+    assert not hits or "O negative" not in hits[0]["text"]
+    v.close()
