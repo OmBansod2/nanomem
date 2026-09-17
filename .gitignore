@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+build/
+dist/
+*.egg-info/
+*.whl
+# runtime vaults and their sidecars are user data, never source
+*.dat
+*.dat.v2.bak
+*.dat.tmp-*
+*.arena
+.DS_Store
+.venv/
+venv/
