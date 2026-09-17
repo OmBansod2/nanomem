@@ -781,7 +781,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**572 tests**, no network required, nothing skipped when a local embedder is
+**576 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 

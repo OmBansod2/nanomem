@@ -1058,3 +1058,88 @@ def test_the_entity_prefilter_changes_no_result(tmp_path, offline_embedder):
         "too many empty result sets for this to be testing anything"
     v.close()
 
+
+# --- surface with no test until now; all of it already worked --------------
+
+def test_unmerge_is_the_inverse_of_merge(tmp_path, offline_embedder):
+    """`merge` stamps `source_vault`; `unmerge` matches on it.
+
+    Neither half had a test, and `unmerge` keys on `source_vault` or `project`
+    and NOT on `user_id` -- so the pair is only an inverse if merge actually
+    stamps the records. It does, and this pins the round trip.
+    """
+    main = Vault(str(tmp_path / "main.dat"))
+    main.add("My phone number is 111.", metadata={"entity": "phone"})
+    main.add("My phone number is 222.", metadata={"entity": "phone"})
+    main.flush()
+    n0 = len(_texts(main))
+
+    side_path = str(tmp_path / "partner.dat")
+    side = Vault(side_path)
+    for t in ("Partner fact one about shipping.", "Partner fact two about shipping."):
+        side.add(t, metadata={"entity": "shipping"})
+    side.flush(); side.close()
+
+    main.merge(side_path)
+    main.flush()
+    assert len(_texts(main)) == n0 + 2
+    stamped = [r for r in main.engine.iter_records()
+               if (r.get("metadata") or {}).get("source_vault")]
+    assert len(stamped) == 2, "merge must stamp what it brought in"
+
+    out_path = str(tmp_path / "extracted.dat")
+    assert main.unmerge("partner.dat", target_vault_path=out_path) == 2
+    main.flush()
+    assert len(_texts(main)) == n0, "unmerge must restore the original size"
+    got = main.search("what is my current phone number", top_k=1)
+    assert got and "222" in got[0]["text"], "the host's own facts must survive"
+    main.close()
+
+    extracted = Vault(out_path)
+    assert len(_texts(extracted)) == 2, "the detached records must land in the target"
+    extracted.close()
+
+
+def test_ingest_file_chunks_and_stays_retrievable(tmp_path, offline_embedder):
+    """A fact stated once at the top of a long file must still be findable."""
+    path = tmp_path / "doc.txt"
+    path.write_text("The shutdown code is PUFFIN-77.\n"
+                    + "Filler sentence about logistics throughput. " * 400)
+    v = Vault(str(tmp_path / "ing.dat"))
+    v.ingest_file(str(path))
+    v.flush()
+    assert len(_texts(v)) > 1, "a long file must chunk"
+    got = v.search("what is the shutdown code", top_k=1)
+    assert got and "PUFFIN-77" in got[0]["text"], got
+    v.close()
+
+
+def test_staleness_reports_a_chain_it_can_act_on(tmp_path, offline_embedder):
+    v = Vault(str(tmp_path / "st.dat"))
+    t = 1_700_000_000.0
+    for i, val in enumerate(("111", "222", "333")):
+        v.add(f"My phone number is {val}.",
+              metadata={"entity": "phone", "user_id": "alice"},
+              timestamp=t + i * 100 * DAY)
+    v.flush()
+    rows = v.staleness()
+    assert rows, "a three-deep chain must produce a staleness row"
+    row = next(r for r in rows if r.get("entity") == "phone")
+    assert row["n_revisions"] == 3 and row["user_id"] == "alice"
+    json.dumps(rows, default=str)          # must survive the API boundary
+    v.close()
+
+
+def test_split_by_key_counts_every_record(tmp_path, offline_embedder):
+    v = Vault(str(tmp_path / "sp.dat"))
+    for i in range(3):
+        v.add(f"My phone number is {i}.",
+              metadata={"entity": "phone", "user_id": "alice"})
+    for i in range(6):
+        v.add(f"Report paragraph {i} on logistics.", source="document",
+              metadata={"user_id": "bob"})
+    v.flush()
+    out = v.split_by_key("user_id", str(tmp_path / "parts"))
+    assert out == {"alice": 3, "bob": 6}, out
+    v.close()
+

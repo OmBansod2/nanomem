@@ -48,7 +48,24 @@ identical across all 520 results and the 3-persona chat set is unchanged at
 It applies only when `entity` is a filter key with a scalar value; every other
 filter takes the walk it always took.
 
-Suite 571 -> 572.
+**The fuzzer was extended and found nothing further.** The revision group key is
+`(user_id, project, entity)` and none of that was being varied: every seed wrote
+as a single anonymous user and never merged or exported. It now draws an OWNER
+for every write from three users, asserts that a search filtered to one user
+never returns a row owned by another, and has `merge` (both reconcile modes) and
+`export` (write out, reopen, confirm the target holds what the call reported) in
+its operation pool. 60 of 60 seeds clean at 120 operations, 19 encrypted, zero
+plaintext leaks. Against 0.7.2 it still fails 0 of 8, now also on multi-user
+chains and on `merge`, which the first version never reached.
+
+The isolation invariant caught the HARNESS first, and it is recorded because it
+looks exactly like a leak and is not one: a write with no `user_id`, queried
+with an `{"entity": ...}` filter, is an UNCONSTRAINED query. That filter names
+no owner, so matching every owner's rows is correct — the same behaviour already
+recorded as use case C2. Asserting isolation against an unowned write was the
+harness being wrong, not the vault leaking.
+
+Suite 571 -> 576.
 
 ---
 
@@ -172,6 +189,12 @@ metadata. **It does NOT split a transfer:** when the caller supplies embeddings
 the rows are already whole, and `merge`, `split` and every rebuild go through
 that path — re-splitting there would invent records the source never had.
 Verified: export 7 records to 7, merge 7 and 7 to 14, no chunk explosion.
+
+**It reaches further than `add_batch` itself.** `ingest_file` and
+`ingest_directory` both route through this method, so document ingestion from
+disk had the same defect. Measured on one 17,632-byte file: 1 record before,
+5 after. That is the most natural way a caller loads a corpus, and it was
+storing each file as a single vector.
 
 Bulk ingestion also agrees with `add()` on a declared revision chain written out
 of order — every record declared, correct current value, `as_of` 4 of 4 — which
