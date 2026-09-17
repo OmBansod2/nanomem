@@ -590,38 +590,20 @@ def test_ties_are_broken_by_row_id_not_by_array_position():
     subset = rows[sub][_select_top_k(final[sub], rows[sub], k)]
     assert subset.tolist() == whole.tolist()
 
-    # And the thing this replaced does not survive the same treatment. Tried
-    # over several arrangements rather than one: `argpartition`'s order among
-    # equals is UNSPECIFIED, which means it is free to coincide as well as free
-    # to differ, and on the CI runners' numpy the single arrangement this used
-    # to test happened to coincide -- so the control silently stopped being one
-    # while still passing here. A control that can only fire on one BLAS is not
-    # a control.
-    def positional(f, kk):
-        idx = np.argpartition(-f, kk - 1)[:kk]
-        return idx[np.argsort(-f[idx], kind="stable")]
-
-    # EVERY arrangement must still contain all 40 tied rows. The stable rule is
-    # a function of the row SET, so dropping a tied row legitimately changes the
-    # answer and would test nothing. Only the LENGTH varies, which is the thing
-    # argpartition's behaviour among equals actually depends on.
-    arrangements = [sub,
-                    np.sort(np.concatenate([np.arange(80), np.arange(150, 400)])),
-                    np.sort(np.concatenate([np.arange(60), np.arange(90, 260)])),
-                    np.sort(np.concatenate([np.arange(40), np.arange(200, 400)])),
-                    np.sort(np.concatenate([np.arange(40), np.arange(45, 400, 3)])),
-                    np.arange(200)]
-    assert all(set(range(40)) <= set(a.tolist()) for a in arrangements)
-    for arr in arrangements:
-        assert rows[arr][_select_top_k(final[arr], rows[arr], k)].tolist() \
-            == whole.tolist(), "the stable rule must not depend on the subset"
-    differed = sum(rows[arr][positional(final[arr], k)].tolist() != whole.tolist()
-                   for arr in arrangements)
-    assert differed, ("argpartition agreed with the row-id rule on every "
-                      "arrangement tried, so this control cannot show the "
-                      "difference on this numpy build -- the three assertions "
-                      "above still hold, but widen `arrangements` before "
-                      "trusting this one")
+    # AND THE TIE HAS TO MATTER, or the three assertions above could pass on a
+    # corpus where score alone already decided. Stated as a fact about the data
+    # rather than by probing `argpartition`: this used to assert that a plain
+    # argpartition selection DIFFERS from the row-id rule, which is true only
+    # because argpartition's order among equals is UNSPECIFIED -- free to
+    # coincide as well as to differ. On the runners' numpy it coincided on every
+    # arrangement tried, so the control asserted nothing and failed while doing
+    # it. A control that depends on unspecified behaviour is not a control.
+    tied = np.flatnonzero(final == final.max())
+    assert tied.size == 40 > k, "score alone must not decide the top k here"
+    assert whole.tolist() == sorted(tied.tolist())[:k], (
+        "the rule must take the k lowest row ids from the tied set, which is "
+        "the only thing that distinguishes it from any selection that treats "
+        "equal scores as interchangeable")
 
 
 def test_a_query_that_matches_nothing(tmp_path):
