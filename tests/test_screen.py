@@ -97,6 +97,32 @@ def same(a, b, tol=SCORE_TOL):
     return all(abs(x["cosine"] - y["cosine"]) <= tol for x, y in zip(a, b))
 
 
+def screen_or_skip(e):
+    """Build the screen, or skip where this machine's BLAS will not allow one.
+
+    `engine._screen_ready` calls `_calibrate_gather()` and DECLINES when a
+    gathered sub-scan does not give the same arithmetic as the full scan at a
+    pad it is willing to pay for. That is the flag's whole promise -- identical
+    scores -- so on such a machine the screen correctly does not engage and the
+    ordinary exact scan runs instead.
+
+    The macOS runner is such a machine, and these tests assumed every machine
+    was this one: eight of them failed there asking a screen that had rightly
+    declined for its `fit_rows`. The engine was behaving exactly as designed.
+    A skip is the honest outcome -- the feature is unavailable here, its
+    fallback is correct, and there is nothing to assert about a screen that does
+    not exist.
+    """
+    info = e.build_screen()
+    if info.get("built"):
+        return info
+    if e.screen_info().get("gather_bitwise_exact") is False:
+        pytest.skip("this BLAS gives a gathered sub-scan different arithmetic "
+                    "from the full scan, so the screen declines by design and "
+                    "the exact fallback is what runs")
+    pytest.fail(f"the screen did not build, and not for the BLAS reason: {info}")
+
+
 # ---------------------------------------------------------------------------
 # the bound itself
 # ---------------------------------------------------------------------------
@@ -233,7 +259,7 @@ def test_search_returns_the_exact_scan_result(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=100)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    assert on.build_screen()["built"] is True
+    screen_or_skip(on)
     for k in (1, 4, 10):
         for q in Q:
             a = on.search("a question", q, top_k=k)
@@ -252,7 +278,7 @@ def test_min_score_is_applied_identically(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=100)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     for q in Q:
         for ms in (0.0, 0.3, 0.9, 1.5):
             assert same(on.search("a question", q, top_k=5, min_score=ms),
@@ -264,7 +290,7 @@ def test_appending_through_the_engine_stays_exact(tmp_path):
     V = structured_rows(4000, seed=16)
     p = str(tmp_path / "v.dat")
     e = fill(p, V[:1500], screen="pca", screen_dims=32, screen_min_rows=100)
-    built = e.build_screen()
+    built = screen_or_skip(e)
     assert built["rows"] == 1500
     for i in range(1500, 4000):
         e.add_fact(f"paragraph {i}", V[i], source="corpus.txt")
@@ -310,7 +336,7 @@ def test_two_engines_can_disagree_and_it_is_NOT_the_screen(tmp_path):
     V = structured_rows(1200, seed=41)
     p = str(tmp_path / "v.dat")
     writer = fill(p, V[:900], screen="pca", screen_dims=32, screen_min_rows=100)
-    writer.build_screen()
+    screen_or_skip(writer)
     for i in range(900, 1200):
         writer.add_fact(f"paragraph {i}", V[i], source="corpus.txt")
     writer.flush()
@@ -348,7 +374,7 @@ def test_replace_all_rebuilds_the_screen(tmp_path):
     V = structured_rows(2000, seed=18)
     p = str(tmp_path / "v.dat")
     e = fill(p, V, screen="pca", screen_dims=32, screen_min_rows=100)
-    e.build_screen()
+    screen_or_skip(e)
     q = structured_rows(1, seed=19)[0]
     e.search("a question", q, top_k=4)
     recs = list(e.iter_records())[::-1]          # same records, new row order
@@ -371,7 +397,7 @@ def test_gather_is_calibrated_and_bitwise(tmp_path):
     p = str(tmp_path / "v.dat")
     fill(p, V).close()
     e = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=100)
-    e.build_screen()
+    screen_or_skip(e)
     info = e.screen_info()
     assert info["gather_bitwise_exact"] is True
     assert info["gather_pad"] in VaultEngine._GATHER_LADDER
@@ -415,7 +441,7 @@ def test_a_broken_basis_falls_back_instead_of_raising(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     q = structured_rows(1, seed=25)[0]
     on._screen.basis = None
     on._screen_arena = None
@@ -433,7 +459,7 @@ def test_a_metadata_filter_stands_the_screen_down(tmp_path):
         e.add_fact(f"paragraph {i}", V[i], source="corpus.txt",
                    metadata={"bucket": i % 4})
     e.flush()
-    e.build_screen()
+    screen_or_skip(e)
     q = structured_rows(1, seed=27)[0]
     got = e.search("a question", q, top_k=4, metadata_filter={"bucket": 2})
     assert e.screen_info()["engaged"] == 0
@@ -469,7 +495,7 @@ def test_an_explicit_historical_direction_stands_the_screen_down(tmp_path):
     p = str(tmp_path / "v.dat")
     fill(p, V).close()
     e = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
-    e.build_screen()
+    screen_or_skip(e)
     e.search("a question", V[0], top_k=4, temporal_direction="historical")
     assert e.screen_info()["engaged"] == 0
     e.search("a question", V[0], top_k=4)
@@ -491,7 +517,7 @@ def test_isotropic_corpus_falls_back_rather_than_slowing_down(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=16, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     Q = rng.normal(size=(40, D)).astype(np.float32)
     Q /= np.linalg.norm(Q, axis=1, keepdims=True)
     for q in Q:
@@ -522,7 +548,7 @@ def test_a_corpus_packed_with_near_ties(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     for q in [base] + list(structured_rows(30, seed=33)):
         a = on.search("a question", q, top_k=12)
         b = off.search("a question", q, top_k=12)
@@ -537,7 +563,7 @@ def test_exact_duplicate_rows(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     for q in structured_rows(40, seed=35):
         a = on.search("a question", q, top_k=6)
         b = off.search("a question", q, top_k=6)
@@ -612,7 +638,7 @@ def test_a_query_that_matches_nothing(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     q = np.zeros(D, dtype=np.float32); q[0] = 1.0
     assert same(on.search("a question", q, top_k=4),
                 off.search("a question", q, top_k=4))
@@ -625,7 +651,7 @@ def test_top_k_larger_than_the_corpus(tmp_path):
     fill(p, V).close()
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     q = structured_rows(1, seed=38)[0]
     assert same(on.search("a question", q, top_k=5000),
                 off.search("a question", q, top_k=5000))
@@ -642,7 +668,7 @@ def test_stats_reports_the_screen(tmp_path):
     p = str(tmp_path / "v.dat")
     fill(p, V).close()
     e = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32, screen_min_rows=10)
-    e.build_screen()
+    screen_or_skip(e)
     st = e.stats()
     assert st["screen"] == "pca"
     assert st["screen_built"] is True
@@ -764,7 +790,7 @@ def test_exact_under_every_residency_the_arena_calls_exact(tmp_path, residency):
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32,
                      screen_min_rows=100, residency=residency)
     off = VaultEngine(p, embed_dim=D, screen="off", residency=residency)
-    assert on.build_screen()["built"] is True
+    screen_or_skip(on)
     for q in structured_rows(60, seed=42):
         a = on.search("a question", q, top_k=6)
         b = off.search("a question", q, top_k=6)
@@ -781,7 +807,36 @@ def test_search_batch_is_untouched_by_the_flag(tmp_path):
     on = VaultEngine(p, embed_dim=D, screen="pca", screen_dims=32,
                      screen_min_rows=100)
     off = VaultEngine(p, embed_dim=D, screen="off")
-    on.build_screen()
+    screen_or_skip(on)
     Q = structured_rows(12, seed=44)
     assert on.search_batch(Q, top_k=5) == off.search_batch(Q, top_k=5)
+    on.close(); off.close()
+
+
+def test_a_blas_that_fails_calibration_still_searches_exactly(tmp_path, monkeypatch):
+    """What the macOS runner actually does, asserted here instead of skipped.
+
+    `screen_or_skip` above keeps the screen-specific tests quiet on a machine
+    whose BLAS will not give a gathered sub-scan the full scan's arithmetic.
+    That is the right outcome for tests ABOUT the screen, but it leaves the
+    interesting half unasserted: on such a machine the search still has to be
+    right. This forces calibration to fail on every platform and checks that
+    turning the flag on changes nothing at all.
+    """
+    V = structured_rows(2000, seed=41)
+    Q = structured_rows(60, seed=42)
+    p_ = str(tmp_path / "v.dat")
+    fill(p_, V).close()
+
+    off = VaultEngine(p_, embed_dim=D, screen="off")
+    on = VaultEngine(p_, embed_dim=D, screen="pca", screen_dims=32,
+                     screen_min_rows=100)
+    monkeypatch.setattr(VaultEngine, "_calibrate_gather", lambda self: (0, False))
+
+    assert on.build_screen()["built"] is False, "it must decline, not pretend"
+    assert on.screen_info()["gather_bitwise_exact"] is False
+    for q in Q:
+        assert same(on.search("a question", q, top_k=6),
+                    off.search("a question", q, top_k=6))
+    assert on.screen_info()["engaged"] == 0, "a declined screen must never engage"
     on.close(); off.close()

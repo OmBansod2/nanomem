@@ -467,11 +467,28 @@ class _VectorStore:
 class _Sidecar:
     """A private, unlinked fp16 vector file the arena reads through ``mmap``.
 
-    Unlinked at creation, so it cannot be left behind by a crash and cannot be
-    read by another process; the fd keeps it alive. Written with ``pwrite`` (so
-    the pages the arena writes are page cache, not process RSS) and mapped
-    read-only for the scan, so the resident cost is clean, evictable pages.
+    On POSIX it is UNLINKED at creation, so it cannot be left behind by a crash
+    and cannot be read by another process; the fd keeps it alive. Written with
+    ``pwrite`` (so the pages the arena writes are page cache, not process RSS)
+    and mapped read-only for the scan, so the resident cost is clean, evictable
+    pages.
+
+    NEITHER OF THOSE IS AVAILABLE ON WINDOWS, and until 0.6.8 this class simply
+    did them anyway. `os.unlink` on a file that still has an open handle raises
+    `PermissionError [WinError 32]` there, in the constructor, so every vault in
+    float16 residency failed to open at all -- 16 of the 50 Windows test
+    failures were this one line. `os.pwrite` does not exist on Windows either;
+    the constructor raised before anything reached it.
+
+    So on Windows the file is deleted in :meth:`close` instead of at creation,
+    and written with ``lseek`` + ``write``. What that costs, stated rather than
+    hidden: a hard crash can leave one ``nanomem-arena-*.f16`` file in the temp
+    directory, and another process could open it in the window before deletion.
+    Neither is true on POSIX. Both are preferable to not running.
     """
+
+    #: True where a file with an open handle can be unlinked, i.e. not Windows.
+    _CAN_UNLINK_OPEN = os.name != "nt"
 
     def __init__(self, embed_dim: int, directory=None):
         self.embed_dim = int(embed_dim)
@@ -481,7 +498,10 @@ class _Sidecar:
             fd, path = tempfile.mkstemp(prefix="nanomem-arena-", suffix=".f16", dir=d)
         except OSError:
             fd, path = tempfile.mkstemp(prefix="nanomem-arena-", suffix=".f16")
-        os.unlink(path)
+        self._unlinked = False
+        if self._CAN_UNLINK_OPEN:
+            os.unlink(path)
+            self._unlinked = True
         self._fd = fd
         self.path_hint = path
         self.n_rows = 0
@@ -492,10 +512,19 @@ class _Sidecar:
         buf = np.ascontiguousarray(rows_f16, dtype=np.float16).tobytes()
         off = int(start) * self.row_bytes
         wrote = 0
-        while wrote < len(buf):
-            wrote += os.pwrite(self._fd, buf[wrote:], off + wrote)
+        if hasattr(os, "pwrite"):
+            while wrote < len(buf):
+                wrote += os.pwrite(self._fd, buf[wrote:], off + wrote)
+        else:
+            # Windows. Not equivalent to pwrite -- it moves the shared file
+            # offset -- which is safe only because this fd belongs to one
+            # `_Sidecar` and every caller holds the engine lock. If that ever
+            # stops being true this needs a real positional write.
+            os.lseek(self._fd, off, os.SEEK_SET)
+            while wrote < len(buf):
+                wrote += os.write(self._fd, buf[wrote:])
         self.n_rows = max(self.n_rows, int(start) + int(rows_f16.shape[0]))
-        self._mm = None                 # stale: remapped on the next read
+        self._drop_map()                # stale: remapped on the next read
 
     def view(self) -> np.ndarray:
         """Read-only ``(n_rows, D)`` fp16 view of the sidecar."""
@@ -513,14 +542,40 @@ class _Sidecar:
     def mapped_bytes(self) -> int:
         return int(self.n_rows) * self.row_bytes
 
-    def close(self) -> None:
+    def _drop_map(self) -> None:
+        """Release the mapping AND its handle.
+
+        Dropping the reference is enough on CPython, but on Windows a mapping
+        that is still open is what stops the file being deleted, so this closes
+        it explicitly rather than trusting the collector to have run.
+        """
+        mm = self._mm
         self._mm = None
+        self._mm_rows = 0
+        base = getattr(mm, "_mmap", None)
+        if base is not None:
+            try:
+                base.close()
+            except (BufferError, ValueError):
+                pass
+
+    def close(self) -> None:
+        self._drop_map()
         if self._fd is not None:
             try:
                 os.close(self._fd)
             except OSError:
                 pass
             self._fd = None
+        if not self._unlinked and self.path_hint:
+            # Windows: this is the deletion POSIX did at creation. A mapping or
+            # handle that outlives us keeps the file, so failure is swallowed --
+            # a stray temp file is not worth raising from a close().
+            try:
+                os.unlink(self.path_hint)
+                self._unlinked = True
+            except OSError:
+                pass
 
     def __del__(self):
         try:

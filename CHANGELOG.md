@@ -5,6 +5,61 @@ number below is from one of those files.
 
 ---
 
+## 0.6.8 — engine 3.3.4
+
+**Windows.** The first CI run reported 50 failures there, from two POSIX idioms
+the package used unconditionally. Both are invisible on macOS and Linux, which
+is why one machine's green suite never found them.
+
+*The arena sidecar unlinked a file it still had open.* `os.unlink` on a live
+handle is the idiom that makes a temp file crash-proof and unreadable by other
+processes — and Windows raises `PermissionError [WinError 32]` for it. It was in
+the constructor, so **every float16-residency vault failed to open at all**; 16
+of the 50. `os.pwrite` does not exist there either, so the constructor raised
+before anything could reach the second problem. On Windows the file is now
+deleted in `close()` and written with `lseek` + `write`. The cost is stated in
+the docstring rather than hidden: a hard crash can leave one temp file behind,
+and another process could open it in the window before deletion. Neither is true
+on POSIX; both beat not running.
+
+*`replace_all` replaced a file it was holding open.* `replace_with` was called
+inside `exclusive()`, which holds the vault's own handle. POSIX swaps the
+directory entry and the open fd keeps the old inode — that is what makes the
+rewrite atomic for a concurrent reader. Windows refuses with
+`PermissionError [WinError 5]`, and the retry loop already in the code could
+never help, because the handle was held for the whole operation rather than
+momentarily. 18 failures, plus `compact`, which goes through the same path. The
+handle is released there before the replace now, and the window that opens is
+named in the docstring: `_assert_same_file` on the next `exclusive` is what
+catches a write that lands in it.
+
+**Both fixes are tested on every platform, not just on Windows.** A new
+`tests/test_windows_paths.py` forces the Windows branch — `_CAN_UNLINK_OPEN`
+off, `os.pwrite` removed, `_REPLACE_NEEDS_CLOSED_HANDLE` on — so a regression
+fails on a developer's machine rather than twenty minutes later in CI. Eight
+tests, including one that asserts the exclusive handle really is closed when
+`os.replace` runs; with the fix removed it fails, which was checked rather than
+assumed.
+
+**macOS: the engine was right and the tests were wrong.** Eight failures there
+were tests demanding a screen that had correctly declined to exist.
+`_screen_ready` calls `_calibrate_gather()` and stands the screen down when a
+gathered sub-scan does not give the full scan's arithmetic on that machine —
+identical scores being the flag's entire promise. The runner's BLAS is such a
+machine. Those tests now skip with that reason, and a new one asserts the half
+that actually matters there: with calibration forced to fail on any platform,
+the screen never engages and every search returns exactly what the full scan
+returns.
+
+**Python 3.9.** `sys.stdlib_module_names` arrived in 3.10, and the static import
+audit used it unguarded — so on 3.9 it raised `AttributeError` instead of
+checking anything, while the other 504 tests passed. The package was fine; the
+test was not. It skips below 3.10, where four other jobs cover the same rule.
+
+Suite 521 → 530.
+
+---
+
 ## 0.6.7 — engine 3.3.3 (unchanged)
 
 **CI's first run found two things this laptop could not.**

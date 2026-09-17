@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.3.3"
+ENGINE_VERSION = "3.3.4"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -3289,7 +3289,7 @@ class VaultEngine:
             tmp = _c.temp_path_for(self.filepath)
             try:
                 rows_before = self.arena.n_rows
-                with self._cont.exclusive(sink=self.arena) as (_f, state):
+                with self._cont.exclusive(sink=self.arena) as (lock_f, state):
                     if state == "replaced":
                         raise ContainerReplacedError(
                             f"{self.filepath} was replaced by another writer; "
@@ -3299,7 +3299,11 @@ class VaultEngine:
                             self._arena_record(r)
                             for r in range(rows_before, self.arena.n_rows)]
                     self._cont.write_new_file(tmp, header, keys, blobs())
-                    self._cont.replace_with(tmp)
+                    # `lock_f` is the exclusive handle ON THE FILE BEING
+                    # REPLACED. Windows will not replace a path anything holds
+                    # open, so `replace_with` closes it there and leaves it
+                    # alone everywhere else.
+                    self._cont.replace_with(tmp, holding=lock_f)
             finally:
                 if os.path.exists(tmp):
                     try:

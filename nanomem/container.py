@@ -1496,15 +1496,43 @@ class Container:
                 pass
         return written
 
-    def replace_with(self, tmp_path: str, retries: int = 5) -> None:
-        """``os.replace`` the temp file over this one, with a Windows retry loop."""
+    #: Windows refuses `os.replace` onto a path anything still has open, so the
+    #: exclusive handle has to be let go first. A module-level flag rather than
+    #: an inline `os.name` check so a test can exercise that path here.
+    _REPLACE_NEEDS_CLOSED_HANDLE = os.name == "nt"
+
+    def replace_with(self, tmp_path: str, retries: int = 5, holding=None) -> None:
+        """``os.replace`` the temp file over this one.
+
+        ``holding`` is the caller's open handle ON THE TARGET -- the one
+        :meth:`exclusive` yields. POSIX does not care: `os.replace` swaps the
+        directory entry and the open fd keeps the old inode, which is what makes
+        the rewrite atomic for a concurrent reader. Windows refuses outright
+        with `PermissionError [WinError 5]`, and it refused every time: 18 of
+        the 50 failures in the first Windows CI run were `replace_all` and
+        `compact` hitting this one line, with a retry loop that could never help
+        because the handle was held for the whole operation, not momentarily.
+
+        So on Windows the handle is closed first. The cost is real and worth
+        naming: that handle carries the exclusive lock, so between closing it
+        and the replace landing there is a window in which another writer could
+        append to a file that is about to be replaced -- and `_assert_same_file`
+        in the next `exclusive` is what catches that, raising
+        `ContainerReplacedError` rather than losing the append silently. POSIX
+        keeps the lock for the whole operation and has no such window.
+        """
+        if holding is not None and self._REPLACE_NEEDS_CLOSED_HANDLE:
+            try:
+                holding.close()
+            except OSError:
+                pass
         last = None
         for attempt in range(retries):
             try:
                 os.replace(tmp_path, self.filepath)
                 fsync_dir(self.filepath)
                 return
-            except PermissionError as exc:          # Windows: another handle is open
+            except PermissionError as exc:          # a mapping someone else holds
                 last = exc
                 time.sleep(0.02 * (2 ** attempt))
         raise last
