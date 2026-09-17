@@ -1131,7 +1131,20 @@ def is_explicit_history(temporal_direction) -> bool:
 # therefore never permuted against another paragraph -- which is what keeps
 # document retrieval identical to an exhaustive cosine scan.
 PERSONAL_SOURCES = frozenset({"chat_session", "chat", "user_input", "cli",
-                              "proxy", "api", "rest_api"})
+                              "proxy", "api", "rest_api",
+                              # `mcp.py` writes with source="mcp_client" by
+                              # default, and until 0.6.6 that was not in this
+                              # set -- so the tagger never ran on the MCP path,
+                              # no revision group ever formed, and FOUR of the
+                              # seven tools that server exposes were degraded or
+                              # dead: `nanomem_history` reported a real chain as
+                              # "has one value and has never changed", and
+                              # `nanomem_volatility` could only ever return
+                              # nothing, because `volatility()` excludes records
+                              # with no entity. An MCP client writing a user's
+                              # facts IS a chat session; it just has an agent in
+                              # the middle.
+                              "mcp_client", "mcp"})
 
 GROUP_SEP = "\x1f"
 

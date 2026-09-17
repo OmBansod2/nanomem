@@ -5,6 +5,62 @@ number below is from one of those files.
 
 ---
 
+## 0.6.6 — engine 3.3.3
+
+**Four of the seven MCP tools were dead, and they answered anyway.**
+
+`nanomem/mcp.py` writes with `source="mcp_client"`. That string was not in
+`entities.PERSONAL_SOURCES`, which is the gate deciding whether the entity
+tagger runs at all. So on the MCP path no entity was ever assigned, no revision
+group ever formed, and the temporal tools that server exists to expose had
+nothing to work with:
+
+* `nanomem_history` answered **"This has one value and has never changed"**
+  about a fact that had just been revised in the previous tool call;
+* `nanomem_volatility` could only ever return nothing, because `volatility()`
+  excludes records with no entity — correctly, but there were never any;
+* `nanomem_search` ranked without the revision layer.
+
+None of them errored. They returned confident, well-formatted, wrong answers,
+which is worse than a stack trace and is why this survived the promotion of the
+server into the package in 0.6.0.
+
+Found by driving the server over stdio while writing its quickstart — the same
+way a first-time user would meet it, and not something the suite could see,
+because every MCP test built its vault through the library with a chat source.
+`mcp_client` and `mcp` are now personal sources. Two regression tests, both
+failing against the published 0.6.5.
+
+**The README is a landing page now, not a folder note.** It opened with
+"nanomem — portable standalone folder", then eleven lines of licensing, then a
+correction about a test file that never existed. Someone arriving from `pip
+install nanomem` read all of that without learning what nanomem does. It now
+opens with the one thing it does that a vector store does not, and a sample that
+runs.
+
+`release_preflight.py` EXECUTES that sample and diffs stdout against the
+comments claiming what it prints. The first draft raised `IndexError` on its
+`as_of` line — the facts were all written at `now`, so "200 days ago" preceded
+every one of them. A landing sample is the code most likely to be tried and
+least likely to be tested.
+
+**Documented: the tagger is the ceiling when you do not declare entities.** The
+README now says so on the first screen, because the honest version of the
+example proves it. Written with no `metadata={"entity": ...}`, the lexical
+tagger reads "I moved jobs, I now work at Initech." as `location` rather than
+`career` — "moved" outweighs "work at" — and one chain silently becomes two.
+Measured recall is 70 of 100 on plain chains and 0 of 100 on narrative phrasing.
+Everything nanomem does beyond a vector store depends on knowing which
+statements are about one fact, so an application with its own attributes should
+declare them.
+
+Also: a copy-pasteable `claude_desktop_config.json` block, verified by running
+the seven tools over stdio rather than by writing it down and hoping.
+
+Suite 519 -> 521.
+
+---
+
 ## 0.6.5 — engine 3.3.2
 
 **`search()` returned a superseded value as current.** Recorded as a major

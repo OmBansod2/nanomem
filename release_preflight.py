@@ -269,12 +269,52 @@ def check_readme_links():
             f"page, which does not resolve relative paths; use the full URL")
 
 
+def check_readme_sample():
+    """RUN the README's opening sample and diff it against its own comments.
+
+    It is the first thing anyone sees after `pip install nanomem`, so it is the
+    one piece of code in the project most likely to be tried and least likely to
+    be tested. The first draft of it raised IndexError on the `as_of` line --
+    the facts were all written at `now`, so "200 days ago" preceded every one of
+    them -- and every printed line was a guess at what it would say.
+
+    Convention: each `print(...)` is followed by `# <exactly what it prints>`.
+    """
+    import subprocess as sp
+    import tempfile
+    m = re.search(r"```python\n(.*?)```", read("README.md"), re.S)
+    if not m:
+        bad("README has no python sample to check")
+        return
+    block = m.group(1)
+    want = [l[2:] for l in block.splitlines() if l.startswith("# ")]
+    if not want:
+        bad("the README sample prints nothing it commits to")
+        return
+    with tempfile.TemporaryDirectory() as d:
+        open(os.path.join(d, "s.py"), "w").write(block)
+        env = dict(os.environ, PYTHONPATH=HERE)
+        r = sp.run([sys.executable, "s.py"], cwd=d, env=env,
+                   capture_output=True, text=True, timeout=300)
+    if r.returncode != 0:
+        bad("the README sample does not run: "
+            + (r.stderr.strip().splitlines() or ["?"])[-1])
+        return
+    got = r.stdout.splitlines()
+    if got != want:
+        bad(f"the README sample prints {got} but its comments claim {want}")
+    else:
+        NOTES.append(f"the README sample runs and prints its {len(want)} "
+                     f"claimed lines")
+
+
 def main():
     offline = "--offline" in sys.argv
     ver = check_versions()
     check_test_count()
     check_metadata(offline)
     check_readme_links()
+    check_readme_sample()
     check_claims()
     check_wheel(ver)
     check_sdist(ver)

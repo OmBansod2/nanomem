@@ -1,9 +1,99 @@
-# nanomem — portable standalone folder
+# nanomem
 
-This folder is self-contained. Copy it anywhere and run it; `pip install` is
-optional. The only third-party runtime dependency is `numpy`.
+**An embedded store for facts that change.**
 
-Package 0.6.5 · engine 3.3.2 · container format 3 · arena cache format 3.
+A fact your application remembers is not a document. It gets corrected — people
+move, change jobs, switch phone numbers. A vector store keeps both statements
+and returns whichever one is worded closer to the question, which is how an
+assistant ends up confidently repeating an address you left two years ago.
+nanomem keeps the chain and knows which end of it is current.
+
+```bash
+pip install nanomem
+```
+
+```python
+import time
+from nanomem import Vault
+
+DAY, now = 86400, time.time()
+job = {"entity": "employer"}
+
+v = Vault("memory.dat")
+v.add("I work at Acme Corp.",                    metadata=job, timestamp=now - 300*DAY)
+v.add("I moved jobs, I now work at Initech.",    metadata=job, timestamp=now - 155*DAY)
+v.add("I switched again, I work at Globex now.", metadata=job, timestamp=now - 10*DAY)
+
+print(v.search("where do I work")[0]["text"])
+# I switched again, I work at Globex now.
+
+for r in v.history("where do I work"):
+    print(r["revision"], r["superseded"], r["text"])
+# 1 True I work at Acme Corp.
+# 2 True I moved jobs, I now work at Initech.
+# 3 False I switched again, I work at Globex now.
+
+print(v.search("where do I work", as_of=now - 200*DAY)[0]["text"])
+# I work at Acme Corp.
+
+f = v.volatility()[0]
+print(f["entity"], f["n_revisions"], round(f["median_interval"]/DAY))
+# employer 3 145
+```
+
+One file on disk. One runtime dependency (`numpy`). No server, no daemon, no
+index to rebuild. Search is **exact** — a full cosine scan, not an approximate
+index — so recall is 100% by construction and every interesting question is
+about time rather than ranking.
+
+## Tell it what an attribute is
+
+`metadata={"entity": "employer"}` is doing real work above, and it is worth a
+paragraph because little else here matters as much.
+
+Name the attribute and nanomem knows those three statements are one fact, so it
+keeps them as a chain. Leave it out and a lexical tagger guesses from the text —
+measured recall 70 of 100 on plainly-worded chains and **0 of 100 on narrative
+phrasing**. In the example above it tags "I moved jobs, I now work at Initech."
+as `location` rather than `career`, because "moved" outweighs "work at", and the
+chain silently splits in two.
+
+So if your application has attributes of its own, declare them. Everything
+nanomem does that a vector store does not rests on knowing which statements are
+about the same thing — and you know that, while the tagger is guessing.
+
+## Use it from Claude, Cursor or Zed (MCP)
+
+```bash
+pip install nanomem
+```
+
+Then add this to your MCP client's config — `claude_desktop_config.json` on
+macOS lives at `~/Library/Application Support/Claude/`:
+
+```json
+{
+  "mcpServers": {
+    "nanomem": {
+      "command": "python3",
+      "args": ["-m", "nanomem.mcp", "--vault", "/absolute/path/to/memory.dat"]
+    }
+  }
+}
+```
+
+Restart the client. It gains seven tools: `nanomem_add`, `nanomem_search`,
+`nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`,
+`nanomem_stats` — so the assistant can ask what a fact USED to be, what the
+memory believed at a past moment, what changed last week, and which of its own
+beliefs have gone stale.
+
+The vault is an ordinary file. Point the CLI or a Python script at the same path
+to read what the assistant wrote.
+
+---
+
+Package 0.6.6 · engine 3.3.3 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -12,6 +102,7 @@ offer them your source — see [COMMERCIAL-LICENSE.md](https://github.com/OmBans
 the alternative. Up to 0.6.0 the wheel metadata said Apache-2.0 while the
 LICENSE file said All Rights Reserved; that contradiction is resolved here and
 the superseded terms are kept in `LICENSE.preview-v1.0.md`.
+
 
 ---
 
@@ -33,7 +124,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-519 tests, no network needed.
+521 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -49,6 +140,7 @@ strings demo.dat | grep hunter2          # password mode: it is not
 ```
 
 ---
+
 
 ## Use it from your own script
 
@@ -179,15 +271,6 @@ POSTed to `/v1/chat/completions`, which 404s.
 
 ---
 
-## Use it from an AI assistant (MCP)
-
-```bash
-python3 -m nanomem.mcp --vault memory.dat
-```
-
-A stdio MCP server, so Claude, Cursor or Zed can use a local vault as memory. It
-exposes `nanomem_add`, `nanomem_search`, and the four above as
-`nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`.
 
 ---
 

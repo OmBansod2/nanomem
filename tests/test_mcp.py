@@ -36,6 +36,35 @@ def chat_vault(vault_path, offline_embedder):
     v.close()
 
 
+def test_the_default_mcp_source_is_a_personal_source():
+    """The write source this server uses must let the entity tagger run.
+
+    `nanomem_add` writes with ``source="mcp_client"``. Until 0.6.6 that string
+    was not in ``PERSONAL_SOURCES``, so the tagger never ran on the MCP path and
+    no revision group ever formed -- which silently disabled the tools this
+    server was expanded to offer. `nanomem_history` answered "This has one value
+    and has never changed" for a fact that had just been revised, and
+    `nanomem_volatility` could only ever return nothing, because `volatility()`
+    excludes records with no entity. Both LOOKED like working answers.
+    """
+    from nanomem import entities as ent
+    assert "mcp_client" in ent.PERSONAL_SOURCES
+
+
+def test_an_mcp_write_forms_a_revision_group(vault_path, offline_embedder):
+    """End to end over the tool surface, not the library underneath it."""
+    v = Vault(vault_path)
+    for i, text in enumerate(("My locker code is value-0.",
+                              "I changed it. My locker code is value-1.")):
+        nm_mcp.dispatch(v, "nanomem_add",
+                         {"text": text, "source": "mcp_client"})
+    chain = v.history("locker code")
+    assert len(chain) == 2, "an MCP-written revision must form a chain"
+    assert [h["superseded"] for h in chain] == [True, False]
+    assert v.volatility(), "volatility() must see a group the MCP path wrote"
+    v.close()
+
+
 def test_every_tool_declares_a_usable_schema():
     names = [t["name"] for t in nm_mcp.TOOLS]
     assert len(names) == len(set(names)), "duplicate tool name"
