@@ -5,6 +5,53 @@ number below is from one of those files.
 
 ---
 
+## 0.7.8 — engine 3.4.1
+
+**A regression this session introduced, caught by the fuzzer it also produced.**
+
+The relevance floor exempts a declared group's CURRENT VALUE from being dropped
+— without that, a floor tuned to remove records which merely carry a tag also
+removes the answer. That exemption asked `_revisions_comparable`. 0.7.4 added a
+CONCORDANCE condition to that predicate, and so switched the protection off for
+every chain whose arrival order and timestamps disagree — which is precisely the
+set of chains 0.7.4 was written to fix. The floor then dropped the current value
+and a superseded record answered.
+
+Found on a chain whose revisions read 5, 3, 4 in time order. `search` returned
+the MIDDLE record of three:
+
+```
+ts 1633868800  rev 5   value-38
+ts 1736771200  rev 3   value-11   <- returned
+ts 1753273600  rev 4   value-12   <- the current value
+```
+
+Two different questions had been fused into one predicate: *do these rows belong
+to one chain*, which decides whether a current value exists at all, and *does the
+counter agree with the clock*, which decides whether the counter may ORDER it.
+`_same_group_key` is split back out and gates the floor; `_revisions_comparable`
+keeps the concordance test and gates the ranker. The protected record is now
+chosen by timestamp with the counter only breaking a tie, rather than by
+`rv.max()`, which on an out-of-order chain is the last-WRITTEN record and not the
+current one.
+
+**Inert wherever the two orders agree, and measured as such:** the 520-result
+`temporal_baseline` is unchanged from 0.7.5 — 40 changed against the 0.7.2
+baseline, all five declared chains, zero document queries, every one moving rank
+1 correctly and staying inside the floor. The 3-persona chat set is 97.2% gold
+top-1 and 94.4% end-to-end, identical to the baseline for the fourth release
+running.
+
+Fuzzer: **60 of 60 seeds clean** at 120 operations each, 19 of them encrypted,
+zero plaintext leaks — against 59 of 60 before this fix. Design and standing
+bars are recorded in `design/fuzz_ops_spec.md`, including the requirement that
+the fuzzer must FAIL against a version known to have the bug it was written for,
+since a fuzzer that passes everywhere measures nothing.
+
+Suite 570 -> 571.
+
+---
+
 ## 0.7.7 — engine 3.4.0 (unchanged)
 
 **Retention deleted the record `search` calls current.** Found by a randomised

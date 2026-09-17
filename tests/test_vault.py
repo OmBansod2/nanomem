@@ -967,3 +967,33 @@ def test_the_arrival_counter_still_breaks_a_retention_tie(tmp_path, offline_embe
         f"with equal timestamps the last write is current: {left}")
     v.close()
 
+
+def test_the_floor_protects_the_current_value_of_an_out_of_order_chain(
+        tmp_path, offline_embedder):
+    """A regression 0.7.4 introduced and the operation fuzzer caught.
+
+    The relevance floor exempts a declared group's current value from being
+    dropped. That exemption asked `_revisions_comparable`, and 0.7.4 added a
+    CONCORDANCE condition to that predicate -- so the protection switched off on
+    exactly the chains 0.7.4 existed for, the ones whose arrival order and
+    timestamps disagree. The floor then dropped the current value and a
+    superseded record answered.
+
+    Found on a chain whose revisions read 5, 3, 4 in time order: `search`
+    returned the MIDDLE record of three. The one-key test and the concordance
+    test are now separate predicates, and the protected record is chosen by
+    timestamp with the counter only breaking a tie.
+    """
+    v = Vault(str(tmp_path / "ooo.dat"))
+    # arrival order 11, 12, 38 -> revisions 1, 2, 3
+    # time order    38, 11, 12 -> the counter and the clock disagree
+    for val, ts in (("value-11", 1_736_771_200.0),
+                    ("value-12", 1_753_273_600.0),
+                    ("value-38", 1_633_868_800.0)):
+        v.add(f"My phone is {val}.", metadata={"entity": "phone"}, timestamp=ts)
+    v.flush()
+    got = v.search("what is the current phone", top_k=1, filter={"entity": "phone"})
+    assert got and "value-12" in got[0]["text"], (
+        f"the newest by time must survive the floor: {got}")
+    v.close()
+

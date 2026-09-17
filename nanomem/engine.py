@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.4.0"
+ENGINE_VERSION = "3.4.1"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -2522,15 +2522,22 @@ class VaultEngine:
             # question said it was temporal or personal. See `_resolve_revisions`.
             return kept
         keep_current = self.floor_keeps_current
+        # ONE KEY, not concordance. This asked `_revisions_comparable`, and when
+        # 0.7.4 added the concordance condition to that predicate the protection
+        # below silently switched off for every chain whose arrival order and
+        # timestamps disagree -- exactly the chains 0.7.4 was written for. The
+        # floor then dropped the current value and a superseded one answered.
+        # Found by the operation fuzzer on a chain with revisions 5, 3, 4 in
+        # time order: search returned the MIDDLE record of three.
         if (kept.size != group.size and group.size >= 2
-                and self._revisions_comparable(rows, group)):
+                and self._same_group_key(rows, group)):
             if keep_current is None:
                 keep_current = self._group_is_declared(rows, group)
         else:
             keep_current = False
         if keep_current or (self.current_keep_sim > 0.0 and kept.size != group.size
                             and group.size >= 2
-                            and self._revisions_comparable(rows, group)):
+                            and self._same_group_key(rows, group)):
             # THE NEWEST REVISION IS NOT A PRECISION RISK. The floor drops
             # records that carry the tag without restating the fact; the
             # maximum-revision member is the one `add_fact` numbered
@@ -2539,8 +2546,15 @@ class VaultEngine:
             # GROUPING is wrong, and the floor is the wrong place to correct it.
             # Gated on `_revisions_comparable` because a revision number orders
             # nothing across group keys.
-            rv = self._columns(np.asarray(rows)[group])[1]
-            newest = group[np.flatnonzero(rv == rv.max())]
+            # WHICH record is current follows the ranker's rule: the latest
+            # timestamp, with the arrival counter only breaking a tie. Taking
+            # `rv.max()` alone protected the last-WRITTEN record, which on an
+            # out-of-order chain is not the current one.
+            _e, rv, tsv = self._columns(np.asarray(rows)[group])
+            latest = tsv.max()
+            at_latest = np.flatnonzero(tsv == latest)
+            best_rev = rv[at_latest].max()
+            newest = group[at_latest[rv[at_latest] == best_rev]]
             if self.current_keep_sim > 0.0:
                 # ...AND IT STILL HAS TO LOOK LIKE THE FACT. Protecting the
                 # newest member unconditionally helps where the group is real
@@ -2625,6 +2639,23 @@ class VaultEngine:
             return False
         return self._group_is_declared(rows, group)
 
+    def _same_group_key(self, rows, group) -> bool:
+        """Every member of ``group`` shares one ``(user_id, project, entity)``.
+
+        Split back out of :meth:`_revisions_comparable` when that gained its
+        concordance condition. The two answer different questions and gate
+        different things: "do these rows belong to one chain" is what decides
+        whether the chain HAS a current value, and "does the counter agree with
+        the clock" is what decides whether the counter may ORDER it. Fusing them
+        turned the floor's current-value protection off on any chain written out
+        of order -- see :meth:`_apply_group_floor`.
+        """
+        g = np.asarray(group, dtype=np.int64)
+        if g.size < 2:
+            return True
+        gids = self._group_ids(np.asarray(rows)[g])
+        return bool(gids[0] >= 0 and np.all(gids == gids[0]))
+
     def _revisions_comparable(self, rows, group) -> bool:
         """True when ``group``'s revision numbers actually order it.
 
@@ -2659,10 +2690,9 @@ class VaultEngine:
         g = np.asarray(group, dtype=np.int64)
         if g.size < 2:
             return True
-        sel = np.asarray(rows)[g]
-        gids = self._group_ids(sel)
-        if not (gids[0] >= 0 and np.all(gids == gids[0])):
+        if not self._same_group_key(rows, group):
             return False
+        sel = np.asarray(rows)[g]
         _ent_col, rv, tsv = self._columns(sel)
         order = np.argsort(rv, kind="stable")
         ts_by_rev = tsv[order]
