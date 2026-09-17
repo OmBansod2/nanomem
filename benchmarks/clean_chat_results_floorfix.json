@@ -1,4 +1,9 @@
 {
+ "measured_on": {
+  "nanomem": "0.7.9",
+  "engine": "3.4.1",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
  "label": "floorfix",
  "fixture": "clean_chat_benchmark.json",
  "group_hoist": null,

@@ -308,6 +308,65 @@ def check_readme_sample():
                      f"claimed lines")
 
 
+def check_benchmarks():
+    """Published evidence must describe the ENGINE being shipped.
+
+    BENCHMARKS.md presents its numbers as current, and a reader who re-runs one
+    and cannot reproduce it has been told something false. That happened here:
+    the head-to-head table was measured on engine 3.0.4 and quoted months later
+    against 3.4.1, across three ranking changes -- nothing in the file recorded
+    which engine produced it, so nothing could notice.
+
+    The discriminator is the ENGINE version, not the package version. Docs and
+    packaging releases bump `__version__` and change no measured behaviour;
+    anything that moves ranking or storage bumps `ENGINE_VERSION`, and that is
+    exactly when every number on that page has to be re-measured or removed.
+    """
+    engine = re.search(r'ENGINE_VERSION = "([^"]+)"',
+                       read("nanomem/engine.py")).group(1)
+    d = os.path.join(HERE, "benchmarks")
+    if not os.path.isdir(d):
+        return
+    files = sorted(f for f in os.listdir(d) if f.endswith(".json"))
+    if not files:
+        bad("benchmarks/ exists but holds no results files")
+        return
+    import json as _json
+    stale, unstamped = [], []
+    for f in files:
+        try:
+            obj = _json.load(open(os.path.join(d, f)))
+        except Exception as e:
+            bad(f"benchmarks/{f} is not readable JSON: {e}")
+            continue
+        m = (obj or {}).get("measured_on") if isinstance(obj, dict) else None
+        if not m or not m.get("engine"):
+            unstamped.append(f)
+        elif str(m["engine"]) != engine:
+            stale.append(f"{f} (engine {m['engine']})")
+    for f in unstamped:
+        bad(f"benchmarks/{f} records no measured_on.engine, so nothing can "
+            f"tell whether its numbers still describe this build")
+    if stale:
+        bad(f"engine is {engine} but these results were measured on an "
+            f"older one, and BENCHMARKS.md presents them as current: "
+            + ", ".join(stale) + " -- re-run them or drop the claims")
+    if not stale and not unstamped:
+        NOTES.append(f"{len(files)} benchmark results all measured on "
+                     f"engine {engine}")
+    # every results file BENCHMARKS.md cites must actually exist
+    doc = os.path.join(HERE, "BENCHMARKS.md")
+    if os.path.exists(doc):
+        import re as _re
+        cited = set(_re.findall(r"benchmarks/([A-Za-z0-9_]+\.json)", read(doc)))
+        missing = sorted(c for c in cited if c not in files)
+        if missing:
+            bad("BENCHMARKS.md cites results files that are not published: "
+                + ", ".join(missing))
+        elif cited:
+            NOTES.append(f"BENCHMARKS.md cites {len(cited)} results files, all present")
+
+
 def main():
     offline = "--offline" in sys.argv
     ver = check_versions()
@@ -318,6 +377,7 @@ def main():
     check_claims()
     check_wheel(ver)
     check_sdist(ver)
+    check_benchmarks()
 
     for n in NOTES:
         print(f"  ok    {n}")

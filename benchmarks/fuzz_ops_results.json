@@ -1,486 +1,491 @@
 {
-  "seeds": 60,
-  "clean": 60,
-  "results": [
-    {
-      "seed": 0,
-      "ok": true,
-      "encrypted": false,
-      "records": 36,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 1,
-      "ok": true,
-      "encrypted": true,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 2,
-      "ok": true,
-      "encrypted": false,
-      "records": 29,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 3,
-      "ok": true,
-      "encrypted": true,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 4,
-      "ok": true,
-      "encrypted": true,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 5,
-      "ok": true,
-      "encrypted": false,
-      "records": 46,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 6,
-      "ok": true,
-      "encrypted": false,
-      "records": 33,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 7,
-      "ok": true,
-      "encrypted": false,
-      "records": 33,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 8,
-      "ok": true,
-      "encrypted": true,
-      "records": 22,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 9,
-      "ok": true,
-      "encrypted": false,
-      "records": 27,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 10,
-      "ok": true,
-      "encrypted": false,
-      "records": 26,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 11,
-      "ok": true,
-      "encrypted": false,
-      "records": 37,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 12,
-      "ok": true,
-      "encrypted": false,
-      "records": 35,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 13,
-      "ok": true,
-      "encrypted": true,
-      "records": 53,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 14,
-      "ok": true,
-      "encrypted": true,
-      "records": 53,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 15,
-      "ok": true,
-      "encrypted": false,
-      "records": 25,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 16,
-      "ok": true,
-      "encrypted": false,
-      "records": 24,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 17,
-      "ok": true,
-      "encrypted": false,
-      "records": 29,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 18,
-      "ok": true,
-      "encrypted": true,
-      "records": 43,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 19,
-      "ok": true,
-      "encrypted": false,
-      "records": 24,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 20,
-      "ok": true,
-      "encrypted": false,
-      "records": 29,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 21,
-      "ok": true,
-      "encrypted": true,
-      "records": 31,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 22,
-      "ok": true,
-      "encrypted": false,
-      "records": 38,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 23,
-      "ok": true,
-      "encrypted": false,
-      "records": 27,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 24,
-      "ok": true,
-      "encrypted": false,
-      "records": 45,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 25,
-      "ok": true,
-      "encrypted": false,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 26,
-      "ok": true,
-      "encrypted": false,
-      "records": 57,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 27,
-      "ok": true,
-      "encrypted": false,
-      "records": 26,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 28,
-      "ok": true,
-      "encrypted": true,
-      "records": 56,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 29,
-      "ok": true,
-      "encrypted": false,
-      "records": 39,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 30,
-      "ok": true,
-      "encrypted": false,
-      "records": 32,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 31,
-      "ok": true,
-      "encrypted": true,
-      "records": 40,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 32,
-      "ok": true,
-      "encrypted": true,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 33,
-      "ok": true,
-      "encrypted": false,
-      "records": 45,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 34,
-      "ok": true,
-      "encrypted": false,
-      "records": 33,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 35,
-      "ok": true,
-      "encrypted": false,
-      "records": 39,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 36,
-      "ok": true,
-      "encrypted": false,
-      "records": 36,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 37,
-      "ok": true,
-      "encrypted": false,
-      "records": 42,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 38,
-      "ok": true,
-      "encrypted": false,
-      "records": 29,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 39,
-      "ok": true,
-      "encrypted": true,
-      "records": 28,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 40,
-      "ok": true,
-      "encrypted": false,
-      "records": 23,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 41,
-      "ok": true,
-      "encrypted": false,
-      "records": 38,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 42,
-      "ok": true,
-      "encrypted": false,
-      "records": 29,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 43,
-      "ok": true,
-      "encrypted": true,
-      "records": 37,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 44,
-      "ok": true,
-      "encrypted": false,
-      "records": 53,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 45,
-      "ok": true,
-      "encrypted": true,
-      "records": 32,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 46,
-      "ok": true,
-      "encrypted": false,
-      "records": 26,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 47,
-      "ok": true,
-      "encrypted": false,
-      "records": 27,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 48,
-      "ok": true,
-      "encrypted": false,
-      "records": 32,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 49,
-      "ok": true,
-      "encrypted": true,
-      "records": 25,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 50,
-      "ok": true,
-      "encrypted": false,
-      "records": 44,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 51,
-      "ok": true,
-      "encrypted": true,
-      "records": 37,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 52,
-      "ok": true,
-      "encrypted": false,
-      "records": 51,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 53,
-      "ok": true,
-      "encrypted": false,
-      "records": 45,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 54,
-      "ok": true,
-      "encrypted": false,
-      "records": 30,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 55,
-      "ok": true,
-      "encrypted": true,
-      "records": 35,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 56,
-      "ok": true,
-      "encrypted": false,
-      "records": 39,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 57,
-      "ok": true,
-      "encrypted": true,
-      "records": 25,
-      "ops": 120,
-      "plaintext_leak": false
-    },
-    {
-      "seed": 58,
-      "ok": true,
-      "encrypted": false,
-      "records": 43,
-      "ops": 120,
-      "plaintext_leak": null
-    },
-    {
-      "seed": 59,
-      "ok": true,
-      "encrypted": true,
-      "records": 30,
-      "ops": 120,
-      "plaintext_leak": false
-    }
-  ]
+ "measured_on": {
+  "nanomem": "0.7.9",
+  "engine": "3.4.1",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
+ "seeds": 60,
+ "clean": 60,
+ "results": [
+  {
+   "seed": 0,
+   "ok": true,
+   "encrypted": false,
+   "records": 36,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 1,
+   "ok": true,
+   "encrypted": true,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 2,
+   "ok": true,
+   "encrypted": false,
+   "records": 29,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 3,
+   "ok": true,
+   "encrypted": true,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 4,
+   "ok": true,
+   "encrypted": true,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 5,
+   "ok": true,
+   "encrypted": false,
+   "records": 46,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 6,
+   "ok": true,
+   "encrypted": false,
+   "records": 33,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 7,
+   "ok": true,
+   "encrypted": false,
+   "records": 33,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 8,
+   "ok": true,
+   "encrypted": true,
+   "records": 22,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 9,
+   "ok": true,
+   "encrypted": false,
+   "records": 27,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 10,
+   "ok": true,
+   "encrypted": false,
+   "records": 26,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 11,
+   "ok": true,
+   "encrypted": false,
+   "records": 37,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 12,
+   "ok": true,
+   "encrypted": false,
+   "records": 35,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 13,
+   "ok": true,
+   "encrypted": true,
+   "records": 53,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 14,
+   "ok": true,
+   "encrypted": true,
+   "records": 53,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 15,
+   "ok": true,
+   "encrypted": false,
+   "records": 25,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 16,
+   "ok": true,
+   "encrypted": false,
+   "records": 24,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 17,
+   "ok": true,
+   "encrypted": false,
+   "records": 29,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 18,
+   "ok": true,
+   "encrypted": true,
+   "records": 43,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 19,
+   "ok": true,
+   "encrypted": false,
+   "records": 24,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 20,
+   "ok": true,
+   "encrypted": false,
+   "records": 29,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 21,
+   "ok": true,
+   "encrypted": true,
+   "records": 31,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 22,
+   "ok": true,
+   "encrypted": false,
+   "records": 38,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 23,
+   "ok": true,
+   "encrypted": false,
+   "records": 27,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 24,
+   "ok": true,
+   "encrypted": false,
+   "records": 45,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 25,
+   "ok": true,
+   "encrypted": false,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 26,
+   "ok": true,
+   "encrypted": false,
+   "records": 57,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 27,
+   "ok": true,
+   "encrypted": false,
+   "records": 26,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 28,
+   "ok": true,
+   "encrypted": true,
+   "records": 56,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 29,
+   "ok": true,
+   "encrypted": false,
+   "records": 39,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 30,
+   "ok": true,
+   "encrypted": false,
+   "records": 32,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 31,
+   "ok": true,
+   "encrypted": true,
+   "records": 40,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 32,
+   "ok": true,
+   "encrypted": true,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 33,
+   "ok": true,
+   "encrypted": false,
+   "records": 45,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 34,
+   "ok": true,
+   "encrypted": false,
+   "records": 33,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 35,
+   "ok": true,
+   "encrypted": false,
+   "records": 39,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 36,
+   "ok": true,
+   "encrypted": false,
+   "records": 36,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 37,
+   "ok": true,
+   "encrypted": false,
+   "records": 42,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 38,
+   "ok": true,
+   "encrypted": false,
+   "records": 29,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 39,
+   "ok": true,
+   "encrypted": true,
+   "records": 28,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 40,
+   "ok": true,
+   "encrypted": false,
+   "records": 23,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 41,
+   "ok": true,
+   "encrypted": false,
+   "records": 38,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 42,
+   "ok": true,
+   "encrypted": false,
+   "records": 29,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 43,
+   "ok": true,
+   "encrypted": true,
+   "records": 37,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 44,
+   "ok": true,
+   "encrypted": false,
+   "records": 53,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 45,
+   "ok": true,
+   "encrypted": true,
+   "records": 32,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 46,
+   "ok": true,
+   "encrypted": false,
+   "records": 26,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 47,
+   "ok": true,
+   "encrypted": false,
+   "records": 27,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 48,
+   "ok": true,
+   "encrypted": false,
+   "records": 32,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 49,
+   "ok": true,
+   "encrypted": true,
+   "records": 25,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 50,
+   "ok": true,
+   "encrypted": false,
+   "records": 44,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 51,
+   "ok": true,
+   "encrypted": true,
+   "records": 37,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 52,
+   "ok": true,
+   "encrypted": false,
+   "records": 51,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 53,
+   "ok": true,
+   "encrypted": false,
+   "records": 45,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 54,
+   "ok": true,
+   "encrypted": false,
+   "records": 30,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 55,
+   "ok": true,
+   "encrypted": true,
+   "records": 35,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 56,
+   "ok": true,
+   "encrypted": false,
+   "records": 39,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 57,
+   "ok": true,
+   "encrypted": true,
+   "records": 25,
+   "ops": 120,
+   "plaintext_leak": false
+  },
+  {
+   "seed": 58,
+   "ok": true,
+   "encrypted": false,
+   "records": 43,
+   "ops": 120,
+   "plaintext_leak": null
+  },
+  {
+   "seed": 59,
+   "ok": true,
+   "encrypted": true,
+   "records": 30,
+   "ops": 120,
+   "plaintext_leak": false
+  }
+ ]
 }

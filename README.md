@@ -10,6 +10,11 @@ and returns whichever one is worded closer to the question, which is how an
 assistant ends up confidently repeating an address you left two years ago.
 nanomem keeps the chain and knows which end of it is current.
 
+**[Evidence](https://github.com/OmBansod2/nanomem/blob/main/BENCHMARKS.md)** —
+how it compares to FAISS, sqlite-vec and Chroma (including where it loses), what
+happens when the process is killed mid-write, and the pytest command that
+re-runs most of those claims on the copy you just installed.
+
 ```bash
 pip install nanomem
 ```

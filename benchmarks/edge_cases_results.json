@@ -1,138 +1,143 @@
 {
-  "1_backfilled_older_revision": {
-    "verdict": "PASS",
-    "revision_numbers_in_time_order": [
-      [
-        3,
-        "3 Elm Lane"
-      ],
-      [
-        1,
-        "10 Oak Street"
-      ],
-      [
-        2,
-        "22 Pine Road"
-      ]
-    ],
-    "current_should_be": "22 Pine Road",
-    "current_is": "My home address is 22 Pine Road.",
-    "history_len": 3,
-    "history": [
-      "3 Elm Lane",
-      "10 Oak Street",
-      "22 Pine Road"
-    ]
+ "measured_on": {
+  "nanomem": "0.7.9",
+  "engine": "3.4.1",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
+ "1_backfilled_older_revision": {
+  "verdict": "PASS",
+  "revision_numbers_in_time_order": [
+   [
+    3,
+    "3 Elm Lane"
+   ],
+   [
+    1,
+    "10 Oak Street"
+   ],
+   [
+    2,
+    "22 Pine Road"
+   ]
+  ],
+  "current_should_be": "22 Pine Road",
+  "current_is": "My home address is 22 Pine Road.",
+  "history_len": 3,
+  "history": [
+   "3 Elm Lane",
+   "10 Oak Street",
+   "22 Pine Road"
+  ]
+ },
+ "2_identical_timestamps": {
+  "verdict": "PASS",
+  "insertion_order": [
+   "AAA",
+   "BBB",
+   "CCC"
+  ],
+  "current_is": "My locker code is CCC.",
+  "history": [
+   "AAA",
+   "BBB",
+   "CCC"
+  ],
+  "note": "a tie must break on insertion order, the only signal left"
+ },
+ "3_future_timestamp": {
+  "verdict": "PASS",
+  "current_is": "My phone number is 999.",
+  "volatility_rows": 1,
+  "volatility_age_negative": true,
+  "note": "recorded: a future row makes `age` negative"
+ },
+ "4_zero_and_negative_timestamp": {
+  "verdict": "PASS",
+  "zero": "accepted",
+  "negative": "accepted",
+  "records_stored": 2,
+  "note": "recorded, not barred: both are accepted silently"
+ },
+ "5_empty_and_whitespace_text": {
+  "verdict": "PASS",
+  "empty_returns": "''",
+  "whitespace_returns": "''",
+  "records_stored": 1,
+  "expected_records": 1
+ },
+ "6_unicode": {
+  "verdict": "PASS",
+  "roundtrip_exact": {
+   "emoji": true,
+   "cjk": true,
+   "rtl": true,
+   "combining": true,
+   "mixed": true
   },
-  "2_identical_timestamps": {
-    "verdict": "PASS",
-    "insertion_order": [
-      "AAA",
-      "BBB",
-      "CCC"
-    ],
-    "current_is": "My locker code is CCC.",
-    "history": [
-      "AAA",
-      "BBB",
-      "CCC"
-    ],
-    "note": "a tie must break on insertion order, the only signal left"
-  },
-  "3_future_timestamp": {
-    "verdict": "PASS",
-    "current_is": "My phone number is 999.",
-    "volatility_rows": 1,
-    "volatility_age_negative": true,
-    "note": "recorded: a future row makes `age` negative"
-  },
-  "4_zero_and_negative_timestamp": {
-    "verdict": "PASS",
-    "zero": "accepted",
-    "negative": "accepted",
-    "records_stored": 2,
-    "note": "recorded, not barred: both are accepted silently"
-  },
-  "5_empty_and_whitespace_text": {
-    "verdict": "PASS",
-    "empty_returns": "''",
-    "whitespace_returns": "''",
-    "records_stored": 1,
-    "expected_records": 1
-  },
-  "6_unicode": {
-    "verdict": "PASS",
-    "roundtrip_exact": {
-      "emoji": true,
-      "cjk": true,
-      "rtl": true,
-      "combining": true,
-      "mixed": true
-    },
-    "a_search_still_works": true
-  },
-  "7_one_enormous_token": {
-    "verdict": "PASS",
-    "chars": 200000,
-    "records_created": 1,
-    "seconds": 0.23
-  },
-  "8_reused_explicit_id": {
-    "verdict": "PASS",
-    "second_add": "accepted",
-    "records_before": 1,
-    "records_after": 2,
-    "get_returns": "Second version of this fact."
-  },
-  "9_as_of_outside_the_range": {
-    "verdict": "PASS",
-    "as_of_before_everything": "<empty>",
-    "expected_before": "<empty>",
-    "as_of_far_future": "My gate code is bb.",
-    "expected_future": "bb"
-  },
-  "10_odd_metadata_types": {
-    "verdict": "PASS",
-    "nested": "accepted",
-    "list": "accepted",
-    "none": "accepted",
-    "bool": "accepted",
-    "numpy": "accepted",
-    "flush": "ok",
-    "records": 5
-  },
-  "11_degenerate_entity_names": {
-    "verdict": "PASS",
-    "empty": "accepted",
-    "spaces": "accepted",
-    "very_long": "accepted",
-    "unicode": "accepted",
-    "records": 4,
-    "note": "recorded, not barred"
-  },
-  "12_reopen_after_prune": {
-    "verdict": "PASS",
-    "records_before": 31,
-    "after_prune": 1,
-    "after_reopen": 1,
-    "answer_same_session": "My blood type is O negative.",
-    "answer_after_reopen": "My blood type is O negative."
-  },
-  "13_two_vaults_one_file": {
-    "verdict": "PASS",
-    "second_open": "allowed",
-    "handle_a_sees": 1,
-    "handle_b_sees": 2,
-    "a_answers": "My car is a red estate.",
-    "b_answers": "My car is a red estate.",
-    "records_on_disk_after_both_closed": 2,
-    "expected": 2,
-    "fresh_handle_answers": "My car is a red estate."
-  },
-  "14_top_k_bounds": {
-    "verdict": "PASS",
-    "zero": "returned 0",
-    "negative": "returned 0",
-    "bigger_than_corpus": "returned 3"
-  }
+  "a_search_still_works": true
+ },
+ "7_one_enormous_token": {
+  "verdict": "PASS",
+  "chars": 200000,
+  "records_created": 1,
+  "seconds": 0.23
+ },
+ "8_reused_explicit_id": {
+  "verdict": "PASS",
+  "second_add": "accepted",
+  "records_before": 1,
+  "records_after": 2,
+  "get_returns": "Second version of this fact."
+ },
+ "9_as_of_outside_the_range": {
+  "verdict": "PASS",
+  "as_of_before_everything": "<empty>",
+  "expected_before": "<empty>",
+  "as_of_far_future": "My gate code is bb.",
+  "expected_future": "bb"
+ },
+ "10_odd_metadata_types": {
+  "verdict": "PASS",
+  "nested": "accepted",
+  "list": "accepted",
+  "none": "accepted",
+  "bool": "accepted",
+  "numpy": "accepted",
+  "flush": "ok",
+  "records": 5
+ },
+ "11_degenerate_entity_names": {
+  "verdict": "PASS",
+  "empty": "accepted",
+  "spaces": "accepted",
+  "very_long": "accepted",
+  "unicode": "accepted",
+  "records": 4,
+  "note": "recorded, not barred"
+ },
+ "12_reopen_after_prune": {
+  "verdict": "PASS",
+  "records_before": 31,
+  "after_prune": 1,
+  "after_reopen": 1,
+  "answer_same_session": "My blood type is O negative.",
+  "answer_after_reopen": "My blood type is O negative."
+ },
+ "13_two_vaults_one_file": {
+  "verdict": "PASS",
+  "second_open": "allowed",
+  "handle_a_sees": 1,
+  "handle_b_sees": 2,
+  "a_answers": "My car is a red estate.",
+  "b_answers": "My car is a red estate.",
+  "records_on_disk_after_both_closed": 2,
+  "expected": 2,
+  "fresh_handle_answers": "My car is a red estate."
+ },
+ "14_top_k_bounds": {
+  "verdict": "PASS",
+  "zero": "returned 0",
+  "negative": "returned 0",
+  "bigger_than_corpus": "returned 3"
+ }
 }
