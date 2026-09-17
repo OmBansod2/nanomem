@@ -5,45 +5,39 @@
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "spec": "design/unexplored_surface_spec.md",
- "verdict": "8 of 8 pass; no defect found",
- "note": "A clean sweep is the result, not a failure to look. Three of six predictions were wrong, all in the direction of the code being better than expected.",
+ "script": "exp_unexplored_surface.py",
+ "machine": {
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "python": "3.12.12"
+ },
+ "verdict": "8 of 8 pass",
  "S1_export_encryption": {
   "pass": true,
+  "records_exported": 2,
   "default_target_inherits_encryption": true,
   "secret_bytes_present_in_default_export": false,
   "default_export_opens_without_password": false,
-  "explicit_target_password_None": "plaintext, as the caller asked",
-  "re_encrypt_with_new_password": "works, opens with the new password only"
+  "explicit_target_password_None_is_plaintext": true,
+  "re_encrypt_with_new_password_opens": true
  },
  "S2_merge_reconcile_revisions": {
   "pass": true,
-  "setup": "vault A holds t=100 and t=300, vault B holds t=200 and t=400, one shared entity",
+  "setup": "vault A holds t=100 and t=300, vault B t=200 and t=400, one entity",
   "reconcile_true": {
-   "current": "9 Birch Way (newest by time)",
-   "history_in_time_order": true,
-   "revisions_in_time_order": [
-    1,
-    1,
-    2,
-    3
-   ]
+   "current": "9 Birch Way",
+   "current_is_newest_by_time": true,
+   "history_in_time_order": true
   },
   "reconcile_false": {
-   "current": "9 Birch Way (newest by time)",
-   "history_in_time_order": true,
-   "revisions_in_time_order": [
-    1,
-    1,
-    2,
-    2
-   ]
-  },
-  "note": "prediction that merge would collide with 0.7.4's concordance rule was WRONG"
+   "current": "9 Birch Way",
+   "current_is_newest_by_time": true,
+   "history_in_time_order": true
+  }
  },
  "S3_compact": {
   "pass": true,
-  "records_before": 8,
-  "records_after": 8,
+  "records_before": 6,
+  "records_after": 6,
   "current_value_unchanged": true,
   "chunked_policy_answer_survives": true
  },
@@ -91,16 +85,18 @@
     "warned": true
    }
   ],
-  "note": "falls back to 50-record block boundaries, never returns a partial record, warns every time"
+  "note": "falls back to block boundaries, never returns a partial record"
  },
  "S5_cross_process_writes": {
   "pass": true,
   "light": {
    "processes": 2,
    "records_each": 60,
+   "flush": "every record",
    "acknowledged": 120,
    "on_disk": 120,
-   "lost": 0
+   "lost": 0,
+   "duplicate_ids": 0
   },
   "heavy": {
    "processes": 4,
@@ -110,8 +106,7 @@
    "on_disk": 600,
    "lost": 0,
    "duplicate_ids": 0
-  },
-  "note": "prediction of lost writes with no cross-process lock was WRONG"
+  }
  },
  "S6_v2_migration": {
   "pass": true,
@@ -131,28 +126,16 @@
    "revision_timestamp_inversions": 0,
    "chains": 86
   },
-  "why_it_matters": "zero migrated records read as DECLARED, so 0.7.5's gate exemption cannot fire on a migrated vault and its ranking is unchanged; zero inversions, so 0.7.4's concordance check never fires either"
+  "why_it_matters": "zero migrated records read as DECLARED, so the 0.7.5 gate exemption cannot fire on a migrated vault and its ranking is unchanged"
  },
  "S7_update_and_delete_on_a_chain": {
   "pass": true,
-  "delete_newest_promotes_previous": "333 deleted -> current became 222",
-  "update_middle_revision": "history ['111', '222-REVISED'], current is the revised record"
+  "delete_newest_promotes_previous": "333 deleted -> My phone number is 222.",
+  "update_middle_revision": "My phone number is 222-REVISED."
  },
  "S8_embedding_width_swap": {
   "pass": true,
-  "behaviour": "warns at open that the requested width is ignored, then refuses the write with ValueError: embedding has 384 dims, vault has 768",
-  "out_of_scope": "a DIFFERENT model of the SAME width cannot be detected and is not barred"
- },
- "predictions_scored": {
-  "correct": [
-   "S1 passes",
-   "S3 passes",
-   "S4 passes for a clean kill"
-  ],
-  "wrong": [
-   "S2 predicted the likeliest defect -- passed in both modes",
-   "S5 predicted lost writes -- zero lost under 4-process max contention",
-   "S7 predicted most likely to be overlooked -- passed"
-  ]
+  "behaviour": "refused: ValueError: embedding has 384 dims, vault at /var/folders/sx/8wxmn_5x5tv6mr486zsxvh_h0000gn/T/nanomem_",
+  "out_of_scope": "a DIFFERENT model of the SAME width cannot be detected"
  }
 }

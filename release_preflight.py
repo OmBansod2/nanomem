@@ -308,6 +308,27 @@ def check_readme_sample():
                      f"claimed lines")
 
 
+def _pool_numbers(o, acc=None):
+    """Every number in a results file, as the strings a doc would quote."""
+    acc = set() if acc is None else acc
+    if isinstance(o, dict):
+        for v in o.values():
+            _pool_numbers(v, acc)
+    elif isinstance(o, list):
+        for v in o:
+            _pool_numbers(v, acc)
+    elif isinstance(o, bool):
+        pass
+    elif isinstance(o, (int, float)):
+        acc.add(str(o))
+        acc.add(f"{float(o):.2f}".rstrip("0").rstrip("."))
+        acc.add(f"{float(o):.1f}")
+    elif isinstance(o, str):
+        import re as _r
+        acc |= set(_r.findall(r"\d+\.\d+", o))
+    return acc
+
+
 def check_benchmarks():
     """Published evidence must describe the ENGINE being shipped.
 
@@ -354,6 +375,55 @@ def check_benchmarks():
     if not stale and not unstamped:
         NOTES.append(f"{len(files)} benchmark results all measured on "
                      f"engine {engine}")
+    # AND every number the page quotes must be IN the file it cites. The
+    # citation alone is not enough: one refresh after this guard was written,
+    # BENCHMARKS.md still read "2.09 ms" while its own results file said 2.15 --
+    # ordinary timing variance, but the page quotes two decimals and a reader
+    # who opens the file to check finds a different number. Numbers get retyped;
+    # retyping is where they drift.
+    doc_p = os.path.join(HERE, "BENCHMARKS.md")
+    if os.path.exists(doc_p):
+        import re as _re2
+        text = read(doc_p)
+        pool = set()
+        for f in files:
+            try:
+                pool |= _pool_numbers(_json.load(open(os.path.join(d, f))))
+            except Exception:
+                pass
+        # decimals only: integers appear as counts, years and version parts and
+        # would produce noise rather than signal
+        quoted = set(_re2.findall(r"(?<![\w.])(\d+\.\d+)(?=\s*(?:ms|%|\s|\)|,|$))",
+                                  text, _re2.M))
+        # ROUNDING IS NOT DRIFT. The page rounds for readability -- 0.0149 s of
+        # reopen is printed 0.015 -- so match numerically at the precision the
+        # page itself used, not as strings. A check that cries wolf on rounding
+        # is a check someone deletes.
+        pool_f = []
+        for x in pool:
+            try:
+                pool_f.append(float(x))
+            except ValueError:
+                pass
+        unbacked = []
+        for q in sorted(quoted):
+            dp = len(q.split(".")[1])
+            qf = float(q)
+            tol = 0.5 * (10 ** -dp) + 1e-12      # "rounds to", half a unit in
+            if not any(abs(v - qf) <= tol for v in pool_f):   # the last place
+                unbacked.append(q)
+        # version strings and figures quoted from the design specs, not results
+        allow = {"0.7", "3.4", "1.8", "3.9", "3.11", "3.13", "3.12",
+                 "19.0", "13.9"}
+        unbacked = [q for q in unbacked if q not in allow]
+        if unbacked:
+            bad("BENCHMARKS.md quotes numbers that are in no results file: "
+                + ", ".join(unbacked[:12])
+                + " -- re-run refresh_benchmarks.py and update the prose")
+        else:
+            NOTES.append(f"every decimal BENCHMARKS.md quotes appears in a "
+                         f"results file ({len(quoted)} checked)")
+
     # every results file BENCHMARKS.md cites must actually exist
     doc = os.path.join(HERE, "BENCHMARKS.md")
     if os.path.exists(doc):

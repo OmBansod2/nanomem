@@ -107,26 +107,38 @@ A single end-to-end number would be misleading — three different things own th
 cost (`benchmarks/latency_split_results.json`, 15,000 records, 5,000 entities, 60 distinct
 entities queried once each):
 
+<!-- GENERATED: latency -- rewritten by scratch/refound/refresh_benchmarks.py -->
 ```
-store only, query already embedded     2.09 ms   <- the part nanomem owns
-embedding round-trip (local Ollama)   12.04 ms   <- your embedder, not the store
-Vault.search(decompose=False)         15.02 ms
-Vault.search(...)  the DEFAULT        50.50 ms   <- decomposition adds 35.6 ms
+store only, query already embedded      2.15 ms   <- the part nanomem owns
+embedding round-trip (local Ollama)     9.13 ms   <- your embedder, not the store
+Vault.search(decompose=False)          16.14 ms
+Vault.search(...)  the DEFAULT         50.37 ms   <- decomposition adds 34.2 ms
 ```
+<!-- /GENERATED -->
 
-Query decomposition is **on by default** and costs 3.4× end-to-end on a short
-identifier-like query, because it embeds sub-queries separately. Pass
+Query decomposition is **on by default** and roughly triples end-to-end latency
+on a short identifier-like query, because it embeds sub-queries separately. Pass
 `decompose=False` when your queries are already atomic.
+
+These are wall-clock medians over 60 distinct entities and move a few percent
+between runs. The two blocks above are **generated** from
+`benchmarks/latency_split_results.json` by `refresh_benchmarks.py` rather than
+typed, because a page that hand-quotes two decimals from a file that changes
+every run is a drift generator, not a cure. `release_preflight.py` additionally
+refuses to ship if any figure on this page is absent from a results file at the
+precision it is quoted.
 
 Store-side filtered search, isolated from the embedder using the deterministic
 offline encoder — and pinned by `test_the_entity_prefilter_changes_no_result`,
 which re-runs the same queries down the old path and requires identical ids:
 
+<!-- GENERATED: storeside -- rewritten by scratch/refound/refresh_benchmarks.py -->
 ```
-unfiltered               0.70 ms         5 record decodes
-filtered, before 0.7.9  33.70 ms    15,001 record decodes   (the whole corpus)
-filtered, 0.7.9          2.08 ms         4 record decodes
+unfiltered                 0.78 ms       5 record decodes
+filtered, before 0.7.9    33.70 ms  15,001 record decodes   (the whole corpus)
+filtered, now              2.10 ms       4 record decodes
 ```
+<!-- /GENERATED -->
 
 ---
 

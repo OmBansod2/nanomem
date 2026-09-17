@@ -4,7 +4,7 @@
   "engine": "3.4.1",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
- "generated": "2026-09-17T21:36:17",
+ "generated": "2026-09-17T23:56:51",
  "embedder": "nomic-embed-text (ollama)",
  "cases": {
   "A_config_drift": {
@@ -81,12 +81,12 @@
   "F_entity_scale": {
    "entities": 5000,
    "records": 15000,
-   "ingest_seconds": 185.0,
-   "ingest_records_per_sec": 81.1,
+   "ingest_seconds": 192.0,
+   "ingest_records_per_sec": 78.1,
    "F1_as_of_accuracy_pct": 100.0,
    "F1_probes": 200,
-   "F1_median_search_ms": 57.38,
-   "F1_p95_search_ms": 78.37,
+   "F1_median_search_ms": 50.59,
+   "F1_p95_search_ms": 55.23,
    "F1_latency_bar_ms": 25.0,
    "F1_latency_pass": false,
    "file_size_mb": 25.197,
@@ -94,5 +94,5 @@
   }
  },
  "embedding_dim": 768,
- "total_seconds": 234.5
+ "total_seconds": 243.0
 }

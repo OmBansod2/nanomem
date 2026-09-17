@@ -19,7 +19,7 @@
   "tn": 177,
   "accuracy": 88.0,
   "f1": 86.1,
-  "p50_ms": 11.94,
+  "p50_ms": 12.93,
   "note": "classifier.py is not part of the engine work; recorded only"
  },
  "in_session": {
