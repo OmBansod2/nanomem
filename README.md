@@ -1,5 +1,7 @@
 # nanomem
 
+[![CI](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml/badge.svg)](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml)
+
 **An embedded store for facts that change.**
 
 A fact your application remembers is not a document. It gets corrected — people

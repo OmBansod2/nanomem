@@ -1,0 +1,75 @@
+# Every performance and correctness number in this repository was measured on
+# ONE machine: macOS, Apple M4 Pro, Python 3.12. The wheel is `py3-none-any` and
+# the platform-specific code has the right branches -- `fcntl` then `msvcrt`
+# then a warning, `/proc/self/statm` then libproc then None -- so it SHOULD run
+# anywhere. "Should" is not "does", and until this file existed the first
+# Windows user was the test.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: ${{ matrix.os }} / py${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # The floor this package CLAIMS. pyproject says requires-python
+          # ">=3.8", and an untested floor is a guess. If this job is the one
+          # that fails, the honest fix is to raise the claim, not to delete the
+          # job.
+          - {os: ubuntu-22.04,   python: "3.8"}
+          - {os: ubuntu-latest,  python: "3.9"}
+          - {os: ubuntu-latest,  python: "3.11"}
+          - {os: ubuntu-latest,  python: "3.13"}
+          # Windows is the platform with a real documented weakness: msvcrt has
+          # no shared lock, so a reader cannot be serialised against a
+          # concurrent append. The suite should say whether anything else bites.
+          - {os: windows-latest, python: "3.9"}
+          - {os: windows-latest, python: "3.13"}
+          - {os: macos-latest,   python: "3.13"}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e .
+          python -m pip install pytest
+      - name: Test
+        # No network: there is no ollama here, so the embedder falls back to the
+        # lexical encoder exactly as it does on a machine that never had one.
+        run: python -m pytest -q
+
+  preflight:
+    name: preflight (ubuntu / py3.12)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: {python-version: "3.12"}
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -e . pytest build twine
+      - name: Preflight
+        # --offline skips the four URL reachability checks; everything else runs,
+        # including EXECUTING the README's opening sample and diffing its output
+        # against the comments that claim what it prints.
+        run: python release_preflight.py --offline
+      - name: Build and check the artifacts
+        run: |
+          python -m build
+          python -m twine check dist/*
