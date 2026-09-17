@@ -42,11 +42,31 @@ order can change which documents come back or in what order** — only the last
 bits of the score beside them. The bar was set at 1.0% undecided before the
 numbers were seen; the result is 0.0%.
 
-So the tests now assert the portable contract — same ids, same order, scores
-within the measured 1e-6 band — and the bitwise property is recorded as an
-observation about one BLAS rather than a promise. Checked for teeth: the new
-`same()` tolerates a two-ulp difference and rejects a wrong document, a wrong
-order, and a score error of 1e-4.
+So the tests now compare **the score sequence**, position by position, within
+the measured 1e-6 band, and the bitwise property is recorded as an observation
+about one BLAS rather than promised.
+
+Requiring identical id ORDER was the first attempt and was still too strong,
+which only Linux could show. `test_exact_duplicate_rows` builds 200 exact
+duplicates on purpose: inside each path those are exactly tied and each breaks
+the tie by row id consistently, but an ulp between the paths can separate a
+duplicate from a near neighbour that was never tied. Where two documents are
+tied inside the band the corpus does not contain a tie-break, and demanding a
+particular one of two identical documents is demanding an answer the data does
+not have. Ids need no separate assertion: a document at the wrong rank either
+has a score outside the band — a real miss, caught — or inside it, which means
+it was interchangeable.
+
+Checked for teeth rather than assumed: the contract accepts a two-ulp difference
+and a swap of genuinely tied documents, and rejects a wrong order, a score error
+of 1e-4, a higher-scoring document that should not be there, and a short result.
+
+A negative control in the same file also stopped being one. It showed that a
+plain `argpartition` selection would differ from the row-id rule — on ONE
+arrangement, and on the runners' numpy that arrangement happened to agree, so
+the control passed by coincidence. It now tries six arrangements, each still
+containing every tied row, and asserts the stable rule is invariant across all
+of them.
 
 README says it plainly now, beside the fp16 tie-break note it belongs with:
 "returns what an exhaustive scan returns" is a claim about which documents come

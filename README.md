@@ -327,8 +327,9 @@ worst |fp32 − fp64| error is 2.01e-07 while the smallest gap between rank 4 an
 rank 5 is 4.46e-06 — twenty times larger — and 0 of 150 queries were undecided
 at k = 1, 4 or 10 (`scratch/refound/screen_exactness_results.json`). So "returns
 what an exhaustive scan returns" is a claim about which documents come back and
-in what order. It is not a claim about the bit pattern of the float beside them,
-and it never could have been.
+in what order — except among documents the ranking genuinely cannot separate,
+where the corpus contains no tie-break to be faithful to. It is not a claim
+about the bit pattern of the float beside them, and it never could have been.
 
 Resident memory is roughly **8–9 KB per document**. Earlier documentation claimed
 a "< 500 KB RAM" or "160 KB active heap" footprint; those were constants printed

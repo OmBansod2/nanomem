@@ -77,12 +77,22 @@ def same(a, b, tol=SCORE_TOL):
     Accelerate. Every CI runner failed this file; this laptop passed it. The G2
     gate learned the identical lesson and was replaced for the identical reason.
 
-    What is guaranteed, and measured above: same ids, same order, scores within
-    the fp32 error scale. That is also exactly what README claims -- "returns
-    what an exhaustive fp32 cosine scan returns" is a claim about the answer,
-    never about the bit pattern of the score attached to it.
+    What is compared is THE SCORE SEQUENCE, position by position, within the
+    measured band. Ids are pinned by that and need no separate assertion: if the
+    two paths put different documents at the same rank, either their scores
+    differ by more than the band -- a real miss, and this returns False -- or
+    they agree inside it, which means the corpus holds two documents the ranking
+    genuinely cannot separate. `test_exact_duplicate_rows` builds 200 of exactly
+    that on purpose. Demanding a particular one of two identical documents is
+    demanding a tie-break the data does not contain.
+
+    Requiring identical id ORDER was the first attempt at this and was still
+    wrong: duplicates are exactly tied within each path, so each breaks the tie
+    by row id and is internally consistent, but an ulp between the paths can
+    separate a duplicate from a near neighbour that was not tied at all. Linux
+    failed on it; this machine did not.
     """
-    if [h["id"] for h in a] != [h["id"] for h in b]:
+    if len(a) != len(b):
         return False
     return all(abs(x["cosine"] - y["cosine"]) <= tol for x, y in zip(a, b))
 
@@ -580,11 +590,38 @@ def test_ties_are_broken_by_row_id_not_by_array_position():
     subset = rows[sub][_select_top_k(final[sub], rows[sub], k)]
     assert subset.tolist() == whole.tolist()
 
-    # And the thing this replaced does not survive the same treatment.
+    # And the thing this replaced does not survive the same treatment. Tried
+    # over several arrangements rather than one: `argpartition`'s order among
+    # equals is UNSPECIFIED, which means it is free to coincide as well as free
+    # to differ, and on the CI runners' numpy the single arrangement this used
+    # to test happened to coincide -- so the control silently stopped being one
+    # while still passing here. A control that can only fire on one BLAS is not
+    # a control.
     def positional(f, kk):
         idx = np.argpartition(-f, kk - 1)[:kk]
         return idx[np.argsort(-f[idx], kind="stable")]
-    assert rows[sub][positional(final[sub], k)].tolist() != whole.tolist()
+
+    # EVERY arrangement must still contain all 40 tied rows. The stable rule is
+    # a function of the row SET, so dropping a tied row legitimately changes the
+    # answer and would test nothing. Only the LENGTH varies, which is the thing
+    # argpartition's behaviour among equals actually depends on.
+    arrangements = [sub,
+                    np.sort(np.concatenate([np.arange(80), np.arange(150, 400)])),
+                    np.sort(np.concatenate([np.arange(60), np.arange(90, 260)])),
+                    np.sort(np.concatenate([np.arange(40), np.arange(200, 400)])),
+                    np.sort(np.concatenate([np.arange(40), np.arange(45, 400, 3)])),
+                    np.arange(200)]
+    assert all(set(range(40)) <= set(a.tolist()) for a in arrangements)
+    for arr in arrangements:
+        assert rows[arr][_select_top_k(final[arr], rows[arr], k)].tolist() \
+            == whole.tolist(), "the stable rule must not depend on the subset"
+    differed = sum(rows[arr][positional(final[arr], k)].tolist() != whole.tolist()
+                   for arr in arrangements)
+    assert differed, ("argpartition agreed with the row-id rule on every "
+                      "arrangement tried, so this control cannot show the "
+                      "difference on this numpy build -- the three assertions "
+                      "above still hold, but widen `arrangements` before "
+                      "trusting this one")
 
 
 def test_a_query_that_matches_nothing(tmp_path):
