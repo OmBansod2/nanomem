@@ -166,3 +166,53 @@ def test_initialize_reports_the_real_version(monkeypatch, vault_path, offline_em
     replies = _serve(monkeypatch, vault_path, [
         json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize"})])
     assert replies[0]["result"]["serverInfo"]["version"] == __version__
+
+
+# --- same-day revisions: the case this store exists for ---------------------
+
+def _same_day_vault(vault_path, offline_embedder):
+    """One fact corrected four times inside a single day, hours apart."""
+    v = Vault(vault_path)
+    t = T0
+    for txt, hrs in (("My locker code is 1111.", 9),
+                     ("Changed it. My locker code is 2222.", 6),
+                     ("Changed again. My locker code is 3333.", 2),
+                     ("Final. My locker code is 4444.", 0)):
+        v.add(txt, metadata={"entity": "locker_code"}, timestamp=t - hrs * 3600)
+    return v, t
+
+
+def test_history_distinguishes_revisions_made_the_same_day(vault_path, offline_embedder):
+    """`_fmt_when` printed `%Y-%m-%d` alone, so four revisions hours apart came
+    back as four identical dates -- and a fact corrected twice in one day is
+    precisely the kind this store is for. The agent reading that could not tell
+    how recent any of them was."""
+    v, _t = _same_day_vault(vault_path, offline_embedder)
+    out = nm_mcp.dispatch(v, "nanomem_history", {"query": "locker code"})
+    stamps = [ln.strip().split("  ")[0] for ln in out.splitlines() if ln.startswith("  2")]
+    assert len(stamps) == 4
+    assert len(set(stamps)) == 4, f"same-day revisions are indistinguishable: {stamps}"
+    assert all(":" in s_ for s_ in stamps), "the time is what makes them distinct"
+    v.close()
+
+
+def test_volatility_does_not_report_a_three_hour_rate_as_zero(vault_path, offline_embedder):
+    """It rendered every duration in whole days: a fact restated every three
+    hours read "~every 0d, last confirmed 0d ago" -- the most volatile fact
+    there is, shown as the same thing as no measurable interval."""
+    v, _t = _same_day_vault(vault_path, offline_embedder)
+    out = nm_mcp.dispatch(v, "nanomem_volatility", {})
+    assert "0d" not in out, f"a sub-day rate rendered as zero days: {out}"
+    assert "~every 3h" in out, out
+    v.close()
+
+
+def test_the_duration_ladder_picks_a_unit_a_reader_can_act_on():
+    f = nm_mcp._fmt_span
+    assert f(45) == "45s"
+    assert f(400) == "7min"
+    assert f(3 * 3600) == "3h"
+    assert f(5 * 86400) == "5d"
+    assert f(145 * 86400) == "5mo"
+    assert f(900 * 86400) == "2.5y"
+    assert f(-10) == "0s", "a negative age is 0, not a negative duration"

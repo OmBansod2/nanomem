@@ -141,12 +141,41 @@ def _parse_when(value):
 
 
 def _fmt_when(ts):
+    """Date AND time.
+
+    This was `%Y-%m-%d` alone, which is fine until a caller corrects the same
+    fact more than once in a day -- and a fact corrected twice in a day is
+    exactly the kind this store exists for. Four revisions hours apart rendered
+    as four identical dates, so the agent reading them could not tell how
+    recent any of them was, or that any time had passed at all. The CLI has
+    always printed the time; only this surface dropped it.
+    """
     from datetime import datetime
-    return datetime.fromtimestamp(float(ts)).strftime("%Y-%m-%d")
+    return datetime.fromtimestamp(float(ts)).strftime("%Y-%m-%d %H:%M")
 
 
-def _days(seconds):
-    return seconds / 86400.0
+def _fmt_span(seconds):
+    """A duration in whatever unit a reader can act on.
+
+    `_days()` divided by 86400 and the caller printed it with no decimals, so a
+    fact restated every three hours read "~every 0d, last confirmed 0d ago" --
+    identical to a fact with no measurable interval at all. That rate IS the
+    answer `volatility` exists to give: something changing every few hours is
+    the most volatile thing in the vault, and it was the one case rendered as
+    nothing.
+    """
+    s = max(0.0, float(seconds))
+    if s < 90:
+        return f"{s:.0f}s"
+    if s < 90 * 60:
+        return f"{s / 60:.0f}min"
+    if s < 48 * 3600:
+        return f"{s / 3600:.0f}h"
+    if s < 90 * 86400:
+        return f"{s / 86400:.0f}d"
+    if s < 730 * 86400:
+        return f"{s / (30.44 * 86400):.0f}mo"
+    return f"{s / (365.25 * 86400):.1f}y"
 
 
 def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
@@ -211,8 +240,8 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         for f in rows:
             out.append(
                 f"  {f['entity']}: {f['n_revisions']}x, "
-                f"~every {_days(f['median_interval']):.0f}d, "
-                f"last confirmed {_days(f['age']):.0f}d ago")
+                f"~every {_fmt_span(f['median_interval'])}, "
+                f"last confirmed {_fmt_span(f['age'])} ago")
         return "\n".join(out)
 
     if tool_name == "nanomem_stats":

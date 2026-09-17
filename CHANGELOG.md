@@ -5,6 +5,46 @@ number below is from one of those files.
 
 ---
 
+## 0.6.9 — engine 3.3.4 (unchanged)
+
+**Two revisions on the same day were indistinguishable through MCP.** Which is
+the case this whole store exists for.
+
+`mcp._fmt_when` formatted `%Y-%m-%d` and nothing else, so a fact corrected four
+times over nine hours came back as four identical dates:
+
+```
+  2026-09-17  [superseded]  My locker code is 1111.
+  2026-09-17  [superseded]  Changed it. My locker code is 2222.
+  2026-09-17  [superseded]  Changed again. My locker code is 3333.
+  2026-09-17  [current]     Final. My locker code is 4444.
+```
+
+An agent reading that cannot tell how recent any of them is, or that any time
+passed between them. The CLI has always printed the time; only this surface
+dropped it — and this surface is the one an assistant actually uses.
+
+**And `volatility` rendered every duration in whole days.** A fact restated
+every three hours read `~every 0d, last confirmed 0d ago` — identical to a fact
+with no measurable interval at all. That rate IS the answer `volatility` exists
+to give: something changing every few hours is the most volatile thing in the
+vault, and it was the one case displayed as nothing. Durations now pick a unit:
+`45s`, `7min`, `3h`, `5d`, `5mo`, `2.5y`.
+
+```
+  locker_code: 4x, ~every 3h, last confirmed 0s ago
+```
+
+**The storage was never wrong.** Timestamps are float64 unix seconds and always
+have been: `as_of` resolves correctly to the hour inside a single day, `changes`
+windows to the hour, and `volatility` computed the true 10,800-second median all
+along. Only the rendering rounded it away. Three regression tests, all failing
+against the published 0.6.8.
+
+Suite 530 → 533.
+
+---
+
 ## 0.6.8 — engine 3.3.4
 
 **Windows.** The first CI run reported 50 failures there, from two POSIX idioms
