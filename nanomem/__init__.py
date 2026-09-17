@@ -115,7 +115,7 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # DISTRIBUTION: at 0.6.0 the five bundled copies of this package -- which had
 # been left at 0.3.0 / engine 3.0.3 for four releases -- were resynced to this
 # source and all twelve wheels in the tree were rebuilt from it.
-__version__ = "0.6.6"
+__version__ = "0.6.7"
 __all__ = [
     "Vault", "TextHopBridge", "list_users", "create_user", "delete_user",
     "user_exists", "NanomemError", "CorruptContainerError", "IntegrityError",

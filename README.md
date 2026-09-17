@@ -95,7 +95,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.6.6 · engine 3.3.3 · container format 3 · arena cache format 3.
+Package 0.6.7 · engine 3.3.3 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -317,6 +317,18 @@ The "same as exhaustive" columns are recall. Ordering is identical too at 1,190
 documents (0 of 120 top-4 order differences); at 10,000 and 71,433 a few
 tie-breaks differ — 2 of 500 and 5 of 500 questions, largest cosine gap 2.2e-05 —
 because the on-disk vectors are fp16 (`scratch/refound/verify_round3_v3r3.json`).
+
+The **scores** are exact in the same sense and not a bit further: two float32
+matmuls of different shapes reduce in different orders, so the score attached to
+a hit can differ in its last bit or two between one BLAS and another — measured
+2.98e-08, two ulps, between Apple Accelerate and OpenBLAS on the same query. The
+answer does not move with it. Over 4,000 documents at 128 and 768 dimensions the
+worst |fp32 − fp64| error is 2.01e-07 while the smallest gap between rank 4 and
+rank 5 is 4.46e-06 — twenty times larger — and 0 of 150 queries were undecided
+at k = 1, 4 or 10 (`scratch/refound/screen_exactness_results.json`). So "returns
+what an exhaustive scan returns" is a claim about which documents come back and
+in what order. It is not a claim about the bit pattern of the float beside them,
+and it never could have been.
 
 Resident memory is roughly **8–9 KB per document**. Earlier documentation claimed
 a "< 500 KB RAM" or "160 KB active heap" footprint; those were constants printed

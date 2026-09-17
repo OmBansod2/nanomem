@@ -58,8 +58,33 @@ def fill(path, V, source="corpus.txt", **kw):
     return e
 
 
-def keyed(hits):
-    return [(h["id"], h["cosine"]) for h in hits]
+#: The measured float32 error scale. `scratch/refound/screen_exactness_results.json`:
+#: over 4,000x128 and 4,000x768, |fp32 - fp64| is at most 2.01e-07, while the
+#: smallest gap between rank k and rank k+1 at k <= 4 is 4.46e-06 -- twenty times
+#: larger. 0 of 150 queries were undetermined at k = 1, 4 or 10, so the ORDER is
+#: settled even though the bits are not.
+SCORE_TOL = 1e-6
+
+
+def same(a, b, tol=SCORE_TOL):
+    """The screen's promise, stated so that a second BLAS can keep it.
+
+    NOT bitwise. Until 0.6.7 these tests demanded identical float32 bits from
+    two matmuls of DIFFERENT SHAPES -- a gathered sub-scan of m rows against a
+    full scan of n. BLAS blocks by shape and float addition is not associative,
+    so it is under no obligation to agree, and it does not: the same query came
+    back 2.98e-08 (two ulps) apart on OpenBLAS from its value here on Apple
+    Accelerate. Every CI runner failed this file; this laptop passed it. The G2
+    gate learned the identical lesson and was replaced for the identical reason.
+
+    What is guaranteed, and measured above: same ids, same order, scores within
+    the fp32 error scale. That is also exactly what README claims -- "returns
+    what an exhaustive fp32 cosine scan returns" is a claim about the answer,
+    never about the bit pattern of the score attached to it.
+    """
+    if [h["id"] for h in a] != [h["id"] for h in b]:
+        return False
+    return all(abs(x["cosine"] - y["cosine"]) <= tol for x, y in zip(a, b))
 
 
 # ---------------------------------------------------------------------------
@@ -203,10 +228,9 @@ def test_search_returns_the_exact_scan_result(tmp_path):
         for q in Q:
             a = on.search("a question", q, top_k=k)
             b = off.search("a question", q, top_k=k)
-            assert set(h["id"] for h in a) == set(h["id"] for h in b)
-            # BITWISE, not np.isclose: the flag's promise is the same answer.
-            assert [h["cosine"] for h in a] == [h["cosine"] for h in b]
-            assert [h["score"] for h in a] == [h["score"] for h in b]
+            assert same(a, b)
+            assert all(abs(x["score"] - y["score"]) <= SCORE_TOL
+                       for x, y in zip(a, b))
     assert on.screen_info()["engaged"] > 0
     on.close(); off.close()
 
@@ -221,8 +245,8 @@ def test_min_score_is_applied_identically(tmp_path):
     on.build_screen()
     for q in Q:
         for ms in (0.0, 0.3, 0.9, 1.5):
-            assert keyed(on.search("a question", q, top_k=5, min_score=ms)) == \
-                   keyed(off.search("a question", q, top_k=5, min_score=ms))
+            assert same(on.search("a question", q, top_k=5, min_score=ms),
+                        off.search("a question", q, top_k=5, min_score=ms))
     on.close(); off.close()
 
 
@@ -249,7 +273,7 @@ def test_appending_through_the_engine_stays_exact(tmp_path):
         e.screen_mode = "off"
         b = e.search("a question", q, top_k=8)
         e.screen_mode = "pca"
-        assert keyed(a) == keyed(b)
+        assert same(a, b)
     e.close()
 
 
@@ -297,13 +321,13 @@ def test_two_engines_can_disagree_and_it_is_NOT_the_screen(tmp_path):
         writer.screen_mode = "off"
         b = writer.search("a question", q, top_k=6)
         writer.screen_mode = "pca"
-        assert keyed(a) == keyed(b)
+        assert same(a, b)
 
     # And the cross-engine disagreement is there with the flag OFF on both
     # sides, so it was never the screen's.
     writer.screen_mode = "off"
-    cross = sum(keyed(writer.search("a question", q, top_k=6))
-                != keyed(reader.search("a question", q, top_k=6)) for q in Q)
+    cross = sum(not same(writer.search("a question", q, top_k=6),
+                         reader.search("a question", q, top_k=6)) for q in Q)
     writer.screen_mode = "pca"
     assert cross > 0, ("the fp16 hazard did not reproduce, so this test no "
                        "longer proves what it claims")
@@ -321,7 +345,7 @@ def test_replace_all_rebuilds_the_screen(tmp_path):
     e.replace_all(recs)
     hits = e.search("a question", q, top_k=4)
     e.screen_mode = "off"
-    assert keyed(hits) == keyed(e.search("a question", q, top_k=4))
+    assert same(hits, e.search("a question", q, top_k=4))
     e.close()
 
 
@@ -385,8 +409,8 @@ def test_a_broken_basis_falls_back_instead_of_raising(tmp_path):
     q = structured_rows(1, seed=25)[0]
     on._screen.basis = None
     on._screen_arena = None
-    assert keyed(on.search("a question", q, top_k=4)) == \
-           keyed(off.search("a question", q, top_k=4))
+    assert same(on.search("a question", q, top_k=4),
+                off.search("a question", q, top_k=4))
     on.close(); off.close()
 
 
@@ -404,8 +428,8 @@ def test_a_metadata_filter_stands_the_screen_down(tmp_path):
     got = e.search("a question", q, top_k=4, metadata_filter={"bucket": 2})
     assert e.screen_info()["engaged"] == 0
     e.screen_mode = "off"
-    assert keyed(got) == keyed(
-        e.search("a question", q, top_k=4, metadata_filter={"bucket": 2}))
+    assert same(got, e.search("a question", q, top_k=4,
+                              metadata_filter={"bucket": 2}))
     e.close()
 
 
@@ -461,8 +485,8 @@ def test_isotropic_corpus_falls_back_rather_than_slowing_down(tmp_path):
     Q = rng.normal(size=(40, D)).astype(np.float32)
     Q /= np.linalg.norm(Q, axis=1, keepdims=True)
     for q in Q:
-        assert keyed(on.search("a question", q, top_k=4)) == \
-               keyed(off.search("a question", q, top_k=4))
+        assert same(on.search("a question", q, top_k=4),
+                off.search("a question", q, top_k=4))
     info = on.screen_info()
     assert info["fell_back"] > 0, "an isotropic corpus should trip screen_max_frac"
     on.close(); off.close()
@@ -492,7 +516,7 @@ def test_a_corpus_packed_with_near_ties(tmp_path):
     for q in [base] + list(structured_rows(30, seed=33)):
         a = on.search("a question", q, top_k=12)
         b = off.search("a question", q, top_k=12)
-        assert keyed(a) == keyed(b)
+        assert same(a, b)
     on.close(); off.close()
 
 
@@ -516,7 +540,7 @@ def test_exact_duplicate_rows(tmp_path):
         # 71,433 docs before the fix -- 1 of them a different id SET, all 9
         # with a bitwise-identical score sequence, none a real miss
         # (pca_screen_results.json :: verdict.C1_exactness_BEFORE_the_fix).
-        assert keyed(a) == keyed(b)
+        assert same(a, b)
     on.close(); off.close()
 
 
@@ -571,8 +595,8 @@ def test_a_query_that_matches_nothing(tmp_path):
     off = VaultEngine(p, embed_dim=D, screen="off")
     on.build_screen()
     q = np.zeros(D, dtype=np.float32); q[0] = 1.0
-    assert keyed(on.search("a question", q, top_k=4)) == \
-           keyed(off.search("a question", q, top_k=4))
+    assert same(on.search("a question", q, top_k=4),
+                off.search("a question", q, top_k=4))
     on.close(); off.close()
 
 
@@ -584,8 +608,8 @@ def test_top_k_larger_than_the_corpus(tmp_path):
     off = VaultEngine(p, embed_dim=D, screen="off")
     on.build_screen()
     q = structured_rows(1, seed=38)[0]
-    assert keyed(on.search("a question", q, top_k=5000)) == \
-           keyed(off.search("a question", q, top_k=5000))
+    assert same(on.search("a question", q, top_k=5000),
+                off.search("a question", q, top_k=5000))
     on.close(); off.close()
 
 
@@ -725,8 +749,7 @@ def test_exact_under_every_residency_the_arena_calls_exact(tmp_path, residency):
     for q in structured_rows(60, seed=42):
         a = on.search("a question", q, top_k=6)
         b = off.search("a question", q, top_k=6)
-        assert set(h["id"] for h in a) == set(h["id"] for h in b)
-        assert [h["cosine"] for h in a] == [h["cosine"] for h in b]
+        assert same(a, b)
     assert on.screen_info()["engaged"] > 0
     on.close(); off.close()
 

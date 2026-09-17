@@ -5,6 +5,55 @@ number below is from one of those files.
 
 ---
 
+## 0.6.7 — engine 3.3.3 (unchanged)
+
+**CI's first run found two things this laptop could not.**
+
+**`requires-python` said 3.8; the package cannot be built on 3.8.**
+`license = "AGPL-3.0-or-later"` is PEP 639, which setuptools supports from
+77.0.0 — and setuptools 77 itself requires Python ≥ 3.9. On 3.8 the backend
+rejects pyproject.toml outright, so anyone on 3.8 installing from the sdist got
+`ValueError: invalid pyproject.toml config: 'project.license'` instead of
+nanomem. Nothing in `nanomem/` uses a construct newer than 3.8 — the source
+would have run — but it could not be built, which from outside is the same
+thing. The floor is `>=3.9`, `build-system` pins `setuptools>=77`, and CI keeps
+a job on it.
+
+**`test_screen.py` asserted something BLAS is under no obligation to provide.**
+Eleven tests demanded bitwise-identical float32 scores from two matmuls of
+different shapes — a gathered sub-scan of m rows against a full scan of n. BLAS
+blocks by shape, float addition is not associative, and the same query came back
+**2.98e-08 — two ulps —** apart on OpenBLAS from its value here on Apple
+Accelerate. Every CI runner failed; this machine passed. The G2 gate learned the
+identical lesson in 0.5.0 and was replaced for the identical reason; the same
+assertion was sitting in a second file.
+
+Measured before changing anything, pre-registered in
+`scratch/refound/design/screen_exactness_spec.md`
+(`screen_exactness_results.json`):
+
+| corpus | worst \|fp32 − fp64\| | smallest rank-4 gap | undecided at k=1,4,10 |
+| --- | ---: | ---: | ---: |
+| 4,000 × 128 | 2.01e-07 | 4.46e-06 | 0 / 150 |
+| 4,000 × 768 | 2.01e-07 | 2.99e-05 | 0 / 150 |
+
+The gaps are twenty to a hundred and fifty times the error, so **no accumulation
+order can change which documents come back or in what order** — only the last
+bits of the score beside them. The bar was set at 1.0% undecided before the
+numbers were seen; the result is 0.0%.
+
+So the tests now assert the portable contract — same ids, same order, scores
+within the measured 1e-6 band — and the bitwise property is recorded as an
+observation about one BLAS rather than a promise. Checked for teeth: the new
+`same()` tolerates a two-ulp difference and rejects a wrong document, a wrong
+order, and a score error of 1e-4.
+
+README says it plainly now, beside the fp16 tie-break note it belongs with:
+"returns what an exhaustive scan returns" is a claim about which documents come
+back and in what order, not about the bit pattern of the float beside them.
+
+---
+
 ## 0.6.6 — engine 3.3.3
 
 **Four of the seven MCP tools were dead, and they answered anyway.**
