@@ -24,11 +24,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          # The floor this package CLAIMS. pyproject says requires-python
-          # ">=3.8", and an untested floor is a guess. If this job is the one
-          # that fails, the honest fix is to raise the claim, not to delete the
-          # job.
-          - {os: ubuntu-22.04,   python: "3.8"}
+          # The floor this package CLAIMS. It said ">=3.8" until this matrix
+          # tried it: setuptools rejects the PEP 639 `license` string on 3.8,
+          # because PEP 639 landed in setuptools 77 and setuptools 77 needs 3.9.
+          # The claim was raised to match; the job stays, one version lower than
+          # nothing, so the floor is never a guess again.
           - {os: ubuntu-latest,  python: "3.9"}
           - {os: ubuntu-latest,  python: "3.11"}
           - {os: ubuntu-latest,  python: "3.13"}

@@ -13,7 +13,7 @@
 # The version is read from nanomem/__init__.py so the distribution and the
 # import can never disagree again (0.1.0 == v2, 0.3.0 == v3).
 [build-system]
-requires = ["setuptools>=61.0", "wheel"]
+requires = ["setuptools>=77.0", "wheel"]   # 77 is where PEP 639 `license` landed
 build-backend = "setuptools.build_meta"
 
 [project]
@@ -23,7 +23,14 @@ description = "Embedded single-file store for facts that change: exact vector se
 readme = "README.md"
 keywords = ["embedded-database", "vector-search", "memory", "single-file",
             "append-only", "temporal", "local-first", "mcp", "agents", "rag"]
-requires-python = ">=3.8"
+# 3.8 was claimed here until CI tried it. `license = "AGPL-3.0-or-later"`
+# below is PEP 639, which setuptools supports from 77.0.0 -- and setuptools
+# 77 itself requires Python >= 3.9. So on 3.8 the build backend rejects this
+# file outright: "`project.license` must be valid exactly by one definition".
+# Anyone on 3.8 installing from the sdist got that traceback, not nanomem.
+# The floor is now the lowest version the package can actually be built and
+# tested on, and CI tests it on every push.
+requires-python = ">=3.9"
 license = "AGPL-3.0-or-later"
 license-files = ["LICENSE", "COMMERCIAL-LICENSE.md",
                  "LICENSE.preview-v1.0.md"]
