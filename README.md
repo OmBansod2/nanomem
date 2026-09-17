@@ -3,7 +3,7 @@
 This folder is self-contained. Copy it anywhere and run it; `pip install` is
 optional. The only third-party runtime dependency is `numpy`.
 
-Package 0.6.4 · engine 3.3.1 · container format 3 · arena cache format 3.
+Package 0.6.5 · engine 3.3.2 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -33,7 +33,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-514 tests, no network needed.
+519 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

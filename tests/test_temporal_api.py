@@ -9,6 +9,8 @@ caller can make. The gates they are held to are in
 checks; G2b 5,670 comparisons, 0 id/order differences, 0 leaks).
 """
 
+import os
+
 import numpy as np
 import pytest
 
@@ -156,15 +158,29 @@ def test_history_keeps_a_weak_old_value_and_does_not_mislabel_current(vault_path
 
 
 def test_the_ranker_still_applies_the_floor(vault_path):
-    """The opt-out is history's alone; search's behaviour is unchanged."""
-    e, q, ids = _chain(vault_path, n=4)
-    ent, rv, tsv = e._columns(np.arange(e.arena.n_rows, dtype=np.int64))
+    """The opt-out is history's alone; search still floors what is not a value.
+
+    0.6.5 exempts a DECLARED group's newest revision from the floor, so this no
+    longer holds for the last member. It holds for every other one: an old
+    statement phrased far from the question is still dropped, which is the
+    precision the floor exists for.
+    """
+    q = unit_rows(1, seed=5)[0]
+    e = VaultEngine(vault_path, embed_dim=D)
+    for i, c in enumerate((0.80, 0.40, 0.78)):      # the MIDDLE one is far off
+        e.add_fact(f"statement {i}", _corr(q, c, seed=600 + i), source="chat",
+                   metadata={"entity": "locker_code"}, timestamp=T0 + i * DAY)
+    e.flush()
     rows = np.arange(e.arena.n_rows, dtype=np.int64)
     cos = e.arena.scores(q / np.linalg.norm(q))
+    ent, _rv, _ts = e._columns(rows)
     mask = np.ones(rows.size, dtype=bool)
-    floored = e._tagged_group(ent, mask, "locker_code", rows, cos)
-    full = e._tagged_group(ent, mask, "locker_code", rows, cos, apply_floor=False)
-    assert floored.size < full.size == 4
+    floored = e._tagged_group(ent, mask, "locker_code", rows, cos).tolist()
+    full = e._tagged_group(ent, mask, "locker_code", rows, cos,
+                           apply_floor=False).tolist()
+    assert full == [0, 1, 2]
+    assert 1 not in floored, "a distant OLD statement is still floored"
+    assert 2 in floored, "the newest revision of a declared group is not"
 
 
 def test_history_on_an_empty_vault(vault_path):
@@ -239,11 +255,11 @@ def test_history_is_right_where_the_ranker_is_wrong(vault_path):
     current employer THIRD. See
     ``scratch/refound/finding_floor_drops_current_value.json``.
 
-    That defect is the ranker's and predates these primitives; it is NOT fixed
-    here, because the knob that fixes it (``group_floor_sim``) ships off on
-    measured evidence and retuning it needs its own benchmark run. What is
-    guaranteed here is that ``history`` -- the surface a caller uses to audit
-    what the memory believes -- reports the chain correctly anyway.
+    Fixed in 0.6.5: the floor may not drop a DECLARED group's newest revision
+    (``design/floor_current_value_spec.md``, ``floor_current_value_results.json``).
+    This test used to assert the defect and carried a tripwire saying "if this
+    now passes, the floor was retuned"; it did, and it was. Both halves are
+    asserted now -- history was always right, and the ranker agrees with it.
     """
     q = unit_rows(1, seed=5)[0]
     e = VaultEngine(vault_path, embed_dim=D)
@@ -259,8 +275,6 @@ def test_history_is_right_where_the_ranker_is_wrong(vault_path):
     assert chain[-1]["id"] == ids[-1], "the newest value is the current one"
     assert [h["superseded"] for h in chain] == [True, True, False]
 
-    # The ranker's floor still removes it -- documenting the defect, not blessing
-    # it. When the floor is retuned this assertion is the one to revisit.
     ent, rv, tsv = e._columns(np.arange(e.arena.n_rows, dtype=np.int64))
     rows = np.arange(e.arena.n_rows, dtype=np.int64)
     cos = e.arena.scores(q / np.linalg.norm(q))
@@ -268,9 +282,118 @@ def test_history_is_right_where_the_ranker_is_wrong(vault_path):
     floored = e._tagged_group(ent, mask, "employer", rows, cos)
     full = e._tagged_group(ent, mask, "employer", rows, cos, apply_floor=False)
     assert full.tolist() == [0, 1, 2]
-    assert 2 not in floored.tolist(), (
-        "if this now passes, the floor was retuned: re-check the benchmark "
-        "coverage gap noted in finding_floor_drops_current_value.json")
+    assert 2 in floored.tolist(), "the current value survives its own floor"
+    assert e.search("where do I work", q, top_k=1)[0]["id"] == ids[-1]
+
+
+def _declared_chain(path, declared=True, n=3):
+    """Three `employer` statements, newest phrased FURTHEST from the question."""
+    q = unit_rows(1, seed=5)[0]
+    e = VaultEngine(path, embed_dim=D)
+    ids = []
+    for i, c in enumerate((0.5926, 0.6348, 0.5317)[:n]):
+        meta = {"entity": "employer"}
+        if not declared:
+            meta["entity_declared"] = False
+        ids.append(e.add_fact(f"employer statement {i}", _corr(q, c, seed=400 + i),
+                              source="chat", metadata=meta, timestamp=T0 + i * DAY))
+    e.flush()
+    return e, q, ids
+
+
+def test_provenance_survives_a_reopen(vault_path):
+    """The whole fix rests on a bit that has to still be there after a restart.
+
+    Benchmarks cannot see this: they build a vault and query it in one process.
+    A caller declares its schema once, at write time, and asks the question
+    weeks later against a reopened file.
+    """
+    e, q, ids = _declared_chain(vault_path)
+    assert e.arena.group_declared[e.arena.group_id[0]] is True
+    e.close()
+
+    e2 = VaultEngine(vault_path, embed_dim=D)
+    assert e2.arena.group_declared[e2.arena.group_id[0]] is True
+    assert e2.search("where do I work", q, top_k=1)[0]["id"] == ids[-1]
+    e2.close()
+
+
+def test_provenance_survives_a_rebuild_without_the_sidecar(vault_path):
+    """Both load paths must agree, or the answer depends on a cache being warm.
+
+    The sidecar is a CACHE; deleting it forces the scan path, which reads
+    provenance out of each record's own metadata instead of the cached column.
+    A disagreement here is the shape of bug where a vault ranks one way on a
+    warm machine and another way on a cold one.
+    """
+    import glob
+    e, q, ids = _declared_chain(vault_path)
+    e.close()
+    for side in glob.glob(vault_path + "*"):
+        if side != vault_path:
+            os.remove(side)
+
+    e2 = VaultEngine(vault_path, embed_dim=D)
+    assert e2.arena.group_declared[e2.arena.group_id[0]] is True
+    assert e2.search("where do I work", q, top_k=1)[0]["id"] == ids[-1]
+    e2.close()
+
+
+def test_a_record_written_before_the_marker_reads_as_inferred(vault_path):
+    """An old vault must rank exactly as it did, not be silently re-judged.
+
+    Records written before 0.6.5 carry an entity with no provenance marker. The
+    conservative reading is `inferred`, because that is the behaviour those rows
+    were written under; guessing `declared` would change the answers an existing
+    vault gives on upgrade, without asking.
+    """
+    e, q, _ids = _declared_chain(vault_path, declared=False)
+    assert e.arena.group_declared[e.arena.group_id[0]] is False
+    rows = np.arange(e.arena.n_rows, dtype=np.int64)
+    cos = e.arena.scores(q / np.linalg.norm(q))
+    ent, _rv, _ts = e._columns(rows)
+    mask = np.ones(rows.size, dtype=bool)
+    assert 2 not in e._tagged_group(ent, mask, "employer", rows, cos).tolist()
+    e.close()
+
+
+def test_one_declaration_makes_the_whole_group_declared(vault_path):
+    """DECLARED WINS. A caller naming the attribute is evidence; a tagger's
+    guess about the same key is not, so a later inferred write must not
+    downgrade a group somebody declared."""
+    q = unit_rows(1, seed=5)[0]
+    e = VaultEngine(vault_path, embed_dim=D)
+    e.add_fact("employer a", _corr(q, 0.60, seed=401), source="chat",
+               metadata={"entity": "employer"}, timestamp=T0)
+    e.add_fact("employer b", _corr(q, 0.55, seed=402), source="chat",
+               metadata={"entity": "employer", "entity_declared": False},
+               timestamp=T0 + DAY)
+    e.flush()
+    assert e.arena.group_declared[e.arena.group_id[0]] is True
+    e.close()
+
+
+def test_an_inferred_group_keeps_the_old_floor(vault_path):
+    """The other half of the fix, and the reason it is gated at all.
+
+    The same chain with the entity INFERRED rather than declared must rank
+    exactly as 0.6.4 did. Protecting the newest member of a group the lexical
+    tagger assembled costs -19.4 points on the 3-persona chat set, concentrated
+    entirely on `phone number` and `address` -- the two attributes with
+    siblings, which is a tagger-merged pair being promoted, not a revision.
+    """
+    q = unit_rows(1, seed=5)[0]
+    e = VaultEngine(vault_path, embed_dim=D)
+    for i, c in enumerate((0.5926, 0.6348, 0.5317)):
+        e.add_fact(f"employer statement {i}", _corr(q, c, seed=400 + i),
+                   source="chat", timestamp=T0 + i * DAY,
+                   metadata={"entity": "employer", "entity_declared": False})
+    e.flush()
+    rows = np.arange(e.arena.n_rows, dtype=np.int64)
+    cos = e.arena.scores(q / np.linalg.norm(q))
+    ent, _rv, _ts = e._columns(rows)
+    mask = np.ones(rows.size, dtype=bool)
+    assert 2 not in e._tagged_group(ent, mask, "employer", rows, cos).tolist()
 
 
 # --- volatility / staleness -------------------------------------------------
@@ -413,8 +536,9 @@ def test_group_floor_sim_recommendation_holds_in_miniature(vault_path):
     ent, _rv, _ts = e._columns(rows)
     mask = np.ones(rows.size, dtype=bool)
 
+    # 0.6.5 does automatically, for a DECLARED group, what 0.45 did by hand.
     e.group_floor_sim = 0.0
-    assert 3 not in e._tagged_group(ent, mask, "locker_code", rows, cos).tolist()
+    assert 3 in e._tagged_group(ent, mask, "locker_code", rows, cos).tolist()
     e.group_floor_sim = 0.45
     assert 3 in e._tagged_group(ent, mask, "locker_code", rows, cos).tolist()
 
@@ -427,14 +551,22 @@ def test_the_boost_bound_is_documented_as_cosine_mode_only(vault_path):
     50-hit sample under score_mode="legacy". The bound is real in the default
     cosine mode and is now documented as cosine-mode-only. This pins both halves
     so the docstring cannot drift back.
+
+    UNBOOSTED hits, deliberately. The violation is not universal: `score` is
+    `legacy_score(c) + boosts`, so a large enough entity boost lifts a legacy
+    score back over its own cosine -- which is why that audit found 43 in 50 and
+    not 50. Until 0.6.5 this fixture tagged its records, and it passed only
+    because the relevance floor happened to shrink the group enough to keep the
+    boosts small. Fixing the floor grew the group, the boosts went up, and the
+    assertion flipped on a change that has nothing to do with what it tests.
+    With no tag there is no boost and `legacy_score(c) < c` is the whole story.
     """
     q = unit_rows(1, seed=13)[0]
     for mode, expect_within in (("cosine", True), ("legacy", False)):
         e = VaultEngine(vault_path + mode, embed_dim=D, score_mode=mode)
         for i in range(3):
             e.add_fact(f"note {i}", _corr(q, 0.8 - 0.05 * i, seed=600 + i),
-                       source="chat", metadata={"entity": "locker_code"},
-                       timestamp=T0 + i * DAY)
+                       source="document", timestamp=T0 + i * DAY)
         e.flush()
         cap = e.stats()["max_boost"]
         deltas = [h["score"] - h["cosine"]

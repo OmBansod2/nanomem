@@ -533,7 +533,12 @@ class _Sidecar:
 #: Suffix of the arena cache that sits next to a vault file.
 ARENA_CACHE_SUFFIX = ".arena"
 ARENA_CACHE_MAGIC = b"NMARENA1"
-ARENA_CACHE_VERSION = 3
+ARENA_CACHE_VERSION = 4
+
+#: What `engine.add_fact` writes into a record's metadata when the CALLER
+#: named the entity. Matched as bytes on the ingest path, so it must stay in
+#: step with that json.dumps -- `separators=(",", ":")`, no space.
+DECLARED_MARK = b'"entity_declared":true'
 
 #: Every section starts on a page boundary, so a mapped array is page-aligned
 #: (and therefore aligned for any dtype this format stores) and a section can be
@@ -1403,6 +1408,7 @@ class ArenaSnapshot:
         gmr, gmt = arena.group_max_columns()
         arr("group_max_rev", gmr)
         arr("group_max_ts", gmt)
+        arr("group_declared", arena.group_declared_column())
 
         layout, off = {}, ARENA_CACHE_HEADER
         for name, kind, payload in secs:
@@ -1736,6 +1742,10 @@ class Arena:
         self._group_keys = []
         self._group_index = {}
         self._group_max = {}
+        #: Parallel to ``group_keys``: did the CALLER name this group's entity,
+        #: or did the lexical tagger infer it? The relevance floor needs to know
+        #: (``engine._apply_group_floor``) and nothing else does.
+        self._group_declared = []
 
     # -- residency plumbing -------------------------------------------------
     @property
@@ -1858,6 +1868,30 @@ class Arena:
         if self._group_index is None:
             self._group_index = {k: i for i, k in enumerate(self.group_keys)}
         return self._group_index
+
+    @property
+    def group_declared(self) -> list:
+        """``group_id -> bool``: the entity was DECLARED, not inferred.
+
+        A cache written before format 4 has no such section, and a vault whose
+        records predate the marker has no evidence either way. Both read as
+        ``False``, which is the conservative answer -- it is what the engine did
+        before this existed, so an old vault keeps its old ranking.
+        """
+        if self._group_declared is None:
+            arr = (self._snapshot.array("group_declared")
+                   if self._snapshot is not None else None)
+            self._group_declared = ([bool(x) for x in arr] if arr is not None
+                                    else [])
+        n = len(self.group_keys)
+        if len(self._group_declared) < n:
+            self._group_declared.extend([False] * (n - len(self._group_declared)))
+        return self._group_declared
+
+    def group_declared_column(self) -> np.ndarray:
+        """``group_declared`` as a dense uint8 array, for the cache writer."""
+        d = self.group_declared
+        return np.asarray(d, dtype=np.uint8) if d else np.zeros(0, dtype=np.uint8)
 
     @property
     def group_max(self) -> dict:
@@ -2013,6 +2047,7 @@ class Arena:
         self._id_index = None
         self._entity_names = self._entity_index = None
         self._group_keys = self._group_index = self._group_max = None
+        self._group_declared = None
         self.n_rows, self.n_blocks = n, nb
         self.reserved_rows = n
         self._mapped_columns = True
@@ -2120,8 +2155,14 @@ class Arena:
             self.entity_index[key] = got
         return got
 
-    def intern_group(self, key) -> int:
-        """Return the int id of a ``(user_id, project, entity)`` group key."""
+    def intern_group(self, key, declared: bool = False) -> int:
+        """Return the int id of a ``(user_id, project, entity)`` group key.
+
+        ``declared`` records that the CALLER named the entity on this write.
+        DECLARED WINS over a later inferred write to the same key: one caller
+        naming the attribute is evidence the tagger's guess never is, and a
+        group that is half-declared is still a group somebody declared.
+        """
         if not key:
             return -1
         got = self.group_index.get(key)
@@ -2129,6 +2170,11 @@ class Arena:
             got = len(self.group_keys)
             self.group_keys.append(key)
             self.group_index[key] = got
+        d = self.group_declared
+        while len(d) <= got:
+            d.append(False)
+        if declared:
+            d[got] = True
         return got
 
     def note_group(self, gid: int, rev: int, ts: float) -> None:
@@ -2213,7 +2259,14 @@ class Arena:
             # superseded copy and `search_multihop` bridge from it.
             idx[names[i]] = start + i
             gkey = rec.groups[i].decode("utf-8")
-            gid = self.intern_group(gkey)
+            # Provenance without parsing. The marker is written by `add_fact`
+            # into the record's own metadata JSON, which is already in this
+            # block's payload; `json.dumps(separators=(",", ":"))` emits it
+            # exactly like this. A substring test over ~200 bytes per record
+            # costs nothing next to the JSON parse that reading it properly
+            # would, and this loop runs 71,433 times over a reopen.
+            lo, hi = int(rec.doc_spans[i][0]), int(rec.doc_spans[i][1])
+            gid = self.intern_group(gkey, DECLARED_MARK in rec_bytes[lo:hi])
             gids[start + i] = gid
             ent = gkey.rsplit("\x1f", 1)[-1] if gkey else ""
             eids[start + i] = self.intern_entity(ent)

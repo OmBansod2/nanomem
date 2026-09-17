@@ -5,6 +5,85 @@ number below is from one of those files.
 
 ---
 
+## 0.6.5 — engine 3.3.2
+
+**`search()` returned a superseded value as current.** Recorded as a major
+defect on 2026-09-17 in `scratch/refound/finding_floor_drops_current_value.json`,
+reproduced identically on 0.5.0, and open through 0.6.4:
+
+    search("where do I work")  ->  "I moved jobs, I now work at Initech."
+    the current employer, Globex, ranked THIRD
+
+`GROUP_COS_DELTA = 0.06`. The group's best member sat at cosine 0.6348 and the
+current value at 0.5317, a gap of 0.1031, so the relevance floor removed the
+newest revision from the group BEFORE `apply_revision_lead` ran. The lead went
+to the most recent SURVIVING member. The current value was never a candidate.
+
+The trigger is ordinary phrasing: "I switched again, I work at Globex now."
+carries two narrative clauses before the value, so it sits further from the
+question than the superseded statement does.
+
+**The floor is compensating for tagger precision, so it now asks who tagged.**
+Either the caller named the entity (`metadata={"entity": ...}`) or the lexical
+tagger guessed it. The engine has always known which; it just never wrote it
+down. It does now, per revision group, and a DECLARED group's newest revision is
+exempt from the query-relative floor while an inferred group's is not.
+
+Measured over six arms, pre-registered in
+`scratch/refound/design/floor_current_value_spec.md` before the experiment was
+written (`floor_current_value_results.json`):
+
+| arm | 0.6.4 | 0.6.5 |
+| --- | --- | --- |
+| A drifting phrasing, declared tags | 52.0 | **71.0** |
+| B canonical phrasing, declared tags | 89.0 | 90.0 |
+| C sibling / adjacent-attribute probes | 68.6 | 69.3 |
+| D 3-persona chat, tagger-inferred | 97.2 | 97.2 |
+| E `historical_value`, declared tags | 64.0 | 64.0 |
+| F `previous_value`, declared tags | 92.9 | 92.9 |
+
+**Two cheaper fixes were measured first and rejected.** Exempting the newest
+member unconditionally gives the same +19.0 on arm A and costs **-19.4** on the
+chat set — all seven of its regressions on `phone number` and `address`, the two
+attributes with siblings, which is a tagger-merged pair being promoted rather
+than a revision. Gating that exemption on how much the newest member resembles
+the group (sweep 0.40 to 0.80) found no threshold that helped A without costing
+D the same: at 0.40 it is the unconditional rule, by 0.70 it does nothing.
+Provenance is the signal that separates them, so provenance is what is stored.
+
+Arms E and F were added by amendment after F1's numbers on A-D were seen, and
+the amendment is recorded as one. Both candidates work by protecting the newest
+revision, and `historical_value` and `previous_value` are the two question types
+whose answer is explicitly not the newest — 156 questions that the original four
+arms never scored. They came back 0.0 and 0.0.
+
+**Exactness.** Gate G1 does not apply: this deliberately changes ranking. What
+was required instead is that nothing outside the revision path moves, and that
+holds — of 70 queries in the 520-result baseline, 18 changed and every one is
+about `employer`, `home address` or `phone number`, the three attributes with
+revision chains. All 40 document queries and both non-revising attributes are
+bitwise identical.
+
+**The arena sidecar format goes 3 to 4** to carry the new per-group column. The
+sidecar is a CACHE: a version it does not recognise is rejected and rebuilt on
+the next open, so vault files are untouched and no migration is needed. Records
+written before this release carry no provenance marker and read as INFERRED,
+which is the behaviour they were written under — an existing vault ranks exactly
+as it did until something is written to it declaring an entity.
+
+Five tests pin what no benchmark can see: that the bit survives a reopen, that
+it survives a rebuild with the sidecar deleted (or the answer would depend on a
+cache being warm), that a pre-0.6.5 record reads as inferred, and that one
+declaration makes the whole group declared. Suite 514 -> 519.
+
+`floor_keeps_current` is a three-way override for callers who want the rule
+always on or always off; `None`, the default, decides per group.
+`group_floor_sim` is untouched and stays 0.0 — it is a different question, one
+asked of every member rather than of the one the revision counter already calls
+current.
+
+---
+
 ## 0.6.4 — engine 3.3.1
 
 **`volatility()` and `staleness()` only counted SEALED blocks.** Found by

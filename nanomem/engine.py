@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.3.1"
+ENGINE_VERSION = "3.3.2"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -394,6 +394,8 @@ class VaultEngine:
                  gate_on_corpus_only: bool = False,
                  floor_skips_single_valued: bool = False,
                  group_floor_sim: float = 0.0,
+                 floor_keeps_current: Optional[bool] = None,
+                 current_keep_sim: float = 0.0,
                  use_revision_markers: bool = False, historical_mode: str = "oldest",
                  group_hoist: float = _ent.GROUP_HOIST,
                  revision_lead: float = _ent.REVISION_LEAD,
@@ -793,6 +795,12 @@ class VaultEngine:
         self.marker_skips_sim = bool(marker_skips_sim)
         self.floor_skips_single_valued = bool(floor_skips_single_valued)
         self.group_floor_sim = float(group_floor_sim)
+        # None = decide per group from tag provenance (the 0.6.5 default);
+        # True = always, whoever assigned the tag; False = never, which is
+        # exactly 0.6.4 and is what the measurement baseline runs as.
+        self.floor_keeps_current = (None if floor_keeps_current is None
+                                    else bool(floor_keeps_current))
+        self.current_keep_sim = float(current_keep_sim)
         self.window_union = bool(window_union)
         self.gate_on_corpus_only = bool(gate_on_corpus_only)
         self.on_integrity_error = str(on_integrity_error)
@@ -1357,7 +1365,8 @@ class VaultEngine:
         restart at 1.
         """
         for item in self._mt.items:
-            gid = self.arena.intern_group(item.get("group_key") or "")
+            gid = self.arena.intern_group(item.get("group_key") or "",
+                                          bool(item.get("entity_declared")))
             item["group_id"] = gid
             item["entity_id"] = self.arena.intern_entity(item.get("entity_key") or "")
             self.arena.note_group(gid, int(item.get("revision", 1)),
@@ -1382,6 +1391,19 @@ class VaultEngine:
                 raise ReadOnlyVaultError(f"{self.filepath} is open read-only")
             self._reload_if_modified()
             meta = dict(metadata or {})
+            # WHO NAMED THE ENTITY. `meta["entity"]` alone cannot answer it: on
+            # a replay or rebuild the stored metadata carries an entity the
+            # TAGGER inferred on the original write, and reading that as a
+            # declaration would hand an inferred group the treatment only a
+            # declared one has earned. The marker is authoritative when present;
+            # a live caller naming the entity sets it; a record written before
+            # the marker existed reads as inferred, which is what the engine did
+            # before this and so leaves an old vault ranking exactly as it did.
+            declared = (bool(meta.get("entity_declared"))
+                        if "entity_declared" in meta
+                        else bool(revision is None and meta.get("entity")))
+            if declared:
+                meta["entity_declared"] = True
             ts = float(timestamp if timestamp is not None else meta.get("timestamp", time.time()))
             doc_id = str(id or meta.get("id") or
                          f"doc_{hashlib.md5(f'{text}_{ts}'.encode()).hexdigest()[:10]}")
@@ -1434,7 +1456,7 @@ class VaultEngine:
                 if meta.get("entity"):
                     self._last_entity[uid] = meta["entity"]
                     gkey = _ent.make_group_key(uid, meta.get("project"), meta["entity"])
-                    gid = self.arena.intern_group(gkey)
+                    gid = self.arena.intern_group(gkey, declared)
                     rev = int(self.arena.group_max.get(gid, (0, 0.0))[0]) + 1
                 else:
                     rev = int(meta.get("revision", 1))
@@ -1451,12 +1473,13 @@ class VaultEngine:
 
             gkey = _ent.make_group_key(uid, meta.get("project"), meta.get("entity"))
             ekey = _ent.normalize_entity(meta.get("entity"))
-            gid = self.arena.intern_group(gkey)
+            gid = self.arena.intern_group(gkey, declared)
             eid = self.arena.intern_entity(ekey)
             self._mt.append({"id": doc_id, "text": text, "source": source,
                              "embedding": v, "metadata": meta, "timestamp": ts,
                              "revision": rev, "entity_id": eid, "group_id": gid,
-                             "entity_key": ekey, "group_key": gkey}, v)
+                             "entity_key": ekey, "group_key": gkey,
+                             "entity_declared": declared}, v)
             self.arena.note_group(gid, rev, ts)
             if self._mt.n >= self.block_capacity:
                 self._spill()
@@ -2440,12 +2463,79 @@ class VaultEngine:
 
         A single global threshold cannot serve both, because the floor is
         compensating for TAGGER PRECISION -- and a caller that declares its own
-        schema has no imprecision to compensate for. Hence a knob and not a
-        default. ``scratch/refound/floor_retune_results.json``,
+        schema has no imprecision to compensate for.
+
+        0.6.5 STOPPED ASKING THE CALLER TO KNOW THIS. The engine already has the
+        answer at write time: either the caller named the entity or the lexical
+        tagger guessed it. That bit is now stored per group
+        (:meth:`_group_is_declared`), and a DECLARED group's newest revision is
+        exempt from the query-relative floor while an inferred group's is not.
+        Measured over six arms against the 0.6.4 default
+        (``design/floor_current_value_spec.md``,
+        ``floor_current_value_results.json``):
+
+        ==================================  =======  =======
+        arm                                   0.6.4    0.6.5
+        ==================================  =======  =======
+        A drifting phrasing, declared          52.0     71.0
+        B canonical phrasing, declared         89.0     90.0
+        C sibling/adjacent probes              68.6     69.3
+        D 3-persona chat, tagger-inferred      97.2     97.2
+        E historical_value, declared           64.0     64.0
+        F previous_value, declared             92.9     92.9
+        ==================================  =======  =======
+
+        and `search("where do I work")` returns the current employer instead of
+        ranking it third. Two cheaper fixes were measured first and rejected:
+        exempting the newest member unconditionally costs -19.4 on arm D, and
+        gating that exemption on how much it resembles the group (sweep 0.40 to
+        0.80) found no threshold that helped A without costing D the same.
+
+        ``group_floor_sim`` remains a knob and remains 0.0. It is a different
+        question -- it tests EVERY member, not the one the revision counter
+        already calls current. ``scratch/refound/floor_retune_results.json``,
         ``floor_chatcheck_results.json``.
         """
         group = np.asarray(group, dtype=np.int64)
         kept = _ent.group_relevance_floor(group, cos, self.group_cos_delta)
+        keep_current = self.floor_keeps_current
+        if (kept.size != group.size and group.size >= 2
+                and self._revisions_comparable(rows, group)):
+            if keep_current is None:
+                keep_current = self._group_is_declared(rows, group)
+        else:
+            keep_current = False
+        if keep_current or (self.current_keep_sim > 0.0 and kept.size != group.size
+                            and group.size >= 2
+                            and self._revisions_comparable(rows, group)):
+            # THE NEWEST REVISION IS NOT A PRECISION RISK. The floor drops
+            # records that carry the tag without restating the fact; the
+            # maximum-revision member is the one `add_fact` numbered
+            # `group_max + 1`, which is the engine's own assertion at write time
+            # that this record restates this fact. If including it is wrong the
+            # GROUPING is wrong, and the floor is the wrong place to correct it.
+            # Gated on `_revisions_comparable` because a revision number orders
+            # nothing across group keys.
+            rv = self._columns(np.asarray(rows)[group])[1]
+            newest = group[np.flatnonzero(rv == rv.max())]
+            if self.current_keep_sim > 0.0:
+                # ...AND IT STILL HAS TO LOOK LIKE THE FACT. Protecting the
+                # newest member unconditionally helps where the group is real
+                # (+19.0 on drifting phrasing with declared tags) and hurts where
+                # the tagger built a bad one (-19.4 on the 3-persona chat set):
+                # the newest member of a group that is not a chain is junk being
+                # promoted. Which case this is can be read off the vectors
+                # without knowing who assigned the tag -- two statements of one
+                # fact resemble each other however the question was worded, which
+                # is the evidence `_cosine_window` uses to group untagged records
+                # in the first place. `group_floor_sim` applies that test to every
+                # member; this applies it to the one member the revision counter
+                # already calls current.
+                lead = int(group[int(np.argmax(cos[group]))])
+                vl = self._vectors_for(np.asarray(rows)[[lead]])[0]
+                Vn = self._vectors_for(np.asarray(rows)[newest])
+                newest = newest[(Vn @ vl) >= float(self.current_keep_sim)]
+            kept = np.union1d(kept, newest)
         if kept.size == group.size or self.group_floor_sim <= 0.0 or group.size < 2:
             return kept
         lead = int(group[int(np.argmax(cos[group]))])
@@ -2453,6 +2543,33 @@ class VaultEngine:
         vl = self._vectors_for(np.asarray(rows)[[lead]])[0]
         near = (V @ vl) >= float(self.group_floor_sim)
         return group[near | np.isin(group, kept)]
+
+    def _group_is_declared(self, rows, group) -> bool:
+        """Did the CALLER name this group's entity, or did the tagger infer it?
+
+        This is what decides whether the newest revision is protected from the
+        relevance floor, and it is the whole difference between a fix and a
+        regression. Measured on the six arms of
+        ``design/floor_current_value_spec.md``, protecting it UNCONDITIONALLY is
+        worth +19.0 points of top-1 where the entity was declared and costs
+        -19.4 where it was inferred -- near-symmetric, because the newest member
+        of a group the tagger built wrongly is the wrong record to promote. The
+        seven regressions it caused on the 3-persona chat set are all on
+        `phone number` and `address`, the two attributes with SIBLINGS, which is
+        that failure exactly.
+
+        No vector test separates the two cases: candidate F3 gated the same rule
+        on how much the newest member resembles the group and found no threshold
+        that helped one path without costing the other by the same amount
+        (``floor_current_value_results.json``). Provenance is the signal, so
+        provenance is what is stored.
+        """
+        gids = self._group_ids(np.asarray(rows)[np.asarray(group)])
+        if gids.size == 0 or gids[0] < 0:
+            return False
+        decl = self.arena.group_declared
+        g = int(gids[0])
+        return bool(0 <= g < len(decl) and decl[g])
 
     def _revisions_comparable(self, rows, group) -> bool:
         """True when every member of ``group`` shares one revision-group key.
