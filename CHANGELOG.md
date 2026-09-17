@@ -5,6 +5,56 @@ number below is from one of those files.
 
 ---
 
+## 0.7.2 — engine 3.3.4 (unchanged)
+
+Three defects found by driving the PUBLISHED 0.7.1 from outside — a clean venv
+install from PyPI and the MCP server over stdio — rather than by the suite.
+That is now the ninth release in a row where that is where the bug was, and the
+suite had a test pinning two of these three in place.
+
+**`forget_superseded(dry_run=True)` reported `deleted: 0`.** `ids` held the
+records that would go, but the headline number said none. The obvious caller
+
+```python
+plan = v.forget_superseded(keep=2, dry_run=True)
+if plan["deleted"]:          # 0 -- always
+    v.forget_superseded(keep=2)
+```
+
+therefore never cleaned anything, and nothing said so. For a full-rewrite delete
+with no undo, a preview disagreeing with the run it previews is the one thing it
+must never do. `deleted`, `ids`, `groups` and `kept` now describe the same
+operation whether or not it runs, and a new `dry_run` key in the result tells
+the two apart.
+
+**`kept` echoed the `keep=` argument instead of counting anything.** Three of
+the four keys were outcomes and the fourth was the knob you had just passed in,
+so `f"deleted {r['deleted']}, kept {r['kept']}"` printed a true number and a
+false one. It is now the revisions left across every tagged fact.
+
+**Two MCP tools answered a missing argument with `float() argument must be a
+string or a real number, not 'NoneType'`.** `nanomem_changes` without `since`
+and `nanomem_as_of` without `as_of` both declare the field required, but nothing
+between a model and the handler enforces that, and an LLM client omits an
+argument routinely. The message named neither the tool, the argument, nor the
+fix. The bad-VALUE path was already right — `since="last week"` has always
+answered "could not read 'last week' as a time; use YYYY-MM-DD…" — so this was
+the one hole in an otherwise good surface. Both now say which tool wants which
+argument and what a usable value looks like.
+
+**An unknown tool name came back as a SUCCESSFUL call.** `{"content": [{"text":
+"Unknown tool: recall"}]}` with no `error` and no `isError`, so a client had to
+string-match content to learn its call had not happened. It is now a JSON-RPC
+error that names the seven tools that do exist.
+
+Six tests, five of which fail against 0.7.1 as published (the sixth covers the
+already-correct bad-value path). Two tests that pinned the old behaviour are
+gone: `test_unknown_tool_does_not_raise` asserted the bug in its own name.
+
+Suite 543 → 548.
+
+---
+
 ## 0.7.1 — engine 3.3.4 (unchanged)
 
 **`prune()` no longer deletes the answer.** 0.7.0 documented this and shipped an

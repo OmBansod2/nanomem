@@ -1688,10 +1688,14 @@ class Vault:
         * any record with no entity, since a record that is not part of a
           revision chain has no newer version to be superseded by.
 
-        Returns ``{"groups", "deleted", "kept", "ids"}``. With ``dry_run=True``
-        nothing is written and ``ids`` is what would go -- worth using first on
+        Returns ``{"groups", "deleted", "kept", "ids", "dry_run"}``:
+        ``deleted`` and ``ids`` are the revisions this call removes, ``kept``
+        the revisions left across every tagged fact, ``groups`` the chains
+        touched. With ``dry_run=True`` nothing is written and every one of those
+        numbers describes what the real call WOULD do -- worth running first on
         a vault you care about, because deletion here is a full rewrite and
-        there is no undo.
+        there is no undo. Check ``dry_run`` in the result, not ``deleted``, to
+        tell a preview from a run.
         """
         keep = max(1, int(keep))
         self.flush()
@@ -1723,8 +1727,15 @@ class Vault:
                 touched += 1
                 doomed.extend(r["id"] for r in older)
 
-        out = {"groups": touched, "deleted": 0 if dry_run else len(doomed),
-               "kept": keep, "ids": doomed}
+        # ``deleted`` is what this call describes, on a dry run as much as a real
+        # one. 0.7.1 reported 0 for a dry run, which read as "nothing to clean"
+        # to the obvious caller -- `if plan["deleted"]: v.forget_superseded(...)`
+        # -- and silently skipped the cleanup. A preview whose headline number
+        # disagrees with the run it previews is worse than no preview. ``dry_run``
+        # in the result is how you tell the two apart.
+        kept = sum(len(r) for r in groups.values()) - len(doomed)
+        out = {"groups": touched, "deleted": len(doomed), "kept": kept,
+               "ids": doomed, "dry_run": bool(dry_run)}
         if doomed and not dry_run:
             self.delete(ids=doomed)
         return out

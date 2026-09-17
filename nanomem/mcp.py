@@ -120,6 +120,25 @@ TOOLS = [
 ]
 
 
+def _require_when(args, key, tool_name):
+    """A time argument the tool declares as required, or a usable complaint.
+
+    The schema marks these required, but nothing between a model and this
+    function enforces that, and an LLM client omits an argument routinely.
+    Through 0.7.1 the miss reached ``float(None)`` and the client was told
+    "float() argument must be a string or a real number, not 'NoneType'" --
+    which names neither the tool, the argument, nor the fix, so the model had
+    nothing to retry with. The bad-VALUE path already answered well; only the
+    missing-value path did not.
+    """
+    value = args.get(key)
+    if value is None or not str(value).strip():
+        raise ValueError(
+            f"{tool_name} requires {key!r} and none was given; "
+            f"use YYYY-MM-DD, an ISO timestamp, or a unix time")
+    return _parse_when(value)
+
+
 def _parse_when(value):
     """A tool argument time: YYYY-MM-DD, an ISO timestamp, or a unix time."""
     from datetime import datetime
@@ -208,7 +227,7 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         return head + "\n" + "\n".join(lines)
 
     if tool_name == "nanomem_as_of":
-        when = _parse_when(args.get("as_of"))
+        when = _require_when(args, "as_of", "nanomem_as_of")
         hits = vault.search(args.get("query", ""), top_k=int(args.get("top_k", 3)),
                             as_of=when)
         if not hits:
@@ -219,7 +238,7 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
             for i, h in enumerate(hits))
 
     if tool_name == "nanomem_changes":
-        rows = vault.changes(_parse_when(args.get("since")),
+        rows = vault.changes(_require_when(args, "since", "nanomem_changes"),
                              until=_parse_when(args.get("until")),
                              limit=args.get("limit"))
         if not rows:
@@ -247,7 +266,12 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
     if tool_name == "nanomem_stats":
         return json.dumps(vault.stats(), indent=2, default=str)
 
-    return f"Unknown tool: {tool_name}"
+    # A plain string here became a NORMAL result: the client saw a successful
+    # call whose content happened to read "Unknown tool", with no isError and no
+    # JSON-RPC error to notice. Raising routes it through the error path, and
+    # naming the real tools gives a model something to retry with.
+    raise ValueError(f"unknown tool {tool_name!r}; this server provides "
+                     + ", ".join(t["name"] for t in TOOLS))
 
 
 def run_mcp_server(vault_path: str = "memory.dat"):

@@ -368,8 +368,47 @@ def test_forget_superseded_dry_run_writes_nothing(tmp_path, offline_embedder):
     v, _t = _dump(tmp_path, offline_embedder)
     before = len(_texts(v))
     out = v.forget_superseded(keep=1, dry_run=True)
-    assert out["deleted"] == 0 and out["ids"], "it must say what it would remove"
-    assert len(_texts(v)) == before
+    assert out["ids"] and out["dry_run"] is True
+    assert len(_texts(v)) == before, "a dry run must not write"
+    v.close()
+
+
+def test_forget_superseded_dry_run_predicts_the_real_run_exactly(
+        tmp_path, offline_embedder):
+    """The preview's numbers are the run's numbers.
+
+    0.7.1 hard-coded ``deleted`` to 0 on a dry run while ``ids`` held the three
+    doomed records. The obvious caller --
+
+        plan = v.forget_superseded(keep=2, dry_run=True)
+        if plan["deleted"]:
+            v.forget_superseded(keep=2)
+
+    -- therefore never cleaned anything, and nothing said so. For a full-rewrite
+    delete with no undo, a preview that disagrees with the run is the one thing
+    it must never do.
+    """
+    v, _t = _dump(tmp_path, offline_embedder, name="a.dat")
+    plan = v.forget_superseded(keep=2, dry_run=True)
+    real = v.forget_superseded(keep=2)
+    assert plan["deleted"] == real["deleted"] > 0
+    assert plan["ids"] == real["ids"]
+    assert plan["groups"] == real["groups"]
+    assert plan["kept"] == real["kept"]
+    assert plan["dry_run"] is True and real["dry_run"] is False
+    v.close()
+
+
+def test_forget_superseded_kept_counts_records_not_the_knob(
+        tmp_path, offline_embedder):
+    """``kept`` is an outcome. It used to echo the ``keep`` argument back."""
+    v, _t = _dump(tmp_path, offline_embedder)
+    out = v.forget_superseded(keep=1)
+    # 5 locker + 2 address + 1 blood type are the tagged revisions; keep=1
+    # leaves one of each, and the untagged note is not in any group.
+    assert out["kept"] == 3, out
+    assert out["kept"] != 1, "kept must not be the keep= knob"
+    assert out["deleted"] + out["kept"] == 8
     v.close()
 
 

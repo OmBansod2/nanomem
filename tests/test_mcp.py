@@ -114,10 +114,6 @@ def test_volatility_tool_is_honest_when_there_is_no_rate(vault_path, offline_emb
     v.close()
 
 
-def test_unknown_tool_does_not_raise(chat_vault):
-    assert "Unknown tool" in nm_mcp.dispatch(chat_vault, "nanomem_nope", {})
-
-
 def test_parse_when_accepts_the_three_documented_forms():
     assert nm_mcp._parse_when("1700000000") == 1700000000.0
     assert nm_mcp._parse_when("2026-03-01") > 1.7e9
@@ -216,3 +212,61 @@ def test_the_duration_ladder_picks_a_unit_a_reader_can_act_on():
     assert f(145 * 86400) == "5mo"
     assert f(900 * 86400) == "2.5y"
     assert f(-10) == "0s", "a negative age is 0, not a negative duration"
+
+
+def _call(monkeypatch, vault_path, name, arguments):
+    """One tools/call over the wire, returning the reply a client would parse."""
+    replies = _serve(monkeypatch, vault_path, [
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                               "clientInfo": {"name": "t", "version": "1"}}}),
+        json.dumps({"jsonrpc": "2.0", "id": 2, "method": "tools/call",
+                    "params": {"name": name, "arguments": arguments}}),
+    ])
+    return replies[-1]
+
+
+def test_an_unknown_tool_reaches_the_client_as_an_error(monkeypatch, vault_path,
+                                                        offline_embedder):
+    """It used to come back as a SUCCESSFUL call whose text read "Unknown tool".
+
+    No `error`, no `isError` -- so a client had to string-match the content to
+    notice its call had not happened. The reply must fail, and must name the
+    tools that do exist so a model can retry.
+    """
+    reply = _call(monkeypatch, vault_path, "nanomem_nope", {})
+    assert "error" in reply, reply
+    assert "result" not in reply
+    msg = reply["error"]["message"]
+    assert "nanomem_nope" in msg and "nanomem_search" in msg
+
+
+@pytest.mark.parametrize("tool,args,missing", [
+    ("nanomem_changes", {}, "since"),
+    ("nanomem_as_of", {"query": "locker code"}, "as_of"),
+])
+def test_a_missing_required_time_says_which_argument(monkeypatch, vault_path,
+                                                     offline_embedder,
+                                                     tool, args, missing):
+    """An LLM client omits an argument routinely; nothing enforces `required`.
+
+    Through 0.7.1 the omission reached float(None) and the client was told
+    "float() argument must be a string or a real number, not 'NoneType'", which
+    names neither the tool nor the argument. The bad-VALUE path already answered
+    well -- only this one did not.
+    """
+    reply = _call(monkeypatch, vault_path, tool, args)
+    assert "error" in reply, reply
+    msg = reply["error"]["message"]
+    assert missing in msg and tool in msg
+    assert "NoneType" not in msg
+    assert "YYYY-MM-DD" in msg, "it must say what a usable value looks like"
+
+
+def test_a_bad_time_value_still_explains_itself(monkeypatch, vault_path,
+                                                offline_embedder):
+    """The path that was already right stays right."""
+    reply = _call(monkeypatch, vault_path, "nanomem_changes", {"since": "last week"})
+    assert "error" in reply
+    assert "last week" in reply["error"]["message"]
+
