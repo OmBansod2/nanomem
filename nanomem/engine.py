@@ -2944,6 +2944,29 @@ class VaultEngine:
         prunes is more than ``max_boost`` (0.70 at the shipped defaults, and the
         caller passes the value ``stats()`` publishes) below the leader.
         """
+        # CHEAP SUPERSET FIRST, when the filter names an entity.
+        # The walk below decodes one record per step and its early-stop bound
+        # cannot fire until `top_k` matches are in hand, so a selective filter
+        # walked the WHOLE corpus: measured on 15,000 records with 5,000
+        # entities, 15,001 record decodes and 33.70 ms against 0.70 ms
+        # unfiltered, 48x.
+        #
+        # `entity_id` is the interned `normalize_entity(...)` of the record's
+        # tag, and `matches_filter` compares the RAW metadata, so the two are
+        # not interchangeable. They do not have to be: normalization is a
+        # function, so raw == filter implies normalize(raw) == normalize(filter),
+        # and restricting to that id can only drop rows that could never have
+        # matched. Every surviving row is still put through `matches_filter`
+        # unchanged, so this narrows the walk without touching its semantics.
+        want_ent = metadata_filter.get("entity") if metadata_filter else None
+        if isinstance(want_ent, (str, bytes)) and want_ent:
+            eid = self.arena.entity_index.get(_ent.normalize_entity(want_ent), -1) \
+                if hasattr(self.arena, "entity_index") else -1
+            if eid >= 0:
+                ent_col = self._columns(np.asarray(rows))[0]
+                mask = mask & (ent_col == eid)
+                if not mask.any():
+                    return mask
         keep = np.zeros(mask.shape, dtype=bool)
         order = np.argsort(-base, kind="stable")
         kept = []

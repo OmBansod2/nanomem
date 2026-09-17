@@ -5,6 +5,53 @@ number below is from one of those files.
 
 ---
 
+## 0.7.9 — engine 3.4.1 (unchanged)
+
+**Filtered search was 48x slower than unfiltered, and now is not.** The one open
+performance item from the use-case sweep, diagnosed rather than re-reported.
+
+`_apply_filter` walks candidates in descending score, decoding one record per
+step, and stops early once `top_k` matches are in hand and the score bound rules
+out everything below. For a SELECTIVE filter the matches are scattered, so the
+bound cannot fire until the walk is nearly over. Measured on 15,000 records
+across 5,000 entities:
+
+```
+unfiltered            0.70 ms       5 record decodes
+filter={'entity':..}  33.70 ms  15,001 record decodes   <- the entire corpus
+```
+
+65% of that time was `json` decoding metadata the walk then threw away.
+
+The walk is now narrowed by the interned `entity_id` column before it starts:
+
+```
+filter={'entity':..}   2.08 ms       4 record decodes   (16x faster)
+```
+
+**Why this is a superset and not a semantic change.** The column holds
+`normalize_entity(...)` while `matches_filter` compares the RAW metadata, so the
+two are not interchangeable — and they do not have to be. Normalization is a
+function, so `raw == filter` implies `normalize(raw) == normalize(filter)`:
+restricting to that id can only drop rows that could never have matched. Every
+surviving row still goes through `matches_filter` completely unchanged, so a
+false positive is filtered out as before and a false negative is impossible.
+
+Proven rather than argued: 123 searches over 41 filters — mixed case, spaces,
+unicode, integer values, list values, multi-key filters, absent keys — return
+identical ids with the narrowing on and off, with 84 of the 123 non-empty so the
+comparison has bite. That comparison is now a test, which disables the column
+and re-runs the same queries down the old path. `temporal_baseline` is bitwise
+identical across all 520 results and the 3-persona chat set is unchanged at
+97.2% and 94.4%.
+
+It applies only when `entity` is a filter key with a scalar value; every other
+filter takes the walk it always took.
+
+Suite 571 -> 572.
+
+---
+
 ## 0.7.8 — engine 3.4.1
 
 **A regression this session introduced, caught by the fuzzer it also produced.**

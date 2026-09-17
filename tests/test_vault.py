@@ -997,3 +997,64 @@ def test_the_floor_protects_the_current_value_of_an_out_of_order_chain(
         f"the newest by time must survive the floor: {got}")
     v.close()
 
+
+def test_the_entity_prefilter_changes_no_result(tmp_path, offline_embedder):
+    """A filtered search must return exactly what it returned before.
+
+    `_apply_filter` walks records in score order decoding one per step, and its
+    early-stop bound cannot fire until `top_k` matches are in hand -- so a
+    selective filter walked the WHOLE corpus: 15,001 decodes and 33.70 ms
+    against 0.70 ms unfiltered. The walk is now narrowed by the interned entity
+    column first.
+
+    That column holds `normalize_entity(...)` while `matches_filter` compares
+    the RAW metadata, so this test exists to prove the narrowing is a SUPERSET
+    and not a semantic change. Normalization is a function, so raw == filter
+    implies normalize(raw) == normalize(filter); every surviving row still goes
+    through `matches_filter` unchanged. The values below are deliberately
+    awkward -- case, spaces, unicode, ints, lists, absent keys.
+    """
+    import random
+    rng = random.Random(7)
+    ents = ["home_address", "Home_Address", "home address", "日本", "cfg_1", None]
+    rows = []
+    for i in range(600):
+        e = rng.choice(ents)
+        m = {}
+        if e is not None:
+            m["entity"] = e
+        if rng.random() < 0.5:
+            m["user_id"] = rng.choice(["a", "b", "c"])
+        if rng.random() < 0.3:
+            m["tags"] = rng.sample(["x", "y", "z"], 2)
+        rows.append({"text": f"record {i} about soil compost drainage beds {e}",
+                     "metadata": m, "timestamp": 1_700_000_000.0 + i})
+    v = Vault(str(tmp_path / "pf.dat"))
+    v.add_batch(rows)
+    v.flush()
+
+    filters = []
+    for e in [x for x in ents if x is not None]:
+        filters += [{"entity": e}, {"entity": e, "user_id": "a"},
+                    {"entity": e, "tags": ["x"]}, {"entity": e.upper()}]
+    filters += [{"user_id": "b"}, {"entity": ["cfg_1"]}, {"entity": "missing"},
+                {"entity": 123}]
+
+    def run():
+        return [[h["id"] for h in v.search("soil compost drainage", top_k=k,
+                                           filter=f)]
+                for f in filters for k in (1, 3, 10)]
+
+    fast = run()
+    arena_cls = type(v.engine.arena)
+    original = arena_cls.entity_index
+    arena_cls.entity_index = property(lambda self: {})   # forces the old walk
+    try:
+        slow = run()
+    finally:
+        arena_cls.entity_index = original
+    assert fast == slow, "the prefilter changed a filtered result"
+    assert sum(1 for r in fast if r) > len(fast) // 3, \
+        "too many empty result sets for this to be testing anything"
+    v.close()
+
