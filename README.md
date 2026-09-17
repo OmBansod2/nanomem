@@ -3,12 +3,12 @@
 This folder is self-contained. Copy it anywhere and run it; `pip install` is
 optional. The only third-party runtime dependency is `numpy`.
 
-Package 0.6.3 · engine 3.3.0 · container format 3 · arena cache format 3.
+Package 0.6.4 · engine 3.3.1 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
 If you offer nanomem to users over a network, AGPL section 13 requires you to
-offer them your source — see [COMMERCIAL-LICENSE.md](COMMERCIAL-LICENSE.md) for
+offer them your source — see [COMMERCIAL-LICENSE.md](https://github.com/OmBansod2/nanomem/blob/main/COMMERCIAL-LICENSE.md) for
 the alternative. Up to 0.6.0 the wheel metadata said Apache-2.0 while the
 LICENSE file said All Rights Reserved; that contradiction is resolved here and
 the superseded terms are kept in `LICENSE.preview-v1.0.md`.
@@ -33,7 +33,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-509 tests, no network needed.
+514 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -249,12 +249,12 @@ in 3.0.
 
 ## Documentation
 
-* [USER_MANUAL.md](USER_MANUAL.md) — hub, and the full measured-performance tables
-* [USER_MANUAL_PERSONAL.md](USER_MANUAL_PERSONAL.md) — chat, profiles, privacy
-* [USER_MANUAL_DEVELOPER.md](USER_MANUAL_DEVELOPER.md) — SDK, CLI, concurrency, migration
-* [SERVICES_AND_API_SPECIFICATION.md](SERVICES_AND_API_SPECIFICATION.md) — REST endpoints and limits
-* [MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md](MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md) — the bridge, and what did not work
-* [CHANGELOG.md](CHANGELOG.md) — breaking changes from 0.1.x
+* [USER_MANUAL.md](https://github.com/OmBansod2/nanomem/blob/main/USER_MANUAL.md) — hub, and the full measured-performance tables
+* [USER_MANUAL_PERSONAL.md](https://github.com/OmBansod2/nanomem/blob/main/USER_MANUAL_PERSONAL.md) — chat, profiles, privacy
+* [USER_MANUAL_DEVELOPER.md](https://github.com/OmBansod2/nanomem/blob/main/USER_MANUAL_DEVELOPER.md) — SDK, CLI, concurrency, migration
+* [SERVICES_AND_API_SPECIFICATION.md](https://github.com/OmBansod2/nanomem/blob/main/SERVICES_AND_API_SPECIFICATION.md) — REST endpoints and limits
+* [MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md](https://github.com/OmBansod2/nanomem/blob/main/MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md) — the bridge, and what did not work
+* [CHANGELOG.md](https://github.com/OmBansod2/nanomem/blob/main/CHANGELOG.md) — breaking changes from 0.1.x
 
 Read `nanomem.THREAT_MODEL` before relying on the optional password mode. It is
 scrypt + a SHAKE256 keystream + an HMAC-SHA256 tag, built from the Python

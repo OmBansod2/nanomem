@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.3.0"
+ENGINE_VERSION = "3.3.1"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -184,6 +184,30 @@ def matches_filter(meta: Dict[str, Any], meta_filter: Dict[str, Any]) -> bool:
             if val != v and str(val) != str(v):
                 return False
     return True
+
+
+def _volatility_entry(key: str, t: np.ndarray, t_now: float,
+                      min_revisions: int) -> Optional[Dict[str, Any]]:
+    """One :meth:`VaultEngine.volatility` row from a group's SORTED timestamps.
+
+    Split out so the sealed-block path and the still-pending path cannot drift:
+    before 0.6.4 there was only the first, and the second did not exist at all.
+    """
+    if t.size < int(min_revisions):
+        return None
+    d = np.diff(t)
+    parts = key.split(_ent.GROUP_SEP)
+    return dict(
+        key=key,
+        user_id=parts[0] if parts else "",
+        project=parts[1] if len(parts) > 1 else "",
+        entity=parts[2] if len(parts) > 2 else "",
+        n_revisions=int(t.size),
+        first_ts=float(t[0]), last_ts=float(t[-1]),
+        age=float(t_now - t[-1]),
+        intervals=[float(x) for x in d],
+        mean_interval=float(d.mean()) if d.size else None,
+        median_interval=float(np.median(d)) if d.size else None)
 
 
 def _top_k_stable(values, k: int) -> np.ndarray:
@@ -2879,8 +2903,10 @@ class VaultEngine:
         a probability, and it is separate precisely so a caller can use the
         measurements without buying the model.
 
-        This reads the resident ``ts`` / ``rev`` / ``group_id`` columns and
-        scores no vectors, so it does not touch the search path.
+        This reads the resident ``ts`` / ``rev`` / ``group_id`` columns and the
+        pending memtable, and scores no vectors, so it does not touch the search
+        path. Records written but not yet flushed ARE counted: `volatility()`
+        and `search()` never disagree about what has been written.
 
         Records with no entity share the empty group key and are excluded: they
         are not restatements of one fact, they are everything the tagger did not
@@ -2888,40 +2914,59 @@ class VaultEngine:
         """
         with self._lock:
             self._reload_if_modified()
-            n = int(self.arena.n_rows)
-            if n == 0:
-                return []
-            gid = np.asarray(self.arena.group_id[:n])
-            ts = np.asarray(self.arena.ts[:n], dtype=np.float64)
-            keys = self.arena.group_keys
             t_now = float(time.time() if now is None else now)
+            keys = self.arena.group_keys
+            n = int(self.arena.n_rows)
+
+            # Records still in the memtable are part of the log. `search` and
+            # `history` have always scored them and `stats()` counts them as
+            # `memtable_pending`; until 0.6.4 this method read `self.arena`
+            # alone, so it saw SEALED 50-row blocks only. Under `block_capacity`
+            # writes it returned [], and past that it answered off a stale
+            # prefix: measured on 0.6.3, 120 writes with the newest made TODAY
+            # reported `n_revisions=100, age=20 days`. Reporting a fact restated
+            # today as three weeks unconfirmed is the exact answer `staleness()`
+            # exists to get right. Every test flushed first, so the suite agreed.
+            pending: Dict[int, List[float]] = {}
+            for it in self._mt.items[:self._mt.n]:
+                g = int(it.get("group_id", -1))
+                if g >= 0:
+                    pending.setdefault(g, []).append(float(it["timestamp"]))
+
             out = []
-            order = np.argsort(gid, kind="stable")
-            gsorted = gid[order]
-            bounds = np.flatnonzero(np.diff(gsorted)) + 1
-            for lo, hi in zip(np.concatenate([[0], bounds]),
-                              np.concatenate([bounds, [gsorted.size]])):
-                g = int(gsorted[lo])
+            if n:
+                gid = np.asarray(self.arena.group_id[:n])
+                ts = np.asarray(self.arena.ts[:n], dtype=np.float64)
+                order = np.argsort(gid, kind="stable")
+                gsorted = gid[order]
+                bounds = np.flatnonzero(np.diff(gsorted)) + 1
+                for lo, hi in zip(np.concatenate([[0], bounds]),
+                                  np.concatenate([bounds, [gsorted.size]])):
+                    g = int(gsorted[lo])
+                    key = keys[g] if 0 <= g < len(keys) else ""
+                    if not key:
+                        continue
+                    # `pop`, so a group with both sealed and pending records is
+                    # counted once, by this branch, with all of its timestamps.
+                    t = np.concatenate([
+                        ts[order[lo:hi]],
+                        np.asarray(pending.pop(g, ()), dtype=np.float64)])
+                    e = _volatility_entry(key, np.sort(t), t_now, min_revisions)
+                    if e is not None:
+                        out.append(e)
+
+            # Groups with no sealed record at all -- which is every group in a
+            # vault younger than one block.
+            for g, times in pending.items():
                 key = keys[g] if 0 <= g < len(keys) else ""
                 if not key:
                     continue
-                rows = order[lo:hi]
-                t = np.sort(ts[rows])
-                if t.size < int(min_revisions):
-                    continue
-                d = np.diff(t)
-                parts = key.split("\x1f")
-                out.append(dict(
-                    key=key,
-                    user_id=parts[0] if parts else "",
-                    project=parts[1] if len(parts) > 1 else "",
-                    entity=parts[2] if len(parts) > 2 else "",
-                    n_revisions=int(t.size),
-                    first_ts=float(t[0]), last_ts=float(t[-1]),
-                    age=float(t_now - t[-1]),
-                    intervals=[float(x) for x in d],
-                    mean_interval=float(d.mean()) if d.size else None,
-                    median_interval=float(np.median(d)) if d.size else None))
+                e = _volatility_entry(
+                    key, np.sort(np.asarray(times, dtype=np.float64)),
+                    t_now, min_revisions)
+                if e is not None:
+                    out.append(e)
+
             out.sort(key=lambda r: -r["age"])
             return out
 

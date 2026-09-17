@@ -14,6 +14,8 @@ in this project and shipped, or nearly did:
   * `hello@nanomem.dev` and two URLs that do not resolve
   * `EmbeddingProvider.dim` hard-coded, so `embed_model=` did nothing
   * a 139 MB model that nothing opened
+  * seven README links that resolve against pypi.org and 404 there
+  * `*.npz` in .gitignore eating a shipped asset -- twice
 
 Usage:  python3 release_preflight.py [--offline]
 """
@@ -66,8 +68,17 @@ def check_test_count():
     if not m:
         bad("could not read a pass count from pytest")
         return
-    n, failed = int(m.group(1)), re.search(r"(\d+) failed", r.stdout)
-    NOTES.append(f"{n} tests pass")
+    passed = int(m.group(1))
+    sk = re.search(r"(\d+) skipped", r.stdout)
+    skipped = int(sk.group(1)) if sk else 0
+    # The docs claim a SUITE SIZE, so compare against one. A clone of the public
+    # mirror skips 16 tests that want research artifacts under scratch/refound/,
+    # which do not ship -- 498 pass there and 514 here, off the same suite. Held
+    # to the pass count alone, the claim could only be true in one of the two.
+    n = passed + skipped
+    failed = re.search(r"(\d+) failed", r.stdout)
+    NOTES.append(f"{n} tests" + (f" ({passed} pass, {skipped} skip here)"
+                                 if skipped else " pass"))
     if failed:
         bad(f"{failed.group(1)} tests FAIL")
     for doc in ("README.md", "USER_MANUAL_DEVELOPER.md"):
@@ -151,33 +162,55 @@ def check_claims():
     for name in referenced:
         if not os.path.exists(os.path.join(assets, name)):
             bad(f"code references assets/{name}, which is not present")
-    wc = os.path.join(assets, "write_classifier.npz")
-    if not os.path.exists(wc):
+    if not os.path.exists(os.path.join(assets, "write_classifier.npz")):
         bad("assets/write_classifier.npz is missing -- a clone without it fails "
             "3 write-gate tests")
-    else:
-        r = subprocess.run(["git", "ls-files", "--error-unmatch",
-                            "nanomem/assets/write_classifier.npz"],
-                           cwd=HERE, capture_output=True)
-        if r.returncode != 0:
-            bad("assets/write_classifier.npz is NOT tracked by git -- clones get "
-                "a broken package (this is what *.npz in .gitignore did)")
+    # Not just the classifier: EVERY .npz the package or the suite loads. The
+    # blanket `*.npz` rule in .gitignore has now eaten two of them -- the
+    # classifier head, where 3 write-gate tests FAILED loudly, and the probe
+    # fixture, where `_fixture()` calls pytest.skip and a clone reports green
+    # with the coverage gone. The silent one went unnoticed far longer.
+    for root in ("nanomem", "tests"):
+        for dirpath, _dirs, files in os.walk(os.path.join(HERE, root)):
+            if "__pycache__" in dirpath:
+                continue
+            for f in sorted(files):
+                if not f.endswith(".npz"):
+                    continue
+                rel = os.path.relpath(os.path.join(dirpath, f), HERE)
+                r = subprocess.run(["git", "ls-files", "--error-unmatch", rel],
+                                   cwd=HERE, capture_output=True)
+                if r.returncode != 0:
+                    bad(f"{rel} is NOT tracked by git -- clones get it missing")
+
+
+def _artifacts(pattern, ver):
+    """Current build artifacts, complaining about any stale one beside them.
+
+    `twine upload dist/*` publishes everything it finds, so a leftover from the
+    previous version in that directory is not clutter -- it is an accidental
+    release.
+    """
+    import glob
+    found = sorted(set(glob.glob(os.path.join(HERE, "dist", pattern))
+                       + glob.glob(os.path.join(HERE, pattern))))
+    current = []
+    for f in found:
+        if ver in os.path.basename(f):
+            current.append(f)
+        else:
+            bad(f"stale artifact {os.path.relpath(f, HERE)} (source is {ver}) "
+                f"-- `twine upload dist/*` would publish it too")
+    return current
 
 
 def check_wheel(ver):
-    import glob
-    whls = glob.glob(os.path.join(HERE, "nanomem-*.whl"))
+    whls = _artifacts("nanomem-*.whl", ver)
     if not whls:
-        NOTES.append("no wheel beside the source yet (build one before upload)")
+        NOTES.append("no wheel built yet (python3 -m build)")
         return
-    for w in whls:
-        if ver not in os.path.basename(w):
-            bad(f"stale wheel beside the source: {os.path.basename(w)} "
-                f"(source is {ver})")
     import zipfile
     for w in whls:
-        if ver not in os.path.basename(w):
-            continue
         with zipfile.ZipFile(w) as z:
             names = z.namelist()
             meta = next((n for n in names if n.endswith("METADATA")), None)
@@ -190,13 +223,61 @@ def check_wheel(ver):
                 bad(f"{os.path.basename(w)} ships model.bin (139 MB, never opened)")
 
 
+def check_sdist(ver):
+    """The sdist is the AGPL "corresponding source" and what conda-forge,
+    Debian and Homebrew actually build from -- they run the suite out of the
+    tarball. There was none at all until 0.6.3, and the setuptools default
+    (`packages = ["nanomem"]` and nothing else) would have shipped no tests,
+    no CHANGELOG and none of the documents README links to: a tarball nobody
+    downstream can verify. MANIFEST.in is what puts them there.
+    """
+    import tarfile
+    sds = _artifacts("nanomem-*.tar.gz", ver)
+    if not sds:
+        NOTES.append("no sdist built yet (python3 -m build --sdist)")
+        return
+    for sd in sds:
+        base = os.path.basename(sd)
+        with tarfile.open(sd) as t:
+            members = t.getmembers()
+            names = {m.name.split("/", 1)[-1] for m in members}
+            pkg = next((m for m in members if m.name.endswith("PKG-INFO")), None)
+            text = t.extractfile(pkg).read().decode() if pkg else ""
+            if "AGPL-3.0-or-later" not in text:
+                bad(f"{base} does not declare AGPL-3.0-or-later")
+            for need in ("LICENSE", "CHANGELOG.md", "MANIFEST.in",
+                         "nanomem/assets/write_classifier.npz",
+                         "tests/data/adjacent_attributes.npz"):
+                if need not in names:
+                    bad(f"{base} is missing {need}")
+            if not any(n.startswith("tests/test_") for n in names):
+                bad(f"{base} ships no tests -- nothing downstream can verify it")
+            for n in sorted(names):
+                if n.endswith((".dat", ".whl", ".pyc")) or "__pycache__" in n:
+                    bad(f"{base} ships junk from this machine: {n}")
+        NOTES.append(f"{base} carries the suite and both assets")
+
+
+def check_readme_links():
+    """PyPI renders README as the project page but does NOT resolve relative
+    links: `](USER_MANUAL.md)` resolves against pypi.org and 404s. Seven of
+    those were in the METADATA of the wheel built before this check existed.
+    """
+    for target in sorted(set(re.findall(r"\]\((?!https?:|#|mailto:)([^)]+)\)",
+                                        read("README.md")))):
+        bad(f"README links {target!r} relatively -- dead on the PyPI project "
+            f"page, which does not resolve relative paths; use the full URL")
+
+
 def main():
     offline = "--offline" in sys.argv
     ver = check_versions()
     check_test_count()
     check_metadata(offline)
+    check_readme_links()
     check_claims()
     check_wheel(ver)
+    check_sdist(ver)
 
     for n in NOTES:
         print(f"  ok    {n}")

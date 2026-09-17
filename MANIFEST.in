@@ -1,0 +1,30 @@
+# What the source distribution carries beyond the package itself.
+#
+# Without this file setuptools builds an sdist from `packages = ["nanomem"]`
+# alone: no tests, no CHANGELOG, none of the seven documents README links to.
+# That is an sdist a downstream packager (conda-forge, Debian, Homebrew) cannot
+# verify -- they run the suite from the tarball, and there would be no suite.
+# `pip install nanomem` is unaffected either way; this is for everyone who
+# builds from source rather than installing a wheel.
+
+include CHANGELOG.md
+include COMPETITIVE_POSITION.md
+include MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md
+include SERVICES_AND_API_SPECIFICATION.md
+include USER_MANUAL.md
+include USER_MANUAL_DEVELOPER.md
+include USER_MANUAL_PERSONAL.md
+
+recursive-include nanomem/assets *.npz
+recursive-include tests *.py
+include tests/data/adjacent_attributes.npz
+include tests/data/fixture_vocab.txt
+
+# Never ship: a real vault written by demo.py, the previous build's outputs, or
+# anything compiled on this machine.
+exclude production_vault.dat
+global-exclude *.dat *.dat.v2.bak *.whl *.py[cod]
+prune build
+prune dist
+prune .pytest_cache
+prune nanomem.egg-info

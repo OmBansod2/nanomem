@@ -302,6 +302,72 @@ def test_volatility_needs_a_restatement(vault_path):
     assert e.volatility() == []
 
 
+def test_volatility_sees_unflushed_records(vault_path):
+    """0.6.3 read `arena` alone, so an unsealed block was invisible HERE while
+    `search`, `history` and `changes` all scored it -- each of those has had a
+    "sees unflushed records" test since the day it shipped and this did not.
+    Under one block of writes, which is the entire life of a small vault,
+    `volatility()` returned [] and `staleness()` with it.
+    """
+    e, _q, _ids = _chain(vault_path, n=3, flush=False)
+    assert e.stats()["memtable_pending"] == 3
+    rows = e.volatility(now=T0 + 10 * DAY)
+    assert len(rows) == 1
+    assert rows[0]["n_revisions"] == 3
+    assert rows[0]["intervals"] == [DAY, DAY]
+
+
+def test_volatility_is_the_same_answer_before_and_after_a_flush(vault_path):
+    """Durability is not visibility: flushing decides what survives a crash,
+    never what has been written."""
+    e, _q, _ids = _chain(vault_path, n=3, flush=False)
+    before = e.volatility(now=T0 + 10 * DAY)
+    e.flush()
+    assert e.volatility(now=T0 + 10 * DAY) == before
+
+
+def test_volatility_counts_a_group_split_across_the_block_boundary(vault_path):
+    """The bug at its sharpest -- not an empty answer, a STALE one.
+
+    Measured on the published 0.6.3 wheel: 120 writes whose newest was made
+    `now` reported ``n_revisions=100`` and ``age=20 days``. A fact restated
+    today, called three weeks unconfirmed, by the method whose whole purpose is
+    to say which facts need re-confirming.
+    """
+    q = unit_rows(1, seed=3)[0]
+    e = VaultEngine(vault_path, embed_dim=D)
+    n = 120
+    for i in range(n):
+        e.add_fact(f"My locker code is value-{i}.",
+                   _corr(q, 0.80, seed=200 + i % 40), source="chat",
+                   metadata={"entity": "locker_code"}, timestamp=T0 + i * DAY)
+    assert 0 < e.stats()["memtable_pending"] < n      # a partial block is open
+    rows = e.volatility(now=T0 + (n - 1) * DAY)
+    assert len(rows) == 1                             # counted once, not twice
+    assert rows[0]["n_revisions"] == n
+    assert rows[0]["age"] == 0.0
+
+
+def test_volatility_excludes_untagged_pending_records(vault_path):
+    """The same exclusion on the pending path: rows with no entity share the
+    empty group key, and pooling them reports one enormous fake fact."""
+    q = unit_rows(1, seed=9)[0]
+    e = VaultEngine(vault_path, embed_dim=D)
+    for i in range(5):
+        e.add_fact(f"unrelated note {i}", _corr(q, 0.4, seed=800 + i),
+                   source="document", timestamp=T0 + i * DAY)
+    assert e.stats()["memtable_pending"] == 5
+    assert e.volatility() == []
+
+
+def test_staleness_sees_unflushed_records(vault_path):
+    """It is built on `volatility`, so it inherited the blind spot and the fix."""
+    e, _q, _ids = _chain(vault_path, n=3, flush=False)
+    st = e.staleness(now=T0 + 10 * DAY, assume_memoryless=True)
+    assert len(st) == 1 and st[0]["n_revisions"] == 3
+    assert 0.0 < st[0]["p_superseded"] < 1.0
+
+
 def test_staleness_suppresses_the_probability_by_default(vault_path):
     """Pre-registered consequence of the calibration gate, not caution."""
     e, q, _ = _chain(vault_path, n=4)

@@ -5,6 +5,63 @@ number below is from one of those files.
 
 ---
 
+## 0.6.4 — engine 3.3.1
+
+**`volatility()` and `staleness()` only counted SEALED blocks.** Found by
+installing the published 0.6.3 wheel from PyPI into a clean virtualenv and
+using it, which is not something the suite can do for you.
+
+Records live in a memtable until `block_capacity` (50) of them accumulate and
+spill to disk. `search`, `history` and `changes` have always scored the pending
+ones — each has had a "sees unflushed records" test since it shipped.
+`volatility()` read the resident `arena` columns alone, so it saw only what had
+already spilled:
+
+| writes, newest made *now* | `stats()['memtable_pending']` | 0.6.3 `volatility()` |
+| --- | --- | --- |
+| 3 | 3 | `[]` |
+| 49 | 49 | `[]` |
+| 120 | 20 | `n_revisions=100`, `age=20 days` |
+
+The empty answers are bad; the third row is worse. It reports a fact restated
+*today* as three weeks unconfirmed — a confident wrong answer from the method
+whose entire purpose is to say which facts need re-confirming, and the exact
+failure this project is positioned to fix. `staleness()` is built on
+`volatility()`, so it returned the same thing.
+
+Under 50 writes — the whole life of a small vault — the primitive returned
+nothing at all.
+
+Now both fold in the pending memtable, so flushing changes durability and never
+visibility. A group with records on both sides of the boundary is counted once,
+with all of its timestamps. Untagged pending rows are excluded by the same rule
+as untagged sealed ones.
+
+Five regression tests. Four fail against the published 0.6.3 wheel and pass
+here, which is the only check that matters for a fix; the fifth guards the
+untagged-pending path, where 0.6.3 returned the right answer for the wrong
+reason. Suite: 509 -> 514.
+
+**Packaging, from the same release.** There is now an sdist — the AGPL
+corresponding source, and what conda-forge and Debian build from. A clean
+virtualenv built from it alone runs the suite. `MANIFEST.in` is what puts the
+tests, the CHANGELOG and the seven linked documents in it; the setuptools
+default ships the package and nothing else.
+
+Two more caught by preflight before upload:
+
+* All seven of README's links were relative. GitHub resolves those; PyPI does
+  not — they would have been seven dead links on the project page.
+* `*.npz` in `.gitignore` had eaten a second shipped file:
+  `tests/data/adjacent_attributes.npz`. Unlike the classifier head, this one
+  fails silently — `_fixture()` calls `pytest.skip`, so a clone loses the
+  coverage and still reports green.
+
+`release_preflight.py` grew four checks for these, each negative-tested to fire
+on the defect and stay quiet on the real tree.
+
+---
+
 ## 0.6.3 — engine 3.3.0 (unchanged)
 
 **The macOS bundles carried 139 MB of a model nanomem never opened.**

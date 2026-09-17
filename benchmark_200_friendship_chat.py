@@ -21,9 +21,6 @@ import time
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 if cur_dir not in sys.path:
     sys.path.insert(0, cur_dir)
-mac_bundle_dir = os.path.join(cur_dir, "nanomem_mac_bundle")
-if os.path.isdir(mac_bundle_dir):
-    sys.path.insert(0, mac_bundle_dir)
 
 from nanomem import Vault
 

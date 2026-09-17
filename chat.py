@@ -28,9 +28,6 @@ from typing import Dict, List, Optional, Tuple
 # Ensure local package import
 cur_dir = os.path.dirname(os.path.abspath(__file__))
 sys.path.insert(0, cur_dir)
-mac_bundle_dir = os.path.join(cur_dir, "nanomem_mac_bundle")
-if os.path.isdir(mac_bundle_dir):
-    sys.path.insert(0, mac_bundle_dir)
 
 from nanomem import Vault, list_users, create_user, delete_user, user_exists
 
