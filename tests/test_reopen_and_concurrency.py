@@ -263,6 +263,8 @@ print(ok)
 """
 
 
+@pytest.mark.skipif(os.name == "nt", reason=(
+    "several processes appending to one vault is serialised by an advisory whole-file lock. On Windows that is msvcrt.locking on a byte range, which has no shared mode and cannot lock a file opened 'rb' -- container.file_lock documents this and warns at runtime. So the guarantee this test checks is one nanomem does not make there, and asserting it would be asserting a lock we told the caller we do not have"))
 @pytest.mark.parametrize("procs,each", [(2, 60), (4, 40)])
 def test_processes_appending_lose_nothing(tmp_path, procs, each):
     """Concurrent appends from several processes: every record survives.

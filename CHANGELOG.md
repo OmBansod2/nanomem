@@ -71,7 +71,10 @@ one is a thing the platform refuses rather than something nanomem gets wrong:
   mode bit to check;
 * `msvcrt` has no shared lock — `container.file_lock` has always said so and
   warns — so concurrent opens are not serialised the way `fcntl` serialises
-  them.
+  them, and **several processes appending to one vault is not a guarantee
+  nanomem makes on Windows**. That is the one limitation here worth planning
+  around: a single process, or one writer with readers that tolerate a stale
+  view, is the supported shape there.
 
 Four test bugs of our own surfaced with them, all invisible on POSIX:
 `os.getloadavg` decorating a diagnostic print, source read with the platform

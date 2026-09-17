@@ -130,12 +130,6 @@ def test_write_cost_is_flat(tmp_path):
     cpu_last = float(np.median(cpu[-500:]))
     wall_first = float(np.median(wall[:500]))
     wall_last = float(np.median(wall[-500:]))
-    print(f"\nadd cost, first 500 -> last 500: cpu median {cpu_first * 1e6:.1f} -> "
-          f"{cpu_last * 1e6:.1f} us ({cpu_last / cpu_first:.2f}x), wall median "
-          f"{wall_first * 1e6:.1f} -> {wall_last * 1e6:.1f} us "
-          f"({wall_last / wall_first:.2f}x), wall mean "
-          f"{float(wall[:500].mean()) * 1e6:.1f} -> {float(wall[-500:].mean()) * 1e6:.1f} us "
-          f"| load {_loadavg():.2f}")
     # `time.process_time()` has a ~15.6 ms tick on Windows, so every one of
     # these ~20 us adds measures as exactly 0.0 and the median with it -- the
     # ratio below was a ZeroDivisionError there, not a failed assertion. Where
@@ -150,6 +144,12 @@ def test_write_cost_is_flat(tmp_path):
         assert e.count() == n
         e.close()
         return
+    print(f"\nadd cost, first 500 -> last 500: cpu median {cpu_first * 1e6:.1f} -> "
+          f"{cpu_last * 1e6:.1f} us ({cpu_last / cpu_first:.2f}x), wall median "
+          f"{wall_first * 1e6:.1f} -> {wall_last * 1e6:.1f} us "
+          f"({wall_last / wall_first:.2f}x), wall mean "
+          f"{float(wall[:500].mean()) * 1e6:.1f} -> {float(wall[-500:].mean()) * 1e6:.1f} us "
+          f"| load {_loadavg():.2f}")
     assert cpu_last < 1.5 * cpu_first, (
         f"cpu median {cpu_last / cpu_first:.2f}x (wall median "
         f"{wall_last / wall_first:.2f}x)")
