@@ -1,0 +1,68 @@
+{
+  "spec": "design/unexplored_surface_spec.md",
+  "verdict": "8 of 8 pass; no defect found",
+  "note": "A clean sweep is the result, not a failure to look. Three of six predictions were wrong, all in the direction of the code being better than expected.",
+  "S1_export_encryption": {
+    "pass": true,
+    "default_target_inherits_encryption": true,
+    "secret_bytes_present_in_default_export": false,
+    "default_export_opens_without_password": false,
+    "explicit_target_password_None": "plaintext, as the caller asked",
+    "re_encrypt_with_new_password": "works, opens with the new password only"
+  },
+  "S2_merge_reconcile_revisions": {
+    "pass": true,
+    "setup": "vault A holds t=100 and t=300, vault B holds t=200 and t=400, one shared entity",
+    "reconcile_true": {"current": "9 Birch Way (newest by time)", "history_in_time_order": true,
+                       "revisions_in_time_order": [1, 1, 2, 3]},
+    "reconcile_false": {"current": "9 Birch Way (newest by time)", "history_in_time_order": true,
+                        "revisions_in_time_order": [1, 1, 2, 2]},
+    "note": "prediction that merge would collide with 0.7.4's concordance rule was WRONG"
+  },
+  "S3_compact": {"pass": true, "records_before": 8, "records_after": 8,
+                 "current_value_unchanged": true, "chunked_policy_answer_survives": true},
+  "S4_crash_and_torn_tail": {
+    "pass": true,
+    "sigkill_mid_write": {"flushed_records_surviving": "40 of 40", "truncated_records": 0,
+                          "reopens": true},
+    "deterministic_truncation": [
+      {"truncated_to_pct": 99, "opens": true, "records": 100, "partial_records": 0, "warned": true},
+      {"truncated_to_pct": 90, "opens": true, "records": 100, "partial_records": 0, "warned": true},
+      {"truncated_to_pct": 75, "opens": true, "records": 50, "partial_records": 0, "warned": true},
+      {"truncated_to_pct": 50, "opens": true, "records": 50, "partial_records": 0, "warned": true},
+      {"truncated_to_pct": 25, "opens": true, "records": 0, "partial_records": 0, "warned": true}
+    ],
+    "note": "falls back to 50-record block boundaries, never returns a partial record, warns every time"
+  },
+  "S5_cross_process_writes": {
+    "pass": true,
+    "light": {"processes": 2, "records_each": 60, "acknowledged": 120, "on_disk": 120, "lost": 0},
+    "heavy": {"processes": 4, "records_each": 150, "flush": "every record",
+              "acknowledged": 600, "on_disk": 600, "lost": 0, "duplicate_ids": 0},
+    "note": "prediction of lost writes with no cross-process lock was WRONG"
+  },
+  "S6_v2_migration": {
+    "pass": true,
+    "chat_v2": {"v2_records": 14, "v3_records": 14, "entity_tagged": 13, "declared": 0,
+                "revision_timestamp_inversions": 0, "chains": 9},
+    "book_v2": {"v2_records": 845, "v3_records": 845, "entity_tagged": 165, "declared": 0,
+                "revision_timestamp_inversions": 0, "chains": 86},
+    "why_it_matters": "zero migrated records read as DECLARED, so 0.7.5's gate exemption cannot fire on a migrated vault and its ranking is unchanged; zero inversions, so 0.7.4's concordance check never fires either"
+  },
+  "S7_update_and_delete_on_a_chain": {
+    "pass": true,
+    "delete_newest_promotes_previous": "333 deleted -> current became 222",
+    "update_middle_revision": "history ['111', '222-REVISED'], current is the revised record"
+  },
+  "S8_embedding_width_swap": {
+    "pass": true,
+    "behaviour": "warns at open that the requested width is ignored, then refuses the write with ValueError: embedding has 384 dims, vault has 768",
+    "out_of_scope": "a DIFFERENT model of the SAME width cannot be detected and is not barred"
+  },
+  "predictions_scored": {
+    "correct": ["S1 passes", "S3 passes", "S4 passes for a clean kill"],
+    "wrong": ["S2 predicted the likeliest defect -- passed in both modes",
+              "S5 predicted lost writes -- zero lost under 4-process max contention",
+              "S7 predicted most likely to be overlooked -- passed"]
+  }
+}

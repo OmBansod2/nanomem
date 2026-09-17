@@ -1,0 +1,93 @@
+{
+  "generated": "2026-09-17T21:36:17",
+  "embedder": "nomic-embed-text (ollama)",
+  "cases": {
+    "A_config_drift": {
+      "entities": 50,
+      "records": 200,
+      "A1_as_of_accuracy_pct": 100.0,
+      "A1_probes": 200,
+      "A1_bar": 95.0,
+      "A1_pass": true,
+      "A1_sample_misses": [],
+      "A2_sibling_top1_pct": 100.0,
+      "A2_probes": 50,
+      "A2_bar": 80.0,
+      "A2_pass": true,
+      "A2_sample_misses": []
+    },
+    "B_price_tracking": {
+      "skus": 200,
+      "records": 1600,
+      "B1_history_order_pct": 100.0,
+      "B1_probes": 50,
+      "B1_bar": 100.0,
+      "B1_pass": true,
+      "B1_failures": [],
+      "B2_sku_top1_pct": 100.0,
+      "B2_probes": 200,
+      "B2_bar": 70.0,
+      "B2_pass": true,
+      "B2_top5_pct_recorded_not_barred": 100.0,
+      "B2_sample_misses": []
+    },
+    "C_multi_tenant": {
+      "tenants": 3,
+      "records": 450,
+      "C1_filtered_probes": 30,
+      "C1_cross_tenant_leaks": 0,
+      "C1_bar": 0,
+      "C1_pass": true,
+      "C2_unfiltered_foreign_rows": 100,
+      "C2_unfiltered_own_rows": 50,
+      "C2_note": "recorded, not barred: what a caller who omits filter= sees"
+    },
+    "D_agent_task_state": {
+      "revisions": 16,
+      "interval_seconds": 2.0,
+      "D1_order_correct": true,
+      "D1_history_len": 16,
+      "D1_history_complete": true,
+      "D1_bar": true,
+      "D1_pass": true,
+      "D2_median_interval_s": 2.0,
+      "D2_rendered": "2s",
+      "D2_bar": "a unit a reader can act on",
+      "D2_pass": true,
+      "D3_current_is_newest": true,
+      "D3_got": "Deployment job 4471 is now done."
+    },
+    "E_policy_versioning": {
+      "policies": 5,
+      "records": 60,
+      "chunked_records": 60,
+      "chunks_inherit_entity": true,
+      "E1_as_of_accuracy_pct": 100.0,
+      "E1_probes": 15,
+      "E1_bar": 95.0,
+      "E1_pass": true,
+      "E1_sample_misses": [],
+      "E2_forget_superseded_keep1_would_delete": 40,
+      "E2_records_before": 60,
+      "E2_records_after_if_applied": 20,
+      "E2_current_window": "90 days",
+      "E2_note": "each version of a policy becomes MANY chunk records sharing one entity, so keep=1 keeps ONE CHUNK per policy, not one version"
+    },
+    "F_entity_scale": {
+      "entities": 5000,
+      "records": 15000,
+      "ingest_seconds": 185.0,
+      "ingest_records_per_sec": 81.1,
+      "F1_as_of_accuracy_pct": 100.0,
+      "F1_probes": 200,
+      "F1_median_search_ms": 57.38,
+      "F1_p95_search_ms": 78.37,
+      "F1_latency_bar_ms": 25.0,
+      "F1_latency_pass": false,
+      "file_size_mb": 25.197,
+      "total_documents": 15000
+    }
+  },
+  "embedding_dim": 768,
+  "total_seconds": 234.5
+}

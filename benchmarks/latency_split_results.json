@@ -1,0 +1,28 @@
+{
+  "title": "Where a query's latency actually goes",
+  "why": "A single end-to-end number blends three costs with different owners. Reporting only the blend invites a reader to re-run it on a different embedder and conclude the store is slow.",
+  "nanomem": "0.7.9", "engine": "3.4.1",
+  "machine": "Apple M4 Pro, macOS 26.5, 12 logical CPUs",
+  "corpus": {"records": 15000, "entities": 5000, "dim": 768,
+             "query": "an entity key, filtered to that entity, with as_of set"},
+  "measurements_ms_median": {
+    "store_only_query_pre_embedded": 2.09,
+    "embed_query_only_ollama_nomic_embed_text_http": 12.04,
+    "vault_search_decompose_true_DEFAULT": 50.50,
+    "vault_search_decompose_false": 15.02
+  },
+  "reading": [
+    "The STORE costs 2.09 ms. That is the part nanomem owns.",
+    "The embedding round-trip costs 12.04 ms and is a property of the embedder you point it at, not of the store.",
+    "Query decomposition, on by default, cost 35.6 ms on this SHORT identifier-like query -- 3.4x end to end. It embeds sub-queries separately.",
+    "A 60-query sample over DISTINCT entities, so no single-entity cache warmth."
+  ],
+  "store_side_filtered_search_before_and_after_0_7_9": {
+    "note": "measured with the deterministic offline encoder so the store is isolated from the embedder",
+    "records": 15000, "entities": 5000,
+    "unfiltered_ms": 0.70,
+    "filtered_before_ms": 33.70, "filtered_before_record_decodes": 15001,
+    "filtered_after_ms": 2.08, "filtered_after_record_decodes": 4
+  },
+  "caveat": "A caller that batches or caches query embeddings sees the 2.09 ms figure. A caller that embeds per query over HTTP does not, whatever store is underneath."
+}

@@ -1,0 +1,198 @@
+{
+  "configs": {
+    "plain_flushed": {
+      "2_backfill_not_current": {
+        "got": "My home address is 22 Pine Road.",
+        "want": "22 Pine Road",
+        "ok": true
+      },
+      "3_history_in_time_order": {
+        "got": [
+          "3 Elm Lane",
+          "10 Oak Street",
+          "22 Pine Road"
+        ],
+        "want": "Elm, Oak, Pine",
+        "ok": true
+      },
+      "7_volatility_counts_them": {
+        "got": 1,
+        "want": ">=1",
+        "ok": true
+      },
+      "8_changes_sees_them": {
+        "got": 3,
+        "want": 3,
+        "ok": true
+      },
+      "6_top_k_zero": {
+        "got": 0,
+        "want": 0,
+        "ok": true
+      },
+      "6_top_k_above_50": {
+        "got": 60,
+        "want": 60,
+        "ok": true
+      },
+      "4_chunks_survive_forget": {
+        "got": true,
+        "want": true,
+        "ok": true
+      },
+      "5_chunks_survive_prune": {
+        "got": true,
+        "want": true,
+        "ok": true
+      }
+    },
+    "plain_unflushed": {
+      "2_backfill_not_current": {
+        "got": "My home address is 22 Pine Road.",
+        "want": "22 Pine Road",
+        "ok": true
+      },
+      "3_history_in_time_order": {
+        "got": [
+          "3 Elm Lane",
+          "10 Oak Street",
+          "22 Pine Road"
+        ],
+        "want": "Elm, Oak, Pine",
+        "ok": true
+      },
+      "7_volatility_counts_them": {
+        "got": 1,
+        "want": ">=1",
+        "ok": true
+      },
+      "8_changes_sees_them": {
+        "got": 3,
+        "want": 3,
+        "ok": true
+      },
+      "6_top_k_zero": {
+        "got": 0,
+        "want": 0,
+        "ok": true
+      },
+      "6_top_k_above_50": {
+        "got": 60,
+        "want": 60,
+        "ok": true
+      },
+      "4_chunks_survive_forget": {
+        "got": true,
+        "want": true,
+        "ok": true
+      },
+      "5_chunks_survive_prune": {
+        "got": true,
+        "want": true,
+        "ok": true
+      }
+    },
+    "enc_flushed": {
+      "2_backfill_not_current": {
+        "got": "My home address is 22 Pine Road.",
+        "want": "22 Pine Road",
+        "ok": true
+      },
+      "3_history_in_time_order": {
+        "got": [
+          "3 Elm Lane",
+          "10 Oak Street",
+          "22 Pine Road"
+        ],
+        "want": "Elm, Oak, Pine",
+        "ok": true
+      },
+      "7_volatility_counts_them": {
+        "got": 1,
+        "want": ">=1",
+        "ok": true
+      },
+      "8_changes_sees_them": {
+        "got": 3,
+        "want": 3,
+        "ok": true
+      },
+      "6_top_k_zero": {
+        "got": 0,
+        "want": 0,
+        "ok": true
+      },
+      "6_top_k_above_50": {
+        "got": 60,
+        "want": 60,
+        "ok": true
+      },
+      "4_chunks_survive_forget": {
+        "got": true,
+        "want": true,
+        "ok": true
+      },
+      "5_chunks_survive_prune": {
+        "got": true,
+        "want": true,
+        "ok": true
+      }
+    },
+    "enc_unflushed": {
+      "2_backfill_not_current": {
+        "got": "My home address is 22 Pine Road.",
+        "want": "22 Pine Road",
+        "ok": true
+      },
+      "3_history_in_time_order": {
+        "got": [
+          "3 Elm Lane",
+          "10 Oak Street",
+          "22 Pine Road"
+        ],
+        "want": "Elm, Oak, Pine",
+        "ok": true
+      },
+      "7_volatility_counts_them": {
+        "got": 1,
+        "want": ">=1",
+        "ok": true
+      },
+      "8_changes_sees_them": {
+        "got": 3,
+        "want": 3,
+        "ok": true
+      },
+      "6_top_k_zero": {
+        "got": 0,
+        "want": 0,
+        "ok": true
+      },
+      "6_top_k_above_50": {
+        "got": 60,
+        "want": 60,
+        "ok": true
+      },
+      "4_chunks_survive_forget": {
+        "got": true,
+        "want": true,
+        "ok": true
+      },
+      "5_chunks_survive_prune": {
+        "got": true,
+        "want": true,
+        "ok": true
+      }
+    }
+  },
+  "encryption": {
+    "9a_plaintext_absent_on_disk": true,
+    "9b_wrong_password": "refused: WrongPasswordError",
+    "9c_no_password": "refused: PasswordRequiredError",
+    "10a_plaintext_absent_after_prune": true,
+    "10b_plaintext_absent_after_forget": true,
+    "10c_still_needs_password_after_rewrite": "yes: PasswordRequiredError",
+    "10d_answer_survives_rewrite": true
+  },
+  "configs_disagree_on": {}
+}
