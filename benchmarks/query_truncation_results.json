@@ -1,7 +1,7 @@
 {
  "measured_on": {
-  "nanomem": "0.7.14",
-  "engine": "3.4.2",
+  "nanomem": "0.7.15",
+  "engine": "3.4.3",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "T1": {
@@ -134,11 +134,11 @@
  "T3": {
   "bar": "median embed(1000w) - embed(100w) < 250 ms",
   "median_ms_by_words": {
-   "100": 12.13,
-   "500": 35.13,
-   "1000": 67.56
+   "100": 11.39,
+   "500": 34.58,
+   "1000": 67.5
   },
-  "delta_ms": 55.43,
+  "delta_ms": 56.11,
   "pass": true
  },
  "T4": {
@@ -149,15 +149,15 @@
  },
  "T5_fanout_basis": {
   "note": "not a bar; this is the evidence for MAX_SUB_QUERIES",
-  "n_distinct_queries": 145051,
-  "n_corpora": 173,
+  "n_distinct_queries": 145055,
+  "n_corpora": 177,
   "bound": 8,
   "pct_within_bound": 99.95,
   "largest_real_query_subqueries": 25,
   "pasted_faq_subqueries": 400,
   "pasted_faq_subqueries_when_capped": 22,
   "distribution": {
-   "1": 100223,
+   "1": 100227,
    "2": 32872,
    "3": 8693,
    "4": 2233,

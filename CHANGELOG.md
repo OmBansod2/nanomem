@@ -6,6 +6,117 @@ number below is from one of those files.
 
 ---
 
+## 0.7.15 — engine 3.4.3
+
+**The question's wording outranked the data.** Third and last finding of the
+second black-box review. In a vault of four DECLARED attributes, three of four
+"where…" questions returned the wrong attribute's chain:
+
+```
+where do I train  -> home_address  cos 0.4338   (gym    won cosine at 0.7015)
+where do I study  -> home_address  cos 0.4009   (school won cosine at 0.6890)
+where is my desk  -> home_address  cos 0.3929   (office won cosine at 0.6732)
+where do I live   -> home_address  correct
+```
+
+The correct chain won on RAW cosine by 0.23–0.28 every time. Not a retrieval
+failure: a boost on the wrong group overrode it.
+
+`query_intents` reads wording alone, so the word **"where"** resolves to
+`location` — an alias for `home_address` — whatever is being asked about. For
+"where is my desk" the better candidate `desk` is proposed first but matches no
+entity in the vault, so it falls through to `location`. `intent_boost` (+0.25)
+plus `group_hoist` (+0.25) then makes that choice decisive.
+
+The rule is a generalisation of 0.7.14's, which was "an intent that names
+nothing in this vault is not evidence about it": **an intent whose best record
+loses to the overall best by more than `intent_margin` raw cosine is not
+evidence either.** Shipped at 0.15, the midpoint of the range clearing every
+pre-registered bar (`evidence/design/intent_margin_spec.md`).
+
+**Correcting the group was half a fix.** `intent_boost` is applied from
+`intent_ids` before the group is resolved, so a rejected intent kept boosting
+its own records: `history` reached 4/4 while `search` stayed at 2/4. The test
+now runs once, before the boost, and drops a failing intent for everything
+downstream — the boost, the group, and the revision layer.
+
+**Four arms improved and none regressed**, which I did not expect and did not
+take on trust (`evidence/intent_margin_arms_results.json`):
+
+```
+            A_drift  B_canon  C_sib  D_chat  E_hist  F_prev
+margin 0.00    71.0     90.0   69.3    97.2    63.0    92.9
+margin 0.15    71.0    100.0   91.4    97.2    73.0   100.0
+```
+
+The pre-registration predicted arm A — drifting phrasing, declared — would fall,
+and named that as the reason the rule would probably die. It does not move: arm
+A's difficulty is that the correct record is worded far from the QUESTION, while
+the margin compares the intent's best record against the overall best. Those are
+different things. Arm C is the sibling-probe arm, which is exactly where wording
+selects the wrong attribute, so it is the arm the mechanism predicts should move.
+
+Corroborated three ways rather than believed: the sweep harness reproduces the
+shipped baseline exactly at margin 0.00, matching `exp_floor_current_value.py`'s
+F2 row figure for figure; the adjacent-attribute corpus (40/40 shipped, 40 vs 30
+tag-check cost), the clean-chat set (97.2% / 100.0% top-3 / 94.4%) and the
+520-result ranking baseline are all unchanged; and the fuzzer is clean.
+
+**Engine 3.4.2 -> 3.4.3** and every benchmark re-measured, because the shipped
+ranking default moved.
+
+The semantic cases cannot be asserted on the offline test encoder, which scores
+"where is my desk" NEARER to "Moved, my place is 8 Wexford Lane now." on shared
+words — there the intent legitimately agrees with the data and the rule must not
+fire. Those are measured against a real model; the rule itself is pinned with
+synthetic cosines and no encoder at all, on both sides of the threshold (0.15
+exactly is kept, 0.16 is dropped) so it cannot drift silently.
+
+With this, all three findings of the second review are closed.
+
+**Every claim the documentation makes is now checked by something.** Five
+documented claims were false at once in 0.7.11 — three arguments that did not
+exist, a return value a reader would misread, and `history` called authoritative
+when it was not — and no test asserted any of them. They were found by an
+outside reviewer reading the docs one at a time, by luck.
+
+`evidence/claims_registry.json` enumerates the 47 checkable claims in the README
+and the public docstrings. Each names a test that would fail if the claim became
+false (33), a results file that measures it, or an explicit waiver saying why it
+is not a behavioural claim (14). `release_preflight.py` refuses to ship when a
+claim has none of those, or names a test that does not exist.
+
+Building it found four more claims nothing was defending, now tested (suite
+607 -> 612):
+
+* **`forget()` had no test at all.** It is public and documented. Two added: it
+  erases what it reports, and it is a genuine no-op below the documented 0.42
+  floor rather than erasing the nearest record anyway.
+* **`inspect()` had no test at all.** Same; the outside reviewer exercised it
+  and this suite never had.
+* **`ingest_file` "preserves exact formatting, indentation and line numbers"** —
+  verified by hand in a review, asserted by nothing.
+* **"every call raises until you reopen"** for a width-mismatched handle. Only
+  the warning half was covered. Testing the rest needs the caller-supplied
+  `embedder=` added in 0.7.11: a different model NAME is not enough, because the
+  offline test encoder emits the same width whatever it is called.
+
+It also found three defects in the documentation itself, all mine: the MCP
+`nanomem_history` description had been corrupted mid-word by a 0.7.14 edit that
+replaced one of two concatenated string literals; the README still described the
+`history` truncation fixed in 0.7.14 as live; and `EmbeddingProvider.dim` still
+said the offline encoder emits `OFFLINE_DIM`, which stopped being true in
+0.7.11. The README's remaining claim was rewritten from the measurement rather
+than from memory.
+
+**A generated block had been deleted and nothing noticed.** `BENCHMARKS.md` lost
+its `latency` table during the 0.7.14 work while the page two lines below still
+said "the two blocks above are generated". The refresh had warned about it every
+run; a warning inside a fifteen-minute job is not a guard. Restored, and a
+missing block now fails preflight.
+
+---
+
 ## 0.7.14 — engine 3.4.2
 
 **`history` reported a three-revision chain as a fact that had never changed.**
@@ -2261,7 +2372,7 @@ ordinary v3 open.
 
 Verified on two golden fixtures in `evidence/golden/`: a chat vault
 answers **12 of 12** expected top-1 queries after migration, against 10 of 12 for
-the v2 engine on the same fixture (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings),
+the v2 engine on the same fixture (`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md),
 `golden_chat_v2`); and a book vault migrates **845 of 845** documents with **0 of
 20** top-4 differences from exhaustive fp32 cosine computed over
 `iter_records()` — that second arm was run by hand and is not in a results JSON.
@@ -2304,7 +2415,7 @@ random insertion order it recalled 3.3–21.7 % against 68.3 % exhaustive
 * Revision resolution: the current revision is ranked first in **14 of 16**
   generic probes against **3 of 16** for plain cosine, while **40 of 40**
   adjacent-but-different attributes are left exactly where plain cosine puts
-  them. Historical lookups 16/16. `ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings).
+  them. Historical lookups 16/16. `ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md).
 * Third-party statements are namespaced separately, so "his number is …" can no
   longer be stored as revision 2 of your own number and returned as the answer to
   your own question (`evidence/third_party_v3r4.json`).

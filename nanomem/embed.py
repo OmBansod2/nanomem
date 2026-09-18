@@ -66,7 +66,8 @@ class EmbeddingProvider:
         Probed lazily, once, with one short request, so constructing a provider
         costs nothing until something actually needs the width. If the server
         cannot be reached the deterministic offline encoder answers instead, and
-        that encoder emits ``OFFLINE_DIM``. Pass ``dim=`` to skip the probe --
+        that encoder emits ``OFFLINE_DIM`` unless a width was declared with
+        ``dim=``, which it honours. Pass ``dim=`` to skip the probe --
         the right thing to do for a provider that will only ever be handed a
         lookup table, and for an air-gapped install.
         """

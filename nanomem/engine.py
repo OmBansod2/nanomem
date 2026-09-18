@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.4.2"
+ENGINE_VERSION = "3.4.3"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -394,6 +394,7 @@ class VaultEngine:
                  gate_on_corpus_only: bool = False,
                  floor_skips_single_valued: bool = False,
                  group_floor_sim: float = 0.0,
+                 intent_margin: float = 0.15,
                  floor_keeps_current: Optional[bool] = None,
                  current_keep_sim: float = 0.0,
                  use_revision_markers: bool = False, historical_mode: str = "oldest",
@@ -749,7 +750,7 @@ class VaultEngine:
         # measured against the five round-4 ranking sets (40 adjacent-attribute
         # probes, 16 revision probes, the 3-persona selection chat set, the
         # 3-persona round-4 dev chat set, the migrated golden chat vault) and
-        # only kept if it paid. Grid: `ranking_dev_r4_u*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
+        # only kept if it paid. Grid: `ranking_dev_r4_u*.json`. (not published, see evidence/INDEX.md)
         #
         #   marker_skips_sim   let an explicit revision marker bypass
         #                      `window_sim`      -> 3-persona chat 33 -> 32.
@@ -776,7 +777,7 @@ class VaultEngine:
         #                      (59/65 with and without) while costing 5 of 36 on
         #                      the 3-persona chat set (35 -> 30). The floor is
         #                      doing real work on real chat; see
-        #                      `ranking_dev_r5_floorskip.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) vs
+        #                      `ranking_dev_r5_floorskip.json` (not published, see evidence/INDEX.md) vs
         #                      ranking_dev_r5_stage4.json.
         #   group_floor_sim    let a tagged group member survive the relevance
         #                      floor by RESEMBLING the group's best member
@@ -791,10 +792,13 @@ class VaultEngine:
         #                      it is a no-op on every set. There is no value that
         #                      pays on both, and the chat set is the realistic
         #                      one, so it ships OFF (0.0) and the ablation stays
-        #                      reproducible: `ranking_dev_r5_gfs*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
+        #                      reproducible: `ranking_dev_r5_gfs*.json`. (not published, see evidence/INDEX.md)
         self.marker_skips_sim = bool(marker_skips_sim)
         self.floor_skips_single_valued = bool(floor_skips_single_valued)
         self.group_floor_sim = float(group_floor_sim)
+        #: How much RAW cosine the question's wording may overrule. 0.0
+        #: keeps 0.7.14 behaviour exactly; see design/intent_margin_spec.md.
+        self.intent_margin = float(intent_margin)
         # None = decide per group from tag provenance (the 0.6.5 default);
         # True = always, whoever assigned the tag; False = never, which is
         # exactly 0.6.4 and is what the measurement baseline runs as.
@@ -2098,6 +2102,20 @@ class VaultEngine:
                 mask = mask & (tsv <= float(as_of))
             if not mask.any():
                 return []
+            # A REJECTED INTENT MUST NOT BOOST EITHER.
+            # Correcting `top_entity` alone fixed `history` and left `search`
+            # wrong: `intent_boost` is applied from `intent_ids` here, before
+            # `_resolve_revisions` runs, so a +0.25 still landed on the records
+            # of an intent the margin had already judged untrustworthy. The test
+            # runs once, and a failing intent is dropped for everything
+            # downstream -- the boost, the group, and the revision layer.
+            if (self.intent_margin > 0.0 and intent_ids is not None
+                    and np.size(intent_ids)):
+                mine = mask & np.isin(ent, intent_ids)
+                if mine.any() and mask.any():
+                    gap = float(cos[mask].max()) - float(cos[mine].max())
+                    if gap > self.intent_margin:
+                        intent, intent_ids = None, None
             max_boost = self._max_boost(intent_ids, personal)
             if metadata_filter is not None:
                 mask = self._apply_filter(rows, base, mask, metadata_filter,
@@ -2264,11 +2282,11 @@ class VaultEngine:
         * 3-persona SELECTION chat set, n=36 -- 97.2% (top-3 100.0%), from 91.7%.
           End-to-end 97.2%. ``evidence/clean_chat_results_r5_3p.json``
         * round-4 DEV chat set, 3 new personas, n=24 -- 95.8% (top-3 100.0%),
-          unchanged. ``ranking_dev_r5_final.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)`
+          unchanged. ``ranking_dev_r5_final.json` (not published, see evidence/INDEX.md)`
         * 40 generic adjacent-attribute probes 40/40 (exactly plain cosine);
           16 generic revision probes 14/16 current (plain cosine 3/16) and
           16/16 historical; migrated golden chat vault 12/12 -- all unchanged
-          from round 4. ``ranking_dev_r5_final.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)`
+          from round 4. ``ranking_dev_r5_final.json` (not published, see evidence/INDEX.md)`
 
         WHAT IS STILL WRONG. On the temporal benchmark the layer is 36/40 on
         adjacent attributes where a plain cosine scan is 40/40, so it is still
@@ -2283,7 +2301,9 @@ class VaultEngine:
         """
         if not mask.any():
             return final
-        top_entity = _ent.resolve_top_entity(final, ent, self.arena.entity_names, intent)
+        top_entity = _ent.resolve_top_entity(
+            final, ent, self.arena.entity_names, intent,
+            cos=cos, margin=self.intent_margin)
         explicit = _ent.is_explicit_history(temporal_direction)
         by_wording = _ent.temporal_question(query_text, temporal_direction,
                                             intent, personal_corpus=personal)
@@ -2398,7 +2418,7 @@ class VaultEngine:
         # with revision 1 was ranked "older" than a record tagged `phone_number`
         # with revision 2 that was written a second EARLIER, and asking for the
         # first of something promoted the wrong one
-        # (`ranking_dev_r5_*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings); the case that exposed it is a
+        # (`ranking_dev_r5_*.json` (not published, see evidence/INDEX.md); the case that exposed it is a
         # dev-persona chat log whose group members carried two different tags).
         # When the revisions are not comparable the timestamp is the only order
         # there is, so the revision key is dropped rather than trusted.
@@ -2808,7 +2828,7 @@ class VaultEngine:
                 # superseded address won. Measured: the 16 generic revision
                 # probes score 14 with this rule and 13 without, and the
                 # adjacent probes, both chat sets and the golden vault are
-                # unchanged (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) vs
+                # unchanged (`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md) vs
                 # ranking_dev_B_no_tagsim.json).
                 k = k | self._tag_matches_leader(ent, order)
             order, marked = order[k], marked[k]
@@ -2862,7 +2882,7 @@ class VaultEngine:
         -- and the rule is measured both ways: with it the 16 generic revision
         probes score 14, without it 13, and the adjacent probes, the 3-persona
         chat set, the round-4 dev chat set and the golden vault are all unchanged
-        (``ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)` vs
+        (``ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md)` vs
         ``ranking_dev_A_no_marker_tag.json``).
         """
         names = self.arena.entity_names
@@ -3043,7 +3063,8 @@ class VaultEngine:
                 return []
             scored = np.where(mask, base, -np.inf)
             top_entity = _ent.resolve_top_entity(
-                scored, ent, self.arena.entity_names, intent)
+                scored, ent, self.arena.entity_names, intent,
+                cos=cos, margin=self.intent_margin)
             # NO RELEVANCE FLOOR HERE, deliberately. `group_relevance_floor`
             # answers "is this member a plausible answer to THIS QUESTION",
             # which is the ranker's question: a record that merely carries the

@@ -113,7 +113,7 @@ _STRUCTURAL = (
 # WHICH attribute the value belongs to. Measured: 3 of the 5 remaining generic
 # revision-probe failures and 1 of 2 remaining round-4 dev-persona failures were
 # a frame class overriding an explicit slot
-# (`ranking_dev_r4_frame.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
+# (`ranking_dev_r4_frame.json` (not published, see evidence/INDEX.md)).
 FRAME_CLASSES = frozenset({"location", "career", "name", "allergy", "birthday",
                            "routine", "emergency_contact"})
 
@@ -256,7 +256,7 @@ FUNCTION_TOKENS = {"the", "a", "an", "of", "from", "for", "to", "in", "on", "at"
 # word is. Without this, "my personal account JUST before this one" produced the
 # entity `personal_account_just`, which matched no record at all and left the
 # whole layer silent on that question (measured: boost +0.000,
-# `ranking_dev_r5_*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
+# `ranking_dev_r5_*.json` (not published, see evidence/INDEX.md)).
 TAIL_ADVERBS = {"just", "only", "really", "actually", "ever", "back", "then",
                 "now", "today", "currently", "again", "still", "anymore",
                 "recently", "originally", "previously", "formerly", "initially",
@@ -1205,7 +1205,7 @@ WINDOW_SIM = 0.60           # ... and they must look like each other by this muc
 # (evidence/marker_separation_v3r4.json) -- but it is not
 # USEFUL: measured at 0.18 / 0.20 / 0.22 / 0.30 it wins nothing on the revision
 # probes and costs up to 2 of 36 on the 3-persona chat set and 1 of 24 on the
-# round-4 dev personas (`ranking_dev_H_wide*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings),
+# round-4 dev personas (`ranking_dev_H_wide*.json` (not published, see evidence/INDEX.md),
 # ranking_dev_r4_current.json). It therefore ships EQUAL to WINDOW_DELTA, i.e.
 # off, and remains a constructor knob so the ablation is reproducible.
 WINDOW_DELTA_MARKED = WINDOW_DELTA
@@ -1223,7 +1223,7 @@ WINDOW_DELTA_MARKED = WINDOW_DELTA
 # cosine; 3.0.1 scored 30/40), revision top-1 14/16 (plain cosine 3/16; 3.0.2
 # scored 11/16), historical 16/16, selection chat 33/36 top-1 and 36/36 top-3,
 # dev chat 23/24 top-1 and 24/24 top-3, golden 12/12. Grid, ablations and
-# per-case failures: `ranking_dev_r4_*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
+# per-case failures: `ranking_dev_r4_*.json`. (not published, see evidence/INDEX.md)
 
 
 def apply_intent_boost(cos, entity_id, intent_ids, mask=None, weight=INTENT_BOOST):
@@ -1236,7 +1236,8 @@ def apply_intent_boost(cos, entity_id, intent_ids, mask=None, weight=INTENT_BOOS
     return boost
 
 
-def resolve_top_entity(scored, entity_id, entity_names, intent=None):
+def resolve_top_entity(scored, entity_id, entity_names, intent=None,
+                       cos=None, margin=0.0):
     """The entity the answer is about: the question's intent, else the best hit's.
 
     AN INTENT THAT NAMES NOTHING IN THIS VAULT IS NOT EVIDENCE ABOUT IT.
@@ -1266,7 +1267,28 @@ def resolve_top_entity(scored, entity_id, entity_names, intent=None):
         eid = int(np.asarray(entity_id)[best])
         if 0 <= eid < len(entity_names):
             best_entity = entity_names[eid]
-    if intent and matching_ids(intent, entity_names).size:
+    ids = matching_ids(intent, entity_names) if intent else np.zeros(0, dtype=np.int64)
+    if intent and ids.size:
+        # ...AND AN INTENT WHOSE RECORDS LOSE BADLY IS NOT EVIDENCE EITHER.
+        # `query_intents` reads wording alone, so the word "where" resolves to
+        # `location` (an alias for `home_address`) whatever the question is
+        # about: "where do I train", "where do I study" and "where is my desk"
+        # all selected the home-address chain, each time over a record that beat
+        # it on RAW cosine by 0.23-0.28. `margin` is a ceiling on how much
+        # similarity the wording is allowed to overrule.
+        #
+        # `cos` must be the RAW similarity. At the ranker's call site `scored`
+        # already carries `intent_boost`, so comparing on it would let the
+        # intent's own boost defend the intent's choice.
+        if margin and margin > 0.0 and cos is not None and best_entity \
+                and best_entity != intent:
+            c = np.asarray(cos, dtype=np.float64).reshape(-1)
+            ent_col = np.asarray(entity_id).reshape(-1)
+            mine = np.isin(ent_col, ids)
+            if mine.any() and c.size == ent_col.size:
+                gap = float(c.max()) - float(c[mine].max())
+                if gap > float(margin):
+                    return best_entity
         return intent
     if intent and best_entity is None:
         # Nothing to fall back to; keep the old answer rather than inventing one.
@@ -1435,7 +1457,7 @@ def apply_revision_lead(final: np.ndarray, rows, rev, ts, historical: bool,
     shipped ``weight`` (``REVISION_LEAD`` = 0.20) is a hard cap rather than a
     tuned value and is not the binding constraint. Measured over every lift this
     release's five ranking sets apply: 72 calls, maximum lift 0.1563, cap reached
-    0 times (``ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)` ->
+    0 times (``ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md)` ->
     ``revision_lead_applied``). 3.0.2's docstring quoted 0.3928 against a 0.20
     clamp, which is arithmetically impossible -- stale round-2 text for a
     ``weight`` of 0.50 that never shipped.

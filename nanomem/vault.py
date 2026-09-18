@@ -206,7 +206,8 @@ class Vault:
         on_torn_tail: str = "warn",
         embedder: Optional[Any] = None,
         vector_dtype: str = "float16",
-        group_floor_sim: float = 0.0
+        group_floor_sim: float = 0.0,
+        intent_margin: float = 0.15
     ):
         # THREE DOCUMENTED ARGUMENTS THAT DID NOT EXIST.
         # Each was described in the README or this class's own docstring and
@@ -240,7 +241,8 @@ class Vault:
                                   password=self._password,
                                   on_torn_tail=on_torn_tail,
                                   vector_dtype=vector_dtype,
-                                  group_floor_sim=group_floor_sim)
+                                  group_floor_sim=group_floor_sim,
+                                  intent_margin=intent_margin)
         self.llm_base_url = llm_base_url or os.getenv("NANOMEM_LLM_URL", os.getenv("LLM_BASE_URL"))
         self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self.last_id: Optional[str] = None

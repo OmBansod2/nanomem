@@ -57,11 +57,19 @@ JOBS = collections.OrderedDict([
      ([sys.executable, "exp_entity_declaration.py"], 3, "needs a live embedder")),
     ("decompose_order_results.json",
      ([sys.executable, "exp_decompose_order.py"], 3, "needs a live embedder")),
+    ("intent_margin_results.json",
+     ([sys.executable, "exp_intent_margin.py"], 17, "needs a live embedder")),
+    ("intent_margin_arms_results.json",
+     ([sys.executable, "exp_intent_margin_arms.py"], 95, "needs a live embedder")),
     ("new_usecases_results.json",
      ([sys.executable, "exp_new_usecases.py"], 243, "needs a live embedder")),
     ("fuzz_ops_results.json",
      ([sys.executable, "exp_fuzz_ops.py", FUZZ_SEEDS_DEFAULT], 553,
       "~46 s per seed; --deep raises 12 seeds to 60")),
+    # The head-to-head's shared cache USED to default to /tmp, which this
+    # machine clears: the cache vanished between sessions and the job failed
+    # with a FileNotFoundError that reads like a broken script rather than a
+    # missing prerequisite. It now lives beside the results it produces.
     ("competitors_standard_results.json",
      ([BENCH_PY, "bench_competitors.py"], 720,
       "DEEP ONLY: builds four stores over 71,433 documents; needs venv_bench "
@@ -128,6 +136,48 @@ def rewrite_doc():
     d = json.load(open(src))
     m = d["measurements_ms_median"]
     s = d["store_side_filtered_search"]
+
+    # THE HEAD-TO-HEAD TABLE IS GENERATED TOO, for the same reason.
+    # It was hand-typed, and the 3.4.2 refresh moved every figure in it: p50
+    # 2.14 -> 1.91 ms, reopen 0.261 -> 0.247 s, sqlite-vec 56.17 -> 54.42 ms.
+    # The preflight guard caught all six, which is the guard working -- but a
+    # number a human retypes each refresh will drift again next time.
+    head = ""
+    comp = os.path.join(PKG, "benchmarks", "competitors_standard_results.json")
+    if os.path.exists(comp):
+        c = json.load(open(comp))["arms"]
+        ROWS = [("FAISS flat IP", "faiss_flat_ip"),
+                ("**nanomem exact**", "nanomem_v3_exact"),
+                ("sqlite-vec brute force", "sqlitevec_bruteforce"),
+                ("Chroma HNSW (tuned)", "chroma_hnsw_tuned"),
+                ("Chroma HNSW (default)", "chroma_hnsw_default")]
+        best_p50 = min(c[k]["n71433"]["latency_ms"]["p50"] for _, k in ROWS)
+        best_re = min(c[k]["n71433"]["reopen_s"] for _, k in ROWS)
+        best_disk = min(c[k]["n71433"]["index_bytes"] for _, k in ROWS)
+        best_rss = min(c[k]["n71433"]["memory"]["rss_delta_mb"] for _, k in ROWS)
+        lines = ["| arm | recall@4 | p50 query | disk | reopen | peak RSS |",
+                 "|---|---|---|---|---|---|"]
+
+        def bold(is_best, txt):
+            return "**" + txt + "**" if is_best else txt
+
+        for label, key in ROWS:
+            r = c[key]["n71433"]
+            p50 = r["latency_ms"]["p50"]
+            reo = r["reopen_s"]
+            disk = r["index_bytes"] / 1048576.0
+            rss = r["memory"]["rss_delta_mb"]
+            cells = [
+                label,
+                "%.1f%%" % r["recall"]["evidence_recall_at_4_pct"],
+                bold(p50 == best_p50, "%.2f ms" % p50),
+                bold(r["index_bytes"] == best_disk, "%.0f MB" % disk),
+                bold(reo == best_re, "%.3f s" % reo),
+                bold(rss == best_rss, "%.0f MB" % rss),
+            ]
+            lines.append("| " + " | ".join(cells) + " |")
+        head = "\n".join(lines)
+
     blocks = {
         "latency": (
             "```\n"
@@ -139,6 +189,7 @@ def rewrite_doc():
             f"Vault.search(...)  the DEFAULT      {m['vault_search_decompose_true_DEFAULT']:8.2f} ms"
             f"   <- decomposition adds {m['decomposition_overhead_ms']} ms\n"
             "```"),
+        "headtohead": head,
         "storeside": (
             "```\n"
             f"unfiltered              {s['unfiltered_ms']:7.2f} ms  "
@@ -185,14 +236,20 @@ def main():
                   f"{os.path.basename(argv[1])}{tag}"
                   f"{'   -- ' + why if why else ''}")
         return 0
-    jobs = collections.OrderedDict(
-        (k, v) for k, v in JOBS.items() if a.deep or k != DEEP_ONLY)
+    # --only SELECTS FROM ALL JOBS, INCLUDING THE DEEP-ONLY ONE.
+    # Filtering the deep-excluded subset meant `--only competitors` could never
+    # match anything: it printed "matched no job" and exited 0, so a 12-minute
+    # re-measurement looked like it had run and had not. Naming a job explicitly
+    # IS the instruction to run it.
     if a.only:
         jobs = collections.OrderedDict(
-            (k, v) for k, v in jobs.items() if a.only in k)
+            (k, v) for k, v in JOBS.items() if a.only in k)
         if not jobs:
             print(f"--only {a.only!r} matched no job; --list shows them all")
             return 2
+    else:
+        jobs = collections.OrderedDict(
+            (k, v) for k, v in JOBS.items() if a.deep or k != DEEP_ONLY)
     if a.deep:
         argv, secs, why = jobs["fuzz_ops_results.json"]
         jobs["fuzz_ops_results.json"] = (argv[:-1] + [FUZZ_SEEDS_DEEP], 2765, why)

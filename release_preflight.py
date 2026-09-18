@@ -329,6 +329,98 @@ def _pool_numbers(o, acc=None):
     return acc
 
 
+def check_claims():
+    """EVERY CLAIM IN THE SHIPPED DOCS MUST BE CHECKED BY SOMETHING.
+
+    Five documented claims were false at once in 0.7.11 -- `embedder=`,
+    `vector_dtype=` and `group_floor_sim=` did not exist, `prune()` returned
+    something other than what a reader would assume, and `history` was called
+    authoritative when it was not -- and no test asserted any of them. They were
+    found by an outside reviewer reading the docs, one at a time, by luck.
+
+    `evidence/claims_registry.json` enumerates the checkable claims in the README
+    and the public docstrings. Each must name a test that would fail if the claim
+    became false, or a results file that measures it, or carry an explicit
+    waiver saying why it is not a behavioural claim. A claim with none of those
+    is a claim nothing is defending, and it blocks the release.
+    """
+    import json as _j
+    reg_path = os.path.join(HERE, "evidence", "claims_registry.json")
+    if not os.path.exists(reg_path):
+        bad("evidence/claims_registry.json is missing; nothing is checking the "
+            "documentation's claims")
+        return
+    try:
+        claims = _j.load(open(reg_path))["claims"]
+    except Exception as e:
+        bad(f"claims registry unreadable: {e}")
+        return
+    import re as _r
+    names = set()
+    tdir = os.path.join(HERE, "tests")
+    for f in sorted(os.listdir(tdir)):
+        if f.startswith("test_") and f.endswith(".py"):
+            names |= set(_r.findall(r"^def (test_[a-z0-9_]+)\(",
+                                    read(os.path.join("tests", f)), _r.M))
+    unbacked, dangling = [], []
+    for c in claims:
+        t, w = c.get("test"), c.get("waived")
+        if not t and not w:
+            unbacked.append(c["id"])
+        elif t and t.startswith("measured:"):
+            if not os.path.exists(os.path.join(HERE, t.split(":", 1)[1])):
+                dangling.append(f"{c['id']} -> {t}")
+        elif t and t not in names:
+            dangling.append(f"{c['id']} -> {t}")
+    if unbacked:
+        bad(f"{len(unbacked)} documented claim(s) have neither a test nor a "
+            f"waiver: " + ", ".join(unbacked[:10]))
+    if dangling:
+        bad(f"{len(dangling)} claim(s) name a test or measurement that does not "
+            f"exist: " + ", ".join(dangling[:6]))
+    if not unbacked and not dangling:
+        n_t = sum(1 for c in claims if c.get("test"))
+        NOTES.append(f"all {len(claims)} documented claims accounted for "
+                     f"({n_t} by a test or measurement)")
+
+
+def check_generated_blocks():
+    """EVERY GENERATED BLOCK THE REFRESH KNOWS ABOUT MUST STILL EXIST.
+
+    `refresh_benchmarks.py` rewrites named `<!-- GENERATED: x -->` regions from
+    the results files. If a region is deleted, the refresh prints a `!!` line
+    and carries on -- and in a job that takes a quarter of an hour, that line is
+    not read. The `latency` block was dropped while another block was being
+    added, and the page shipped one release later still saying "the two blocks
+    above are generated" with one block above it.
+
+    A warning nobody reads is not a guard, so a missing region fails here.
+    """
+    doc = os.path.join(HERE, "BENCHMARKS.md")
+    ref = os.path.join(os.path.dirname(HERE), "scratch", "refound",
+                       "refresh_benchmarks.py")
+    if not (os.path.exists(doc) and os.path.exists(ref)):
+        return
+    import re as _r
+    named = set(_r.findall(r'^\s*"([a-z_]+)":\s', read(os.path.relpath(ref, HERE)),
+                           _r.M))
+    # only the keys of the `blocks` dict, which are the ones rewrite_doc emits
+    body = read(os.path.relpath(ref, HERE))
+    m = _r.search(r"blocks = \{(.*?)\n    \}", body, _r.S)
+    if not m:
+        return
+    named = set(_r.findall(r'"([a-z_]+)":', m.group(1)))
+    text = read("BENCHMARKS.md")
+    present = set(_r.findall(r"<!-- GENERATED: ([a-z_]+) ", text))
+    missing = sorted(named - present)
+    if missing:
+        bad("BENCHMARKS.md is missing generated block(s) that "
+            "refresh_benchmarks.py writes: " + ", ".join(missing)
+            + " -- the page will silently stop showing those numbers")
+    else:
+        NOTES.append(f"all {len(named)} generated blocks present in BENCHMARKS.md")
+
+
 def check_citations():
     """A CLAIM WHOSE EVIDENCE CANNOT BE OPENED IS NOT A CHECKED CLAIM.
 
@@ -533,9 +625,10 @@ def main():
     check_metadata(offline)
     check_readme_links()
     check_readme_sample()
-    check_claims()
     check_wheel(ver)
     check_sdist(ver)
+    check_claims()
+    check_generated_blocks()
     check_citations()
     check_benchmarks()
 

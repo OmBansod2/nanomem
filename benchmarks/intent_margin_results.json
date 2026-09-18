@@ -1,0 +1,369 @@
+{
+ "measured_on": {
+  "nanomem": "0.7.15",
+  "engine": "3.4.3",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
+ "bar_B1": "4/4 on search and history, default path",
+ "by_margin": {
+  "0.0": {
+   "search_correct": 1,
+   "history_correct": 1,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.05": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.1": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.12": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.15": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.18": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.2": {
+   "search_correct": 4,
+   "history_correct": 4,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "school",
+     "history": "school",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "office",
+     "history": "office",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.25": {
+   "search_correct": 2,
+   "history_correct": 2,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "gym",
+     "history": "gym",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.3": {
+   "search_correct": 1,
+   "history_correct": 1,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  },
+  "0.4": {
+   "search_correct": 1,
+   "history_correct": 1,
+   "n": 4,
+   "detail": [
+    {
+     "q": "where do I train",
+     "want": "gym",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I study",
+     "want": "school",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where is my desk",
+     "want": "office",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    },
+    {
+     "q": "where do I live",
+     "want": "home_address",
+     "search": "home_address",
+     "history": "home_address",
+     "history_len": 3
+    }
+   ]
+  }
+ },
+ "b1_passing": [
+  0.05,
+  0.1,
+  0.12,
+  0.15,
+  0.18,
+  0.2
+ ],
+ "note": "B2 (arm A of exp_floor_current_value.py) decides; a margin that passes B1 and costs arm A is a rejected candidate"
+}

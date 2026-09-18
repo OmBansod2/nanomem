@@ -90,16 +90,25 @@ is weakest. 71,433 documents, 768-d (`benchmarks/competitors_standard_results.js
 <!-- GENERATED: headtohead -- rewritten by evidence/refresh_benchmarks.py -->
 | arm | recall@4 | p50 query | disk | reopen | peak RSS |
 |---|---|---|---|---|---|
-| FAISS flat IP | 60.6% | **1.08 ms** | 209 MB | 0.013 s | **230 MB** |
-| **nanomem exact** | 60.6% | 1.91 ms | **149 MB** | 0.247 s | 296 MB |
-| sqlite-vec brute force | 60.6% | 54.42 ms | 258 MB | **0.001 s** | 266 MB |
-| Chroma HNSW (tuned) | 60.6% | 8.53 ms | 514 MB | 0.002 s | 314 MB |
-| Chroma HNSW (default) | 55.0% | 1.25 ms | 488 MB | 0.002 s | 286 MB |
+| FAISS flat IP | 60.6% | **1.09 ms** | 209 MB | 0.016 s | **230 MB** |
+| **nanomem exact** | 60.6% | 1.82 ms | **149 MB** | 0.255 s | 296 MB |
+| sqlite-vec brute force | 60.6% | 55.09 ms | 258 MB | **0.001 s** | 266 MB |
+| Chroma HNSW (tuned) | 60.6% | 8.49 ms | 514 MB | 0.002 s | 314 MB |
+| Chroma HNSW (default) | 54.6% | 1.29 ms | 488 MB | 0.002 s | 285 MB |
 <!-- /GENERATED -->
 
 Query decomposition is **on by default** and roughly triples end-to-end latency
 on a short identifier-like query, because it embeds sub-queries separately. Pass
 `decompose=False` when your queries are already atomic.
+
+<!-- GENERATED: latency -- rewritten by evidence/refresh_benchmarks.py -->
+```
+store only, query already embedded      2.13 ms   <- the part nanomem owns
+embedding round-trip (local Ollama)    10.42 ms   <- your embedder, not the store
+Vault.search(decompose=False)          15.22 ms
+Vault.search(...)  the DEFAULT         49.71 ms   <- decomposition adds 34.5 ms
+```
+<!-- /GENERATED -->
 
 These are wall-clock medians over 60 distinct entities and move a few percent
 between runs. The two blocks above are **generated** from
@@ -115,9 +124,9 @@ which re-runs the same queries down the old path and requires identical ids:
 
 <!-- GENERATED: storeside -- rewritten by evidence/refresh_benchmarks.py -->
 ```
-unfiltered                 0.79 ms       5 record decodes
+unfiltered                 0.76 ms       5 record decodes
 filtered, before 0.7.9    33.70 ms  15,001 record decodes   (the whole corpus)
-filtered, now              2.12 ms       4 record decodes
+filtered, now              2.05 ms       4 record decodes
 ```
 <!-- /GENERATED -->
 

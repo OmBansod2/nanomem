@@ -27,6 +27,7 @@ asserts the full list of numbers is unchanged before writing.
 |---|---|
 | `clean_chat_benchmark_heldout.json`, `clean_chat_benchmark_persona4.json`, `clean_chat_embeds_heldout.npz`, and the two results files derived from them | held out of development so that scores against them mean something. Publishing them would make every future measurement on them worthless. |
 | `assets/` | a 139 MB archived model file. The citation is a note recording where a removed file was kept locally, not evidence for a claim. |
+| the `ranking_dev_*.json` family | the round-4 and round-5 dev-persona probes. They carry the recorded query text of those personas, which includes fabricated but realistic contact details, and they are an evaluation corpus whose value depends on not being public. Cited by name in the source so the arms can be identified; not published. |
 | `golden/*.dat` | the two expected-result JSONs are published; the vault fixtures are not. `book_v2.dat` is 6.3 MB of ingested book text whose provenance could not be established. |
 
 ## Files
@@ -40,53 +41,9 @@ asserts the full list of numbers is unchanged before writing.
 | `floor_current_value_results.json` | 7 KiB |
 | `floor_retune_results.json` | 4 KiB |
 | `grouping_signal_results.json` | 2 KiB |
+| `intent_margin_arms_results.json` | 1 KiB |
 | `marker_separation_v3r4.json` | 0 KiB |
 | `pca_screen_results.json` | 53 KiB |
-| `ranking_dev_A_no_marker_tag.json` | 3 KiB |
-| `ranking_dev_B_no_tagsim.json` | 3 KiB |
-| `ranking_dev_C_no_widewin.json` | 3 KiB |
-| `ranking_dev_D_lead30.json` | 4 KiB |
-| `ranking_dev_F_none.json` | 3 KiB |
-| `ranking_dev_G_wideoff_lead0.20.json` | 3 KiB |
-| `ranking_dev_G_wideoff_lead0.25.json` | 3 KiB |
-| `ranking_dev_G_wideoff_lead0.30.json` | 3 KiB |
-| `ranking_dev_H_wide0.18.json` | 3 KiB |
-| `ranking_dev_H_wide0.20.json` | 3 KiB |
-| `ranking_dev_H_wide0.22.json` | 3 KiB |
-| `ranking_dev_H_wide0.30.json` | 3 KiB |
-| `ranking_dev_r4_all5.json` | 4 KiB |
-| `ranking_dev_r4_base4off.json` | 3 KiB |
-| `ranking_dev_r4_current.json` | 3 KiB |
-| `ranking_dev_r4_frame.json` | 3 KiB |
-| `ranking_dev_r4_inner.json` | 3 KiB |
-| `ranking_dev_r4_only_gate.json` | 3 KiB |
-| `ranking_dev_r4_only_mskip.json` | 3 KiB |
-| `ranking_dev_r4_only_union.json` | 4 KiB |
-| `ranking_dev_r4_selfname.json` | 3 KiB |
-| `ranking_dev_r4_shipped.json` | 3 KiB |
-| `ranking_dev_r4_u1.json` | 3 KiB |
-| `ranking_dev_r4_u2.json` | 3 KiB |
-| `ranking_dev_r4_u3.json` | 3 KiB |
-| `ranking_dev_r4_u4.json` | 4 KiB |
-| `ranking_dev_r5_after.json` | 3 KiB |
-| `ranking_dev_r5_as.json` | 2 KiB |
-| `ranking_dev_r5_final.json` | 2 KiB |
-| `ranking_dev_r5_floorskip.json` | 4 KiB |
-| `ranking_dev_r5_gcd0.10.json` | 3 KiB |
-| `ranking_dev_r5_gcd0.16.json` | 3 KiB |
-| `ranking_dev_r5_gcd0.25.json` | 4 KiB |
-| `ranking_dev_r5_gcd1.0.json` | 4 KiB |
-| `ranking_dev_r5_gfs0.50.json` | 4 KiB |
-| `ranking_dev_r5_gfs0.60.json` | 3 KiB |
-| `ranking_dev_r5_gfs0.70.json` | 2 KiB |
-| `ranking_dev_r5_gfs0.80.json` | 2 KiB |
-| `ranking_dev_r5_names.json` | 2 KiB |
-| `ranking_dev_r5_p7.json` | 2 KiB |
-| `ranking_dev_r5_revcmp.json` | 2 KiB |
-| `ranking_dev_r5_stage4.json` | 2 KiB |
-| `ranking_dev_r5_tailadv.json` | 2 KiB |
-| `ranking_dev_r5_verify.json` | 2 KiB |
-| `ranking_r5_temporal_layer.json` | 12 KiB |
 | `screen_exactness_results.json` | 2 KiB |
 | `selection_results.json` | 75 KiB |
 | `window_topk_results.json` | 2 KiB |
@@ -140,7 +97,7 @@ asserts the full list of numbers is unchanged before writing.
 
 | file | size |
 |---|---:|
-| `competitors_standard_results.json` | 119 KiB |
+| `competitors_standard_results.json` | 80 KiB |
 | `context_lever_results.json` | 234 KiB |
 | `exotic_ranking_results.json` | 204 KiB |
 | `exotic_routing_results.json` | 457 KiB |
@@ -160,6 +117,7 @@ asserts the full list of numbers is unchanged before writing.
 | `design/core_spec.md` | 86 KiB |
 | `design/edge_cases_spec.md` | 3 KiB |
 | `design/floor_current_value_spec.md` | 9 KiB |
+| `design/intent_margin_spec.md` | 6 KiB |
 | `design/new_usecases_spec.md` | 5 KiB |
 | `design/screen_exactness_spec.md` | 4 KiB |
 | `design/temporal_api_spec.md` | 4 KiB |
@@ -174,7 +132,8 @@ asserts the full list of numbers is unchanged before writing.
 | file | size |
 |---|---:|
 | `exp_fuzz_ops.py` | 14 KiB |
-| `refresh_benchmarks.py` | 10 KiB |
+| `ranking_r5_temporal_layer.json` | 12 KiB |
+| `refresh_benchmarks.py` | 13 KiB |
 | `train_write_classifier.py` | 24 KiB |
 
-_116 files, 4.1 MiB._
+_74 files, 4.0 MiB._

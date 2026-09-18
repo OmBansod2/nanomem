@@ -245,7 +245,7 @@ because inside the engine it is *slower* for the same recall: p50 3.604 ms versu
 * **0.1.x (`format_version` 2) files migrate on first open.** The original is kept
   beside the new one as `<path>.v2.bak`, byte-identical to the source. Migration
   is verified on two golden vaults: 12/12 expected top-1 answers on a chat vault
-  (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings), `golden_chat_v2`), and 845/845
+  (`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md), `golden_chat_v2`), and 845/845
   documents with 0/20 top-4 differences from exhaustive fp32 cosine on a book
   vault (run by hand; not in a results JSON).
 * **`stats()` values are measured.** `active_heap_ram_kb` is no longer the

@@ -100,7 +100,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.14 · engine 3.4.2 · container format 3 · arena cache format 3.
+Package 0.7.15 · engine 3.4.3 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +131,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-602 tests, no network needed.
+612 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -261,19 +261,24 @@ the one without paying the other
 (`evidence/floor_current_value_results.json`). So this is a deliberate
 trade, not an oversight.
 
-**0.7.12 said here that `history` is authoritative and should be believed over
-`search`. That was wrong, and the claim is withdrawn.** `history` applies the
-same relevance floor, so on a chain whose later revisions are worded further
-from your query it can return a SHORTER chain than exists — in the worst case
-one entry flagged `superseded=False`, which this library's own docstring defines
-as "this fact never changed". `changes()` and `get_all_records()` see every
-revision in that same vault, so the data is intact and only this view is short.
-Until that is fixed, cross-check a chain you care about with `changes()`, and
-treat neither `search` nor `history` as the final word on its own.
+0.7.12 said here that `history` is authoritative and should be believed over
+`search`. That was wrong and the claim was withdrawn: `history` could itself
+return a shorter chain than existed, in the worst case one entry flagged
+`superseded=False`, which this library defines as "this fact never changed".
+That truncation is fixed in 0.7.14 and 0.7.15 — a declared chain now returns
+every revision it holds, and `changes()` agrees with it.
 
-Declaring the entity removes the `search`/`history` disagreement described
-above, but it does NOT prevent this truncation — the reproduction is a declared
-chain.
+What remains is the disagreement itself, and only on a group the TAGGER
+inferred. Measured over three chains in two timestamp regimes
+(`evidence/entity_declaration_results.json`):
+
+| | `search` top-1 == `history`'s current value |
+|---|---|
+| entity declared | 3/3 |
+| left to the tagger | 2/3 |
+
+**Declare the entity and the disagreement goes away.** Leave it to the tagger
+and `changes()` is the unfiltered view to cross-check against.
 
 ---
 

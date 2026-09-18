@@ -1,0 +1,306 @@
+{
+ "claims": [
+  {
+   "source": "README.md",
+   "claim": "A vector store keeps both statements and returns whichever one is worded closer to the question, which is how an assistant ends up confidently repeating an address you left two years ago.",
+   "id": "C001",
+   "test": null,
+   "waived": "describes what a plain vector store does, not nanomem"
+  },
+  {
+   "source": "README.md",
+   "claim": "In the example above it tags \"I moved jobs, I now work at Initech.\" as `location` rather than `career`, because \"moved\" outweighs \"work at\", and the chain silently splits in two.",
+   "id": "C002",
+   "test": null,
+   "waived": "an illustration of the tagger's documented weakness, measured in grouping_signal_results.json"
+  },
+  {
+   "source": "README.md",
+   "claim": "Everything nanomem does that a vector store does not rests on knowing which statements are about the same thing \u2014 and you know that, while the tagger is guessing.",
+   "id": "C003",
+   "test": null,
+   "waived": "rationale, asserts nothing checkable"
+  },
+  {
+   "source": "README.md",
+   "claim": "To check for yourself: `add()` returns the document id, so you can `get`, `update` or `delete` by it later.",
+   "id": "C004",
+   "test": "test_the_id_add_returns_is_usable_on_a_chunked_document"
+  },
+  {
+   "source": "README.md",
+   "claim": "**Embeddings are yours to choose.** The default is `nomic-embed-text` on a local Ollama-compatible daemon, but any model of any width works \u2014 the width is probed from the model itself, and the vault is sized from what it returns: Point it anywhere with `base_url=` or `NANOMEM_EMBED_URL`.",
+   "id": "C005",
+   "test": "test_a_vault_is_sized_from_the_chosen_model"
+  },
+  {
+   "source": "README.md",
+   "claim": "An existing vault's width always wins over the one you request, so you cannot silently corrupt a vault by naming a different model later \u2014 you get a warning and the file keeps its own width.",
+   "id": "C006",
+   "test": "test_an_existing_vaults_width_wins_over_the_request"
+  },
+  {
+   "source": "README.md",
+   "claim": "That handle is then unusable: your encoder is still the model you named, so every call raises until you reopen with one of the file's width.",
+   "id": "C007",
+   "test": "test_a_width_mismatched_handle_raises_on_every_call"
+  },
+  {
+   "source": "README.md",
+   "claim": "Nothing is lost, but it does not quietly carry on.",
+   "id": "C008",
+   "test": null,
+   "waived": "sentence fragment continuing C007"
+  },
+  {
+   "source": "README.md",
+   "claim": "That makes four questions answerable that a vector index cannot represent, because none of them keeps the history to answer from.",
+   "id": "C009",
+   "test": null,
+   "waived": "a count of the questions the section then demonstrates individually"
+  },
+  {
+   "source": "README.md",
+   "claim": "`history()` returns each value with its timestamp and a `superseded` flag; the last entry is the current one.",
+   "id": "C010",
+   "test": "test_history_marks_exactly_the_last_entry_current"
+  },
+  {
+   "source": "README.md",
+   "claim": "A fact that never changed returns one entry, which is an answer, not an empty result.",
+   "id": "C011",
+   "test": "test_history_of_an_unchanged_fact_has_one_entry"
+  },
+  {
+   "source": "README.md",
+   "claim": "`staleness()` will turn that into a probability, but it returns `None` unless you pass `assume_memoryless=True` \u2014 the per-fact rate only beat a single corpus-wide rate on data generated to match its own assumption, so it is not on by default (`evidence/staleness_calibration.json`).",
+   "id": "C012",
+   "test": "test_staleness_suppresses_the_probability_by_default"
+  },
+  {
+   "source": "README.md",
+   "claim": "**What it costs when you cannot declare one.** On a group the tagger inferred, `search` and `history` can disagree about which value is current: `history` resolves the tagged chain and reads the revision counter, while `search` also applies a relevance floor that can drop the newest value when it is phrased further from the question than an older one.",
+   "id": "C013",
+   "test": "measured:evidence/entity_declaration_results.json"
+  },
+  {
+   "source": "README.md",
+   "claim": "Declaring the entity removes the `search`/`history` disagreement described above, but it does NOT prevent this truncation \u2014 the reproduction is a declared chain.",
+   "id": "C014",
+   "test": "measured:evidence/entity_declaration_results.json"
+  },
+  {
+   "source": "README.md",
+   "claim": "It returns what an exhaustive fp32 cosine scan returns \u2014 0 of 120 top-4 order differences on a 1,190-document corpus (`evidence/exactness_v3r2.json`) \u2014 and its latency therefore grows with the corpus.",
+   "id": "C015",
+   "test": "measured:evidence/exactness_v3r2.json"
+  },
+  {
+   "source": "README.md",
+   "claim": "The answer does not move with it.",
+   "id": "C016",
+   "test": null,
+   "waived": "sentence fragment continuing C015"
+  },
+  {
+   "source": "README.md",
+   "claim": "So \"returns what an exhaustive scan returns\" is a claim about which documents come back and in what order \u2014 except among documents the ranking genuinely cannot separate, where the corpus contains no tie-break to be faithful to.",
+   "id": "C017",
+   "test": null,
+   "waived": "scopes C015; the scope itself is what C015's test asserts"
+  },
+  {
+   "source": "README.md",
+   "claim": "It is not a claim about the bit pattern of the float beside them, and it never could have been.",
+   "id": "C018",
+   "test": null,
+   "waived": "states what C015 is NOT a claim about"
+  },
+  {
+   "source": "Vault.add",
+   "claim": "Store a document, note, or fact into memory and return its document id.",
+   "id": "C019",
+   "test": "test_add_returns_id"
+  },
+  {
+   "source": "Vault.add",
+   "claim": "Returns \"\" for empty input.",
+   "id": "C020",
+   "test": "test_add_returns_id"
+  },
+  {
+   "source": "Vault.add",
+   "claim": "``get(id)`` and ``search_multihop``'s anchor lookup return the most recent of them; ``delete(id=...)`` removes all of them; ``update(id=...)`` rewrites the first.",
+   "id": "C021",
+   "test": "test_the_id_add_returns_is_usable_on_a_chunked_document"
+  },
+  {
+   "source": "Vault.compact",
+   "claim": "With `recluster=True` the rows are first re-ordered by a global spherical k-means, which is what makes an unordered corpus routable; it changes the stored order and therefore the order `get_all_records` returns.",
+   "id": "C022",
+   "test": null,
+   "waived": "describes what recluster=True does to stored order; the invariant that matters (compact changes no answer) is test_compact_changes_no_answer"
+  },
+  {
+   "source": "Vault.delete",
+   "claim": "Returns the number of deleted records.",
+   "id": "C023",
+   "test": "test_crud_cycle"
+  },
+  {
+   "source": "Vault.export",
+   "claim": "The target INHERITS this vault's password by default, so exporting out of an encrypted vault cannot silently produce a plaintext one.",
+   "id": "C024",
+   "test": "test_export_from_an_encrypted_vault_stays_encrypted"
+  },
+  {
+   "source": "Vault.forget",
+   "claim": "Returns the deleted memory records.",
+   "id": "C025",
+   "test": "test_forget_erases_the_match_and_returns_what_it_erased"
+  },
+  {
+   "source": "Vault.forget_superseded",
+   "claim": "WHAT IT WILL NEVER DELETE, which is the entire reason it exists rather than you calling :meth:`prune`: * the CURRENT value of any fact, at any age.",
+   "id": "C026",
+   "test": "test_forget_superseded_keeps_the_current_value_of_every_fact"
+  },
+  {
+   "source": "Vault.forget_superseded",
+   "claim": "Returns ``{\"groups\", \"deleted\", \"kept\", \"ids\", \"dry_run\"}``: ``deleted`` and ``ids`` are the revisions this call removes, ``kept`` the revisions left across every tagged fact, ``groups`` the chains touched.",
+   "id": "C027",
+   "test": "test_forget_superseded_dry_run_predicts_the_real_run_exactly"
+  },
+  {
+   "source": "Vault.get",
+   "claim": "Returns the record dictionary if found, or None if not present.",
+   "id": "C028",
+   "test": "test_crud_cycle"
+  },
+  {
+   "source": "Vault.history",
+   "claim": "A fact that never changed has a one-element history, which is an answer, not an empty result.",
+   "id": "C029",
+   "test": "test_history_of_an_unchanged_fact_has_one_entry"
+  },
+  {
+   "source": "Vault.ingest_file",
+   "claim": "Preserves exact code formatting, indentation, and line numbers for coding agents.",
+   "id": "C030",
+   "test": "test_ingest_file_preserves_indentation_and_line_numbers"
+  },
+  {
+   "source": "Vault.inspect",
+   "claim": "Returns a summary of all document sources, metadata keys, and unique values.",
+   "id": "C031",
+   "test": "test_inspect_reports_the_sources_and_metadata_actually_stored"
+  },
+  {
+   "source": "Vault.merge",
+   "claim": "- ZERO DATA LOSS BY DEFAULT: `deduplicate` is False by default.",
+   "id": "C032",
+   "test": "test_merge_without_dedup_loses_nothing"
+  },
+  {
+   "source": "Vault.merge",
+   "claim": "Every chunk, file, and fact from both vaults is preserved with 100% fidelity.",
+   "id": "C033",
+   "test": "test_merge_without_dedup_loses_nothing"
+  },
+  {
+   "source": "Vault.merge",
+   "claim": "phone numbers, addresses) are preserved in full and ordered chronologically with monotonic revisions (Rev 1, Rev 2), ensuring current queries retrieve the latest state without deleting history.",
+   "id": "C034",
+   "test": null,
+   "waived": "a restatement of C033 for one record shape"
+  },
+  {
+   "source": "Vault.merge",
+   "claim": "Returns a summary dictionary: {\"incoming\": int, \"added\": int, \"duplicates_skipped\": int}.",
+   "id": "C035",
+   "test": "test_merge_without_dedup_loses_nothing"
+  },
+  {
+   "source": "Vault.prune",
+   "claim": "RETURNS BYTES FREED, NOT A RECORD COUNT.",
+   "id": "C036",
+   "test": "test_prune_documents_that_it_returns_bytes"
+  },
+  {
+   "source": "Vault.prune",
+   "claim": "This is the one thing the docstring never said, and `delete()` -- documented immediately above, with the same `-> int` -- returns \"the number of deleted records\".",
+   "id": "C037",
+   "test": null,
+   "waived": "explains why C036 is stated; C036 carries the test"
+  },
+  {
+   "source": "Vault.prune",
+   "claim": "So the natural reading next to it is wrong: pruning 9 records from a small vault returns 15339, and ``print(f\"pruned {v.prune(older_than_days=365)} records\")`` reports fifteen thousand of them.",
+   "id": "C038",
+   "test": "test_prune_documents_that_it_returns_bytes"
+  },
+  {
+   "source": "Vault.prune",
+   "claim": "``keep_current=True``, the default, exempts the CURRENT value of every tagged fact whatever its age.",
+   "id": "C039",
+   "test": "test_prune_keeps_the_current_value_of_a_fact_it_would_have_deleted"
+  },
+  {
+   "source": "Vault.prune",
+   "claim": "Only a record that is the newest revision of a tagged chain is exempt, and an ingested document carries no entity, so a corpus being aged out prunes exactly as it did.",
+   "id": "C040",
+   "test": "test_prune_still_ages_out_a_document_corpus"
+  },
+  {
+   "source": "Vault.staleness",
+   "claim": "That is not caution: the per-fact rate only beat a single corpus-wide rate on data generated to match its own memoryless assumption, and tied elsewhere, so it does not ship on by default.",
+   "id": "C041",
+   "test": null,
+   "waived": "rationale for the default asserted by C012's test"
+  },
+  {
+   "source": "Vault.stats",
+   "claim": "Return memory statistics, document count, and working set footprint.",
+   "id": "C042",
+   "test": "test_eager_creation_and_stats"
+  },
+  {
+   "source": "Vault.volatility",
+   "claim": "Facts the tagger never grouped are excluded, because they are not restatements of one thing.",
+   "id": "C043",
+   "test": "test_volatility_needs_a_restatement"
+  },
+  {
+   "source": "EmbeddingProvider.dim",
+   "claim": "If the server cannot be reached the deterministic offline encoder answers instead, and that encoder emits ``OFFLINE_DIM``.",
+   "id": "C044",
+   "test": "test_the_offline_encoder_honours_a_declared_width"
+  },
+  {
+   "source": "mcp:nanomem_search.top_k",
+   "claim": "Number of results to return.",
+   "id": "C045",
+   "test": null,
+   "waived": "a parameter description, not a behavioural claim"
+  },
+  {
+   "source": "mcp:nanomem_history",
+   "claim": "A fact that never changed returns a single entry, which is an answer.",
+   "id": "C046",
+   "test": "test_history_of_an_unchanged_fact_has_one_entry"
+  },
+  {
+   "source": "mcp:nanomem_stats",
+   "claim": "Return current memory vault size and document count.",
+   "id": "C047",
+   "test": null,
+   "waived": "restates C042 for the MCP surface"
+  }
+ ],
+ "summary": {
+  "total": 47,
+  "with_test": 33,
+  "waived_not_a_claim": 14,
+  "still_unmapped": 0
+ }
+}

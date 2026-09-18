@@ -65,10 +65,14 @@ TOOLS = [
     {
         "name": "nanomem_history",
         "description": (
-            "Every value a fact has held, oldest first, with the current one marked. Cross-check with nanomem_changes before relying on it: this view applies a relevance filter and can return a SHORTER chain than exists, including a single entry marked current when later revisions were written. nanomem_changes is unfiltered."
-            "asserted. The last entry is the current value. Use this when the user asks "
-            "what something used to be, when it changed, or whether it changed at all. "
-            "A fact that never changed returns a single entry, which is an answer."),
+            "Every value a fact has held, oldest first, with the current one marked. "
+            "The last entry is the current "
+            "value. Use this when the user asks what something used to be, when it "
+            "changed, or whether it changed at all. A fact that never changed "
+            "returns a single entry, which is an answer, not an empty result. For a "
+            "chain whose attribute was not declared with `entity`, nanomem_search "
+            "can still rank a superseded value first; nanomem_changes is unfiltered "
+            "and reports every write in a window."),
         "inputSchema": {
             "type": "object",
             "properties": {

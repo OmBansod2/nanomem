@@ -113,7 +113,7 @@ both and marks the newer one as the current revision. Asking "what is my phone
 number" gets the current one; asking about the old one can still reach the
 historical record. On the release's own revision probes the current revision is
 ranked first in 14 of 16 cases, against 3 of 16 for plain similarity
-(`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
+(`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md)).
 
 Statements about other people are kept separate from statements about you. "His
 number is …" does not overwrite yours.

@@ -2,6 +2,8 @@
 
 import json
 import os
+import re
+import warnings
 import sys
 import time
 
@@ -1578,3 +1580,243 @@ def test_a_genuinely_unchanged_fact_still_has_a_one_element_history(
     h = v.history("what is my blood group")
     assert len(h) == 1 and h[0]["superseded"] is False
     v.close()
+
+
+# --- the question's wording must not outrank the data ------------------------
+
+_F3_CHAINS = {
+    "home_address": ["I live at 14 Bracken Row.",
+                     "Moved, my place is 8 Wexford Lane now.",
+                     "Relocated again to 22 Pallant Street."],
+    "gym": ["I train at Ironworks on Mill Road.",
+            "Switched gyms, I go to Crossfield now.",
+            "Now training at Bellhouse Athletic."],
+    "office": ["Desk was on the third floor of Kestrel House.",
+               "Moved down to the annexe at Larkfield.",
+               "Now parked in the Maple Wharf building."],
+}
+
+
+def _f3_vault(tmp_path, name="f3.dat", **kw):
+    v = Vault(str(tmp_path / name), **kw)
+    now = 1_700_000_000.0
+    for ent, vals in _F3_CHAINS.items():
+        for i, val in enumerate(vals):
+            v.add(val, metadata={"entity": ent},
+                  timestamp=now - (len(vals) - 1 - i) * 150 * DAY)
+    v.flush()
+    return v
+
+
+def test_a_where_question_does_not_always_mean_home_address(
+        tmp_path, offline_embedder):
+    """`query_intents` reads wording alone, so "where" resolved to `location` --
+    an alias for `home_address` -- whatever the question was about. With
+    `intent_boost + group_hoist` behind it that overrode the correct chain by
+    0.23-0.28 of raw cosine on three of four declared attributes.
+
+    Only the case the lexical test encoder can express is asserted end to end.
+    That encoder has no notion of "desk" relating to `office`, and it scores
+    "where is my desk" NEARER to "Moved, my place is 8 Wexford Lane now."
+    (shared words) than to any office record -- so there the intent legitimately
+    agrees with the data and the rule must NOT fire. The semantic cases are
+    measured against a real model in evidence/intent_margin_results.json; the
+    rule itself is pinned below without an encoder at all.
+    """
+    v = _f3_vault(tmp_path)
+    got = (v.search("where do I train", top_k=1, decompose=False)[0]
+           .get("metadata") or {}).get("entity")
+    assert got == "gym", f"'where do I train' -> {got!r}"
+    hits = v.search("where do I train", top_k=1, decompose=False)
+    assert hits[0].get("score") == hits[0].get("cosine"), \
+        "a rejected intent must not still be boosting"
+    v.close()
+
+
+def test_history_follows_the_same_correction(tmp_path, offline_embedder):
+    """0.7.14 made the chain the right LENGTH; it was still the wrong
+    attribute's chain. Same encoder caveat as above."""
+    v = _f3_vault(tmp_path, "f3h.dat")
+    h = v.history("where do I train")
+    assert h, "no history returned"
+    assert (h[-1].get("metadata") or {}).get("entity") == "gym", \
+        f"history of {(h[-1].get('metadata') or {}).get('entity')!r}"
+    v.close()
+
+
+def test_the_margin_rule_itself(tmp_path):
+    """The rule with no encoder in the way: synthetic cosines, exact thresholds.
+
+    An intent is kept when it wins, kept when it loses by less than the margin,
+    and dropped when it loses by more. The boundary is asserted on both sides so
+    the threshold cannot drift silently.
+    """
+    from nanomem import entities as _ent
+    import numpy as _np
+    names = ["home_address", "gym"]
+    ent_col = _np.array([0, 1], dtype=_np.int32)          # [home_address, gym]
+
+    def top(cos_home, cos_gym, margin):
+        cos = _np.array([cos_home, cos_gym], dtype=_np.float64)
+        return _ent.resolve_top_entity(cos, ent_col, names, intent="home_address",
+                                       cos=cos, margin=margin)
+
+    assert top(0.70, 0.40, 0.15) == "home_address"   # intent wins outright
+    assert top(0.60, 0.70, 0.15) == "home_address"   # loses by 0.10, under margin
+    assert top(0.40, 0.70, 0.15) == "gym"            # loses by 0.30, over margin
+    assert top(0.55, 0.70, 0.15) == "home_address"   # loses by exactly 0.15: kept
+    assert top(0.54, 0.70, 0.15) == "gym"            # 0.16: dropped
+    assert top(0.40, 0.70, 0.0) == "home_address"    # margin off, old behaviour
+
+
+def test_an_intent_that_wins_on_cosine_still_decides(tmp_path, offline_embedder):
+    """The rule must not degenerate into "always believe cosine".
+
+    `intent_margin` only fires when the intent's best record loses by more than
+    the margin. Where the intent agrees with the data it must still apply, which
+    is what `intent_boost` is for.
+    """
+    v = _f3_vault(tmp_path, "f3keep.dat")
+    hits = v.search("where do I live", top_k=3, decompose=False)
+    assert (hits[0].get("metadata") or {}).get("entity") == "home_address"
+    # and the boost is still doing something: score exceeds raw cosine
+    assert hits[0].get("score", 0.0) > hits[0].get("cosine", 0.0), \
+        "the intent boost stopped applying entirely"
+    v.close()
+
+
+def test_intent_margin_zero_restores_the_old_behaviour(tmp_path, offline_embedder):
+    """The knob is measured, not chosen, so the previous behaviour stays
+    reachable and the sweep stays reproducible."""
+    v = _f3_vault(tmp_path, "f3off.dat", intent_margin=0.0)
+    got = (v.search("where do I train", top_k=1, decompose=False)[0]
+           .get("metadata") or {}).get("entity")
+    assert got == "home_address", \
+        f"margin=0.0 should reproduce the defect, got {got!r}"
+    v.close()
+
+
+# --- two documented methods the suite never touched --------------------------
+
+def test_forget_erases_the_match_and_returns_what_it_erased(
+        tmp_path, offline_embedder):
+    """`forget` is public, documented ("Returns the deleted memory records") and
+    had ZERO test coverage before this — found by enumerating the claims in the
+    shipped docs and asking which test would fail if each became false."""
+    v = Vault(str(tmp_path / "forget.dat"))
+    v.add("The staging database listens on port 5433.")
+    v.add("Backups run nightly at 0200 UTC.")
+    v.flush()
+    before = len(v.get_all_records())
+
+    gone = v.forget("staging database port", min_score=0.0)
+    v.flush()
+    assert isinstance(gone, list) and gone, "forget returned nothing"
+    assert all(isinstance(r, dict) and "text" in r for r in gone), \
+        "the returned records are not records"
+    assert len(v.get_all_records()) == before - len(gone), \
+        "the count it reported does not match what left the vault"
+    for r in gone:
+        assert not any(x["text"] == r["text"] for x in v.get_all_records()), \
+            "forget reported a record it did not erase"
+    v.close()
+
+
+def test_forget_erases_nothing_when_nothing_clears_min_score(
+        tmp_path, offline_embedder):
+    """The documented default is a 0.42 floor, so an unrelated query must be a
+    no-op rather than erasing the nearest record anyway."""
+    v = Vault(str(tmp_path / "forget2.dat"))
+    v.add("The staging database listens on port 5433.")
+    v.flush()
+    assert v.forget("zqxjkv unrelated marker text") == []
+    assert len(v.get_all_records()) == 1, "a no-op forget still deleted something"
+    v.close()
+
+
+def test_inspect_reports_the_sources_and_metadata_actually_stored(
+        tmp_path, offline_embedder):
+    """`inspect()` is public and documented and had no test. The reviewer's
+    black-box round exercised it; this suite did not."""
+    v = Vault(str(tmp_path / "inspect.dat"))
+    v.add("Port 5433 is staging.", source="runbook.md", metadata={"entity": "port"})
+    v.add("Backups at 0200 UTC.", source="runbook.md", metadata={"entity": "backup"})
+    v.add("A note from chat.", source="user_chat")
+    v.flush()
+    out = v.inspect()
+    assert isinstance(out, dict) and out, "inspect returned nothing usable"
+    flat = json.dumps(out, default=str)
+    for expected in ("runbook.md", "user_chat", "entity"):
+        assert expected in flat, f"inspect() does not report {expected!r}"
+    v.close()
+
+
+def test_ingest_file_preserves_indentation_and_line_numbers(
+        tmp_path, offline_embedder):
+    """`ingest_file` claims it "preserves exact code formatting, indentation, and
+    line numbers for coding agents". Nothing asserted it: an outside reviewer
+    checked it by hand and this suite never did."""
+    src = tmp_path / "runbook.py"
+    lines = []
+    for i in range(120):
+        if i % 4 == 0:
+            lines.append(f"def step_{i}():")
+        else:
+            lines.append(f"    payload_{i} = compute({i})      # trailing note")
+    src.write_text("\n".join(lines) + "\n")
+
+    v = Vault(str(tmp_path / "ing.dat"))
+    v.ingest_file(str(src))
+    v.flush()
+    rows = v.get_all_records()
+    assert rows, "ingest_file stored nothing"
+
+    joined = "\n".join(r["text"] for r in rows)
+    assert "    payload_5 = compute(5)      # trailing note" in joined, \
+        "leading indentation or inner spacing was not preserved verbatim"
+    # line numbers are recorded in `source` as name:start-end
+    ranges = [r.get("source", "") for r in rows]
+    assert any(re.search(r"runbook\.py:\d+-\d+$", s) for s in ranges), \
+        f"no line range recorded in source: {ranges[:3]}"
+    v.close()
+
+
+def test_a_width_mismatched_handle_raises_on_every_call(tmp_path, offline_embedder):
+    """The README says the file keeps its own width and the handle "is then
+    unusable ... every call raises until you reopen with one of the file's
+    width". Nothing asserted the raising half."""
+    p = str(tmp_path / "mismatch.dat")
+    v = Vault(p)
+    v.add("The database listens on port 5433.")
+    v.flush()
+    v.close()
+
+    # A different MODEL NAME is not enough here: the offline test encoder emits
+    # the same width whatever it is called, so there would be no mismatch to
+    # warn about. A caller-supplied 384-d embedder makes the conflict real.
+    class _Narrow:
+        dim = 384
+
+        def embed(self, text):
+            import hashlib
+            h = hashlib.md5(str(text).encode()).digest()
+            return np.frombuffer(h * 24, dtype=np.uint8).astype(np.float32)[:384] / 255.0
+
+        def embed_batch(self, texts):
+            return np.stack([self.embed(t) for t in texts])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        v2 = Vault(p, embedder=_Narrow())
+    assert any("ignored" in str(w.message) for w in caught), "no warning emitted"
+    assert v2.stats()["embed_dim"] == D, "the file did not keep its own width"
+    for label, call in (("search", lambda: v2.search("database port")),
+                        ("history", lambda: v2.history("database port")),
+                        ("add", lambda: v2.add("another fact"))):
+        with pytest.raises(ValueError, match="dims"):
+            call()
+    v2.close()
+
+    v3 = Vault(p)                       # reopening correctly still works
+    assert len(v3.get_all_records()) == 1, "data was lost"
+    v3.close()

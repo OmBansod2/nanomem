@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.14 · engine 3.4.2 · container format 3 · arena cache format 3.
+Package 0.7.15 · engine 3.4.3 · container format 3 · arena cache format 3.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.14 3.4.2
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.15 3.4.3
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -237,7 +237,7 @@ vault.search("Where was the server?", temporal_direction="historical") # revisio
 Revision groups are scoped by `(user_id, project, entity)`. On the release's own
 generic probes the current revision is ranked first in 14 of 16 cases against 3
 of 16 for plain cosine, and historical lookups are 16 of 16
-(`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
+(`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md)).
 
 **On adjacent attributes the layer is worse than doing nothing, and this manual
 used to claim parity.** On the fixture-free set — "backup email" against
@@ -427,7 +427,7 @@ with Vault("old_memory.dat") as v:
 
 Verified on two golden fixtures in `evidence/golden/`: a chat vault
 answers 12 of 12 expected top-1 queries after migration — that arm is recorded in
-`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) (`golden_chat_v2`), and the v2
+`ranking_dev_r4_shipped.json` (not published, see evidence/INDEX.md) (`golden_chat_v2`), and the v2
 engine answered 10 of 12 on the same fixture. A book vault migrates 845 of 845
 documents with 0 of 20 top-4 differences from exhaustive fp32 cosine computed
 over `iter_records()`; that second arm was run by hand and is not in a results
@@ -781,7 +781,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**602 tests**, no network required, nothing skipped when a local embedder is
+**612 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 

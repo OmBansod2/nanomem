@@ -1,7 +1,7 @@
 {
  "measured_on": {
-  "nanomem": "0.7.14",
-  "engine": "3.4.2",
+  "nanomem": "0.7.15",
+  "engine": "3.4.3",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "label": "floorfix",
@@ -19,7 +19,7 @@
   "tn": 177,
   "accuracy": 88.0,
   "f1": 86.1,
-  "p50_ms": 10.78,
+  "p50_ms": 10.08,
   "note": "classifier.py is not part of the engine work; recorded only"
  },
  "in_session": {
