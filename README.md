@@ -100,7 +100,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.10 · engine 3.4.1 · container format 3 · arena cache format 3.
+Package 0.7.11 · engine 3.4.1 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +131,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-580 tests, no network needed.
+591 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -182,7 +182,9 @@ Point it anywhere with `base_url=` or `NANOMEM_EMBED_URL`. Pass `dim=` to
 `EmbeddingProvider` to skip the probe entirely (air-gapped installs). An
 existing vault's width always wins over the one you request, so you cannot
 silently corrupt a vault by naming a different model later — you get a warning
-and the file's own width.
+and the file keeps its own width. That handle is then unusable: your encoder is
+still the model you named, so every call raises until you reopen with one of the
+file's width. Nothing is lost, but it does not quietly carry on.
 
 **Without a daemon** there is a fallback, and it is worth knowing what it is:
 a deterministic *lexical* encoder at 768-d — words and character trigrams

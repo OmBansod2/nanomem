@@ -52,6 +52,17 @@ class ContainerReplacedError(NanomemError):
     """The file on disk was replaced (new inode or new vault_uuid) under us."""
 
 
+class EmbeddingWidthError(NanomemError):
+    """A declared ``dim=`` disagrees with the width the endpoint actually returns.
+
+    ``EmbeddingProvider(dim=N)`` is documented as a way to skip the startup
+    probe. Through 0.7.10 it was taken purely on trust: ``.dim`` reported N
+    while ``embed()`` returned whatever the endpoint sent, so the object
+    advertised one width and produced another, and a caller sizing anything
+    from ``.dim`` was sizing it wrong.
+    """
+
+
 class NotEncryptedError(NanomemError):
     """A password was supplied for a vault that is stored in plaintext.
 

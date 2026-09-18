@@ -3,6 +3,7 @@
 import json
 import os
 import sys
+import time
 
 import numpy as np
 import pytest
@@ -1245,4 +1246,156 @@ def test_a_genuine_composite_question_is_still_decomposed(tmp_path, offline_embe
     v.engine.search = real_search
 
     assert len(calls) > 1, "a real composite question stopped being decomposed"
+    v.close()
+
+
+# --- the id add() hands back must work on a chunked document -----------------
+
+def _long_doc(marker="zqxjkv", words=1200):
+    w = ["filler"] * words
+    w[470] = marker                     # inside the 40-word overlap window
+    w[900] = marker + "2"               # in a later chunk only
+    return " ".join(w)
+
+
+def test_the_id_add_returns_is_usable_on_a_chunked_document(tmp_path, offline_embedder):
+    """`add()` documents its return as "the parent id ... for a chunked document"
+    and the README says you can `get`, `update` or `delete` by it later.
+
+    Every one of those was a silent no-op past 500 words: the parent id is not a
+    stored row, so `get` returned None, `exists` False, `update` False and
+    `delete` 0 -- no exception anywhere, and the document stayed on disk.
+    """
+    v = Vault(str(tmp_path / "chunked_id.dat"))
+    doc_id = v.add(_long_doc())
+    v.flush()
+    rows = v.get_all_records()
+    assert len(rows) > 1, "corpus no longer chunks; the test proves nothing"
+    assert all(r["id"].startswith(doc_id + "_chunk_") for r in rows)
+
+    assert v.exists(doc_id), "the id add() returned does not exist"
+    got = v.get(doc_id)
+    assert got is not None, "get(parent_id) returned None"
+    assert "zqxjkv" in got["text"] and "zqxjkv2" in got["text"], \
+        "get() must return the whole document, not one chunk"
+
+    n = v.delete(id=doc_id)
+    v.flush()
+    assert n == len(rows), f"delete(id=parent) removed {n} of {len(rows)} chunks"
+    assert v.get_all_records() == [], "chunks survived delete(id=parent)"
+    v.close()
+
+
+def test_get_on_a_chunked_document_does_not_duplicate_the_overlap(
+        tmp_path, offline_embedder):
+    """Chunks share a 40-word overlap bridge, so naive concatenation would repeat
+    text. The marker sits inside that bridge and must appear once."""
+    v = Vault(str(tmp_path / "overlap.dat"))
+    doc_id = v.add(_long_doc())
+    v.flush()
+    carriers = [r for r in v.get_all_records() if "zqxjkv " in r["text"] + " "]
+    assert len(carriers) >= 2, "marker is not in the overlap; test proves nothing"
+    text = v.get(doc_id)["text"]
+    assert text.split().count("zqxjkv") == 1, \
+        f"overlap duplicated on reassembly: {text.split().count('zqxjkv')} copies"
+    v.close()
+
+
+def test_delete_ids_list_and_update_also_accept_a_parent_id(tmp_path, offline_embedder):
+    """`delete(ids=[...])` and `update()` share the by-id path, so they shared
+    the defect."""
+    v = Vault(str(tmp_path / "parent_more.dat"))
+    doc_id = v.add(_long_doc())
+    v.flush()
+    assert v.update(doc_id, text="a short replacement document") is True
+    v.flush()
+    rows = v.get_all_records()
+    assert len(rows) == 1 and rows[0]["text"] == "a short replacement document"
+
+    doc2 = v.add(_long_doc(marker="qqwwee"))
+    v.flush()
+    n_before = len(v.get_all_records())
+    assert v.delete(ids=[doc2]) == n_before - 1
+    v.close()
+
+
+def test_a_short_document_still_behaves_exactly_as_before(tmp_path, offline_embedder):
+    """The parent-id path must not change the ordinary un-chunked case."""
+    v = Vault(str(tmp_path / "short.dat"))
+    doc_id = v.add("a single short fact that will never be split")
+    v.flush()
+    assert v.exists(doc_id)
+    assert v.get(doc_id)["text"] == "a single short fact that will never be split"
+    assert v.update(doc_id, text="replaced") is True
+    v.flush()
+    assert v.get(doc_id)["text"] == "replaced"
+    assert v.delete(id=doc_id) == 1
+    assert v.get_all_records() == []
+    v.close()
+
+
+# --- three documented arguments that did not exist, and one that lied --------
+
+class _TinyEmbedder:
+    """The minimum the README's `embedder=` line promises: .embed/.embed_batch/.dim"""
+    dim = 16
+
+    def embed(self, text):
+        import hashlib
+        h = hashlib.md5(str(text).encode()).digest()
+        return np.frombuffer(h, dtype=np.uint8).astype(np.float32)[:16] / 255.0
+
+    def embed_batch(self, texts):
+        return np.stack([self.embed(t) for t in texts])
+
+
+def test_a_caller_supplied_embedder_is_accepted(tmp_path):
+    """README: `Vault("m.dat", embedder=MyOwnEmbedder())` — which raised TypeError."""
+    v = Vault(str(tmp_path / "emb.dat"), embedder=_TinyEmbedder())
+    assert v.stats()["embed_dim"] == 16
+    v.add("a fact stored through a caller-supplied embedder")
+    v.flush()
+    assert v.search("a fact")[0]["text"].startswith("a fact stored")
+    v.close()
+
+
+def test_a_bad_embedder_is_refused_by_name(tmp_path):
+    """Duck typing that fails later is worse than a clear refusal now."""
+    class Half:
+        dim = 8
+        def embed(self, t): return [0.0] * 8
+    with pytest.raises(TypeError, match="embed_batch"):
+        Vault(str(tmp_path / "bad.dat"), embedder=Half())
+
+
+def test_vector_dtype_and_group_floor_sim_reach_the_engine(tmp_path, offline_embedder):
+    """Both are documented — one in this class's docstring, one in the README as
+    a +19.0 point tuning step — and both raised TypeError."""
+    v = Vault(str(tmp_path / "dt.dat"), vector_dtype="float32", group_floor_sim=0.45)
+    v.add("a fact")
+    v.flush()
+    assert v.engine.header.vector_dtype == "float32"
+    assert v.engine.group_floor_sim == 0.45
+    v.close()
+    d = Vault(str(tmp_path / "def.dat"))
+    assert d.engine.header.vector_dtype == "float16"     # default unchanged
+    assert d.engine.group_floor_sim == 0.0
+    d.close()
+
+
+def test_prune_documents_that_it_returns_bytes(tmp_path, offline_embedder):
+    """`prune() -> int` next to `delete() -> "number of deleted records"` reads
+    as a record count. It is bytes, and now says so."""
+    assert "BYTES FREED" in (Vault.prune.__doc__ or "")
+    v = Vault(str(tmp_path / "pr.dat"))
+    now = time.time()
+    for i in range(9):
+        v.add(f"fact {i} about assorted unrelated topics", timestamp=now - (400 + i) * DAY)
+    v.flush()
+    before = len(v.get_all_records())
+    freed = v.prune(older_than_days=365)
+    v.flush()
+    removed = before - len(v.get_all_records())
+    assert removed > 0 and freed > removed, \
+        f"prune returned {freed} against {removed} records removed"
     v.close()

@@ -88,6 +88,42 @@ OPENAI_COMPATIBLE_PORTS = frozenset({1234, 8000, 8080, 5000, 4891, 11435})
 MAX_SUB_QUERIES = 8
 
 
+def _chunk_index(chunk_id: str) -> int:
+    """The N in ``{parent}_chunk_N``; a large number when there is none, so an
+    unexpected id sorts last instead of raising."""
+    tail = str(chunk_id).rsplit("_chunk_", 1)
+    if len(tail) != 2 or not tail[1].isdigit():
+        return 1 << 30
+    return int(tail[1])
+
+
+def _join_chunks(texts: List[str], max_overlap_words: int = 200) -> str:
+    """Rejoin a split document, removing the overlap bridge between neighbours.
+
+    `split_large_text` repeats roughly ``overlap_words`` between consecutive
+    chunks so no sentence is orphaned, and it breaks on paragraph and sentence
+    boundaries -- so the repeat is rarely exactly that many words. The real
+    overlap is found instead of assumed: the longest suffix of one chunk that is
+    also a prefix of the next. Concatenating without this repeats text, which on
+    a document that mentions something once inside the bridge reads as if it
+    were said twice.
+    """
+    out: List[str] = []
+    for t in texts:
+        w = str(t).split()
+        if not out:
+            out = w
+            continue
+        limit = min(len(out), len(w), max_overlap_words)
+        k = 0
+        for n in range(limit, 0, -1):
+            if out[-n:] == w[:n]:
+                k = n
+                break
+        out.extend(w[k:])
+    return " ".join(out)
+
+
 def _llm_endpoint(base_url: str):
     """Resolve a base URL to ``(flavour, url)``.
 
@@ -167,10 +203,30 @@ class Vault:
         llm_base_url: Optional[str] = None,
         api_key: Optional[str] = None,
         password=_UNSET_PW,
-        on_torn_tail: str = "warn"
+        on_torn_tail: str = "warn",
+        embedder: Optional[Any] = None,
+        vector_dtype: str = "float16",
+        group_floor_sim: float = 0.0
     ):
+        # THREE DOCUMENTED ARGUMENTS THAT DID NOT EXIST.
+        # Each was described in the README or this class's own docstring and
+        # each raised TypeError, because all three were implemented further down
+        # and never plumbed up to here: `vector_dtype` and `group_floor_sim` are
+        # `VaultEngine` arguments, and `embedder` only needed the provider to be
+        # something a caller could supply rather than something built in place.
+        # Loud failures, so nothing was silently wrong -- but the README's
+        # "+19.0 points of top-1" tuning step could not be applied at all.
         self.path = os.path.abspath(path)
-        self.embedder = EmbeddingProvider(model=embed_model, base_url=base_url)
+        if embedder is not None:
+            missing = [a for a in ("embed", "embed_batch", "dim")
+                       if not hasattr(embedder, a)]
+            if missing:
+                raise TypeError(
+                    "embedder= needs .embed, .embed_batch and .dim; "
+                    f"{type(embedder).__name__} is missing {', '.join(missing)}")
+            self.embedder = embedder
+        else:
+            self.embedder = EmbeddingProvider(model=embed_model, base_url=base_url)
         # EXPLICIT None IS AN OPT-OUT, not "unset". `export(target_password=None)`
         # deliberately writes a plaintext target, and 3.0.2 still picked up
         # NANOMEM_PASSWORD for it -- so the opt-out was unreliable and raised
@@ -182,7 +238,9 @@ class Vault:
             self._password = password
         self.engine = VaultEngine(filepath=self.path, embed_dim=self.embedder.dim,
                                   password=self._password,
-                                  on_torn_tail=on_torn_tail)
+                                  on_torn_tail=on_torn_tail,
+                                  vector_dtype=vector_dtype,
+                                  group_floor_sim=group_floor_sim)
         self.llm_base_url = llm_base_url or os.getenv("NANOMEM_LLM_URL", os.getenv("LLM_BASE_URL"))
         self.api_key = api_key or os.getenv("OPENAI_API_KEY", "")
         self.last_id: Optional[str] = None
@@ -1098,6 +1156,26 @@ class Vault:
             records.append(rec)
         return records
 
+    def _chunks_of(self, doc_id: str) -> List[Dict[str, Any]]:
+        """The chunks of a chunked document, in order, or [] if ``doc_id`` is not
+        a parent id.
+
+        `add()` returns the PARENT id for text it split, and that id is not a
+        stored row -- the rows are `{parent}_chunk_N`. So every by-id call
+        silently missed: `get` returned None, `exists` False, `update` False,
+        `delete` 0, and the document stayed on disk. Nothing raised, which is
+        why a caller deleting a document could believe it had.
+        """
+        pid = str(doc_id).strip()
+        if not pid:
+            return []
+        out = []
+        for r in self.get_all_records():
+            if (r.get("metadata") or {}).get("parent_id") == pid:
+                out.append(r)
+        out.sort(key=lambda r: _chunk_index(r.get("id", "")))
+        return out
+
     def get(self, id: str) -> Optional[Dict[str, Any]]:
         """
         Retrieve an exact memory record, fact, or chunk by its unique ID.
@@ -1109,7 +1187,27 @@ class Vault:
         self.flush()
         rec = self.engine.get(clean_id)
         if rec is None:
-            return None
+            chunks = self._chunks_of(clean_id)
+            if not chunks:
+                return None
+            # The whole document, not one chunk. Chunks carry a 40-word overlap
+            # bridge, so they are joined by removing the real overlap between
+            # each neighbouring pair rather than by assuming a fixed width --
+            # `split_large_text` breaks on paragraph and sentence boundaries, so
+            # the bridge is rarely exactly 40 words.
+            first = chunks[0]
+            meta = dict(first.get("metadata") or {})
+            meta["id"] = clean_id
+            meta["chunk_ids"] = [c.get("id") for c in chunks]
+            meta.pop("parent_id", None)
+            return {
+                "id": clean_id,
+                "text": _join_chunks([c.get("text", "") for c in chunks]),
+                "metadata": meta,
+                "source": first.get("source"),
+                "timestamp": float(first.get("timestamp", 0.0)),
+                "revision": int(first.get("revision", 1)),
+            }
         meta = dict(rec.get("metadata") or {})
         meta["id"] = clean_id
         return {
@@ -1165,7 +1263,28 @@ class Vault:
                 break
 
         if target_idx is None:
-            return False
+            # A parent id names a document, not a row. Replacing it means
+            # dropping every chunk and re-adding, because new text splits into a
+            # different number of chunks than the old text did.
+            chunks = self._chunks_of(clean_id)
+            if not chunks:
+                return False
+            if text is None:
+                for c in chunks:
+                    self.update(c.get("id"), metadata=metadata, source=source)
+                return True
+            first = chunks[0]
+            new_meta = dict(first.get("metadata") or {})
+            for k in ("parent_id", "is_chunked", "id"):
+                new_meta.pop(k, None)
+            if metadata is not None:
+                new_meta.update(metadata)
+            self.delete(id=clean_id)
+            self.add(str(text).strip(),
+                     metadata=new_meta or None,
+                     source=source if source is not None else first.get("source"))
+            self.flush()
+            return True
 
         target_rec = all_recs[target_idx]
         cur_meta = dict(target_rec.get("metadata") or {})
@@ -1355,7 +1474,8 @@ class Vault:
             rec_id = str(r.get("id") or (r.get("metadata") or {}).get("id") or "")
             meta = r.get("metadata") or {}
 
-            if target_ids and rec_id in target_ids:
+            if target_ids and (rec_id in target_ids
+                               or meta.get("parent_id") in target_ids):
                 drop = True
             elif text_exact is not None and r.get("text", "").strip() == text_exact.strip():
                 drop = True
@@ -1886,6 +2006,15 @@ class Vault:
               older_than_days: Optional[int] = None,
               keep_current: bool = True) -> int:
         """Reclaim disk space by removing the oldest records.
+
+        RETURNS BYTES FREED, NOT A RECORD COUNT. This is the one thing the
+        docstring never said, and `delete()` -- documented immediately above,
+        with the same `-> int` -- returns "the number of deleted records". So
+        the natural reading next to it is wrong: pruning 9 records from a small
+        vault returns 15339, and
+        ``print(f"pruned {v.prune(older_than_days=365)} records")`` reports
+        fifteen thousand of them. The name ``target_freed_bytes`` is the hint;
+        it should not have had to be one.
 
         ``keep_current=True``, the default, exempts the CURRENT value of every
         tagged fact whatever its age. Until 0.7.1 there was no such exemption

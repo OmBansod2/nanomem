@@ -13,6 +13,8 @@ import urllib.request
 import numpy as np
 from typing import List, Optional
 
+from .errors import EmbeddingWidthError
+
 DEFAULT_MODEL = "nomic-embed-text"
 DEFAULT_OLLAMA_URL = "http://localhost:11434/api/embed"
 ASSET_DIR = os.path.join(os.path.dirname(__file__), "assets")
@@ -94,6 +96,16 @@ class EmbeddingProvider:
         vecs = np.array(data["embeddings"], dtype=np.float32)
         if vecs.ndim != 2 or vecs.shape[0] != len(texts):
             return None
+        if self._dim and int(vecs.shape[1]) != int(self._dim):
+            # A DECLARED WIDTH THAT THE ENDPOINT CONTRADICTS IS AN ERROR.
+            # Reporting one width from `.dim` and returning another is how a
+            # caller ends up sizing a vault, a cache or a matrix wrongly with
+            # nothing to tell them. `dim=` skips the probe; it does not override
+            # the model.
+            raise EmbeddingWidthError(
+                f"{self.model} at {self.base_url} returns {vecs.shape[1]}-d "
+                f"vectors, but dim={self._dim} was declared. Pass the model's "
+                f"real width, or omit dim= and let it be probed.")
         norms = np.linalg.norm(vecs, axis=1, keepdims=True) + 1e-8
         return vecs / norms
 
@@ -111,6 +123,14 @@ class EmbeddingProvider:
                 if self._dim is None:
                     self._dim = int(vecs.shape[1])
                 return vecs
+        except EmbeddingWidthError:
+            # A WIDTH CONFLICT IS NOT A DAEMON OUTAGE. The blanket `except` below
+            # exists so an unreachable endpoint degrades to the lexical encoder
+            # instead of failing. Letting it swallow this would be worse than the
+            # bug it replaced: the caller declared a width the model contradicts,
+            # and they would silently get lexical hashing at the declared width
+            # while believing they were using the model.
+            raise
         except Exception:
             pass
 
@@ -140,27 +160,33 @@ class EmbeddingProvider:
         demonstrated with it is measuring string overlap.
 
         It is deterministic across processes and sessions (hashlib, not the
-        salted builtin ``hash``), and always emits ``OFFLINE_DIM`` columns
-        whatever width the remote model would have used.
+        salted builtin ``hash``), and emits ``OFFLINE_DIM`` columns unless a
+        width was declared with ``dim=``, which it honours.
         """
         import hashlib
-        batch_vecs = np.zeros((len(texts), OFFLINE_DIM), dtype=np.float32)
+        # A DECLARED WIDTH IS HONOURED HERE, NOT JUST REPORTED.
+        # This always emitted OFFLINE_DIM, so `EmbeddingProvider(dim=384)` --
+        # the documented air-gapped case, where this encoder IS the model --
+        # reported 384 and returned 768. The scheme hashes into as many columns
+        # as it is given, so there was never a reason it could not honour one.
+        width = int(self._dim) if self._dim else OFFLINE_DIM
+        batch_vecs = np.zeros((len(texts), width), dtype=np.float32)
         
         for idx, text in enumerate(texts):
             clean = text.lower().strip()
             words = clean.split()
-            vec = np.zeros(OFFLINE_DIM, dtype=np.float32)
+            vec = np.zeros(width, dtype=np.float32)
             
             for w_idx, w in enumerate(words):
                 h = int.from_bytes(hashlib.md5(w.encode("utf-8")).digest()[:4], "little")
-                w_vec = np.sin(np.arange(OFFLINE_DIM) * (h % 1000 + 1) * 0.01)
+                w_vec = np.sin(np.arange(width) * (h % 1000 + 1) * 0.01)
                 decay = 1.0 / (1.0 + 0.05 * w_idx)
                 vec += w_vec * decay
 
             if len(clean) >= 3:
                 for i in range(len(clean) - 2):
                     tri = clean[i:i+3].encode("utf-8")
-                    th = int.from_bytes(hashlib.md5(tri).digest()[:4], "little") % OFFLINE_DIM
+                    th = int.from_bytes(hashlib.md5(tri).digest()[:4], "little") % width
                     vec[th] += 0.35
 
             norm = np.linalg.norm(vec) + 1e-8

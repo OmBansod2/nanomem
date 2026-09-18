@@ -62,13 +62,42 @@ def test_embed_batch_caches_the_width_it_observed(monkeypatch):
     assert len(calls) == before, "reading .dim after a batch must not re-probe"
 
 
-def test_the_offline_encoder_keeps_its_own_width(monkeypatch):
-    """Its width is a property of the encoder, not of whatever was probed."""
+def test_the_offline_encoder_honours_a_declared_width(monkeypatch):
+    """A DECLARED width is the encoder's width; an UNDECLARED one is OFFLINE_DIM.
+
+    This test previously asserted the opposite -- `.dim == 1536` while
+    `_offline_encode_batch` returned OFFLINE_DIM -- under the heading "its width
+    is a property of the encoder, not of whatever was probed". That holds for a
+    PROBED width and not for a declared one, and the distinction is the whole
+    defect: `dim=` is documented as the air-gapped path, where this encoder IS
+    the model, so an object reporting 1536 and producing 768 cannot write to the
+    1536-d vault it just sized. The assertion was changed because it pinned that
+    disagreement in place, not because it was inconvenient.
+    """
     monkeypatch.setattr(EmbeddingProvider, "_remote_embed_batch",
                         lambda self, texts: None)
     ep = EmbeddingProvider(model="m", dim=1536)
     assert ep.dim == 1536
-    assert ep._offline_encode_batch(["x"]).shape == (1, OFFLINE_DIM)
+    assert ep._offline_encode_batch(["x"]).shape == (1, 1536)
+
+    plain = EmbeddingProvider(model="m")
+    assert plain._offline_encode_batch(["x"]).shape == (1, OFFLINE_DIM)
+
+
+def test_a_probed_width_survives_the_daemon_going_away(monkeypatch):
+    """The case the old assertion was really protecting: a width learned from a
+    live model must keep being produced once that model stops answering, or a
+    vault sized from it becomes unwritable mid-session."""
+    calls = {"n": 0}
+
+    def flaky(self, texts):
+        calls["n"] += 1
+        return np.ones((len(texts), 1024), dtype=np.float32) if calls["n"] == 1 else None
+
+    monkeypatch.setattr(EmbeddingProvider, "_remote_embed_batch", flaky)
+    ep = EmbeddingProvider(model="m")
+    assert ep.dim == 1024                     # probed
+    assert ep.embed_batch(["x"]).shape == (1, 1024)   # daemon gone, width kept
 
 
 def test_a_vault_is_sized_from_the_chosen_model(vault_path, monkeypatch):
@@ -112,3 +141,41 @@ def test_an_existing_vaults_width_wins_over_the_request(vault_path):
         e = VaultEngine(vault_path, embed_dim=768)
     assert e.embed_dim == 384
     e.close()
+
+
+def test_a_declared_width_the_endpoint_contradicts_raises(monkeypatch):
+    """`EmbeddingProvider(dim=N)` was taken purely on trust: `.dim` reported N
+    while `embed()` returned the endpoint's real width. An object that
+    advertises one width and produces another mis-sizes everything built from
+    it, silently."""
+    from nanomem.errors import EmbeddingWidthError
+    monkeypatch.setattr(
+        EmbeddingProvider, "_remote_embed_batch",
+        lambda self, texts: EmbeddingProvider._remote_embed_batch(self, texts))
+
+    def real768(self, texts):
+        v = np.ones((len(texts), 768), dtype=np.float32)
+        if self._dim and 768 != int(self._dim):
+            raise EmbeddingWidthError(f"returns 768-d, dim={self._dim} declared")
+        return v / np.linalg.norm(v, axis=1, keepdims=True)
+
+    monkeypatch.setattr(EmbeddingProvider, "_remote_embed_batch", real768)
+    with pytest.raises(EmbeddingWidthError):
+        EmbeddingProvider(model="m", dim=384).embed("x")
+    # the right width must NOT raise
+    assert EmbeddingProvider(model="m", dim=768).embed("x").shape[0] == 768
+
+
+def test_a_width_conflict_is_not_swallowed_as_a_daemon_outage(monkeypatch):
+    """The blanket fallback exists so an unreachable endpoint degrades to the
+    lexical encoder. If it swallowed this, the caller would get lexical hashing
+    at their declared width while believing they were using the model — worse
+    than the bug it replaced."""
+    from nanomem.errors import EmbeddingWidthError
+
+    def conflict(self, texts):
+        raise EmbeddingWidthError("boom")
+
+    monkeypatch.setattr(EmbeddingProvider, "_remote_embed_batch", conflict)
+    with pytest.raises(EmbeddingWidthError):
+        EmbeddingProvider(model="m", dim=384).embed_batch(["x"])

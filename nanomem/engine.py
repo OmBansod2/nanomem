@@ -927,9 +927,17 @@ class VaultEngine:
                                    readonly=self.read_only)
             h = self._cont.header
             if h.embed_dim != self.embed_dim:
+                # SAY WHAT HAPPENS NEXT, NOT JUST WHAT WAS IGNORED. The file
+                # keeps its width and nothing is corrupted, but the caller's
+                # encoder is still the one they named, so every search, history
+                # and add from here raises on the width mismatch. "ignored" read
+                # as "carried on at the file's width", which it does not.
                 warnings.warn(
                     f"{self.filepath} stores {h.embed_dim}-d vectors; requested "
-                    f"embed_dim={self.embed_dim} ignored", UserWarning, stacklevel=2)
+                    f"embed_dim={self.embed_dim} ignored. The file is unchanged, "
+                    f"but this handle cannot read or write it -- every call will "
+                    f"raise until you reopen with a {h.embed_dim}-d model.",
+                    UserWarning, stacklevel=2)
                 self.embed_dim = int(h.embed_dim)
             self.block_capacity = int(h.block_capacity)
             self.landmarks_per_block = int(h.landmarks_per_block)

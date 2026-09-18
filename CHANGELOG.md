@@ -5,6 +5,94 @@ number below is from one of those files.
 
 ---
 
+## 0.7.11 — engine 3.4.1 (unchanged)
+
+Five defects found by an **independent black-box review** — an agent given the
+published wheel, the documentation as its only oracle, and no access to this
+source tree. It was told to find where the package disagrees with its own docs.
+Its full report is reproduced against 0.7.10 before each fix below. A sixth
+finding, and the most serious, is not in this release: see the end.
+
+**`add()` handed back an id that nothing accepted.** `add()` documents its
+return as "the parent id ... for a chunked document", and the README says you
+can `get`, `update` or `delete` by it later. Past 500 words that id is not a
+stored row — the rows are `{parent}_chunk_N` — so every by-id call silently
+missed:
+
+```
+add() returned            doc_61b9e5eadf     (5 chunks stored)
+get(doc_61b9e5eadf)    -> None
+exists(doc_61b9e5eadf) -> False
+update(doc_61b9e5eadf) -> False
+delete(id=...)         -> 0        <- 5 rows still on disk
+```
+
+Nothing raised, so a caller deleting a document could believe it had been
+deleted. The by-id path now resolves a parent id to its chunks: `delete` removes
+all of them, `exists` is True, `update` replaces the document, and `get` returns
+the whole text — rejoined by finding the real overlap between neighbouring
+chunks rather than assuming its width, since `split_large_text` breaks on
+paragraph and sentence boundaries and the bridge is rarely exactly 40 words.
+Sub-500-word documents are untouched.
+
+**Three documented arguments did not exist.** All three raised `TypeError`, and
+all three were implemented further down and simply never plumbed up to `Vault`:
+
+| documented in | argument |
+|---|---|
+| README, "Embeddings are yours to choose" | `Vault(..., embedder=MyOwnEmbedder())` |
+| `Vault` class docstring | `vector_dtype="float32"` |
+| README, twice, as "+19.0 points of top-1" | `group_floor_sim=0.45` |
+
+`group_floor_sim` was the costly one: the README presents it as the concrete
+tuning step for the declared-entity workload it spends a section recommending,
+and there was no way to apply it. `embedder=` now type-checks what it is given
+and names the missing method rather than failing later.
+
+**`EmbeddingProvider(dim=N)` reported a width it did not produce.** `dim=` is
+documented as the way to skip the startup probe on air-gapped installs. It was
+taken purely on trust: `.dim` returned N while `embed()` returned 768, including
+in that air-gapped case, where the lexical encoder *is* the model. An object
+that advertises one width and produces another mis-sizes everything built from
+it. The encoder now honours a declared width (it hashes into as many columns as
+it is given, so there was never a reason it could not), and a declared width the
+endpoint contradicts raises the new `EmbeddingWidthError` instead of being
+quietly overruled. That error is deliberately not caught by the fallback that
+degrades to lexical hashing when no daemon answers — swallowing it would hand
+the caller lexical vectors at their declared width while they believed they were
+using the model, which is worse than the bug it replaced.
+
+One existing test asserted the old behaviour and was rewritten rather than
+deleted. It held that the encoder's width is "a property of the encoder, not of
+whatever was probed" — true of a probed width, false of a declared one, and the
+distinction is the defect. A second test now pins the case that assertion was
+really protecting: a width learned from a live model keeps being produced after
+the daemon goes away.
+
+**`prune()` returns bytes freed; nothing said so.** `delete()`, documented
+immediately above it with the same `-> int`, returns "the number of deleted
+records". Pruning 9 records from a small vault returns 15051, so
+`print(f"pruned {v.prune(older_than_days=365)} records")` reports fifteen
+thousand of them. Documented, not changed: changing the return would break
+callers who read it correctly.
+
+**A width-mismatched reopen said less than it should have.** "you get a warning
+and the file's own width" reads as *it carries on at the file's width*. It does
+not — the file is safe and unchanged, but the handle's encoder is still the
+model you named, so every `search`, `history` and `add` raises. The warning and
+the README now say that.
+
+Suite 580 -> 591. The clean-chat benchmark is unchanged (97.2% / 100.0% top-3,
+94.4% end-to-end). Engine untouched, so every benchmark result stays current.
+
+**Not in this release.** The review's highest-ranked finding is that `search` and
+`history` disagree about which value is current on any chain the tagger grouped
+— which is every chain written through MCP or the CLI, since neither exposes a
+way to declare an entity. That is a ranking-layer fix and it gets its own
+release rather than riding along with five unrelated ones.
+
+---
+
 ## 0.7.10 — engine 3.4.1 (unchanged)
 
 **A question asked after word 100 of a query was thrown away.** Both `search`
