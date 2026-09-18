@@ -100,7 +100,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.12 · engine 3.4.1 · container format 3 · arena cache format 3.
+Package 0.7.13 · engine 3.4.1 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +131,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-595 tests, no network needed.
+598 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -259,9 +259,21 @@ inferred group was measured and rejected — it costs **-19.4 points** on the
 3-persona chat set, and a sweep from 0.40 to 0.80 found no threshold that bought
 the one without paying the other
 (`scratch/refound/floor_current_value_results.json`). So this is a deliberate
-trade, not an oversight, and the honest summary is: **`history` is authoritative
-about what is current; `search` is ranked by relevance and only usually agrees.**
-Declaring the entity removes the disagreement entirely.
+trade, not an oversight.
+
+**0.7.12 said here that `history` is authoritative and should be believed over
+`search`. That was wrong, and the claim is withdrawn.** `history` applies the
+same relevance floor, so on a chain whose later revisions are worded further
+from your query it can return a SHORTER chain than exists — in the worst case
+one entry flagged `superseded=False`, which this library's own docstring defines
+as "this fact never changed". `changes()` and `get_all_records()` see every
+revision in that same vault, so the data is intact and only this view is short.
+Until that is fixed, cross-check a chain you care about with `changes()`, and
+treat neither `search` nor `history` as the final word on its own.
+
+Declaring the entity removes the `search`/`history` disagreement described
+above, but it does NOT prevent this truncation — the reproduction is a declared
+chain.
 
 ---
 

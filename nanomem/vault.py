@@ -841,14 +841,40 @@ class Vault:
         seen_texts = set()
         max_depth = max((len(h[1]) for h in sub_hits), default=0)
 
+        # WHICH SUB-QUERY CAME FIRST MUST NOT DECIDE RANK 1.
+        # The interleave exists so a genuine multi-part question gets hits for
+        # every part instead of top_k hits for its strongest clause. But it
+        # walked `sub_hits` in INPUT ORDER, so rank 1 was always the best hit of
+        # whatever text appeared first -- and for a pasted email, a chat turn, or
+        # any question asked after context, that is the preamble. Measured over
+        # five unrelated questions behind one 46-word preamble: all five returned
+        # the SAME record, and it was exactly the record the preamble alone
+        # returns. The question contributed nothing.
+        #
+        # 0.7.10 removed the 100-word query cap for this same shape and missed
+        # this, because its test and its release check both passed
+        # `decompose=False` to isolate the truncation -- the one path on which
+        # this cannot happen.
+        #
+        # The levels are kept, so each sub-query still contributes its best hit
+        # before any contributes a second; only the order WITHIN a level changes,
+        # from input position to score. A composite question still answers every
+        # part, and rank 1 is now the best hit anywhere.
+        def _rank(h):
+            v = h.get("score")
+            if v is None:
+                v = h.get("cosine", 0.0)
+            return float(v)
+
         for d in range(max_depth):
-            for sq, hits in sub_hits:
-                if d < len(hits):
-                    h = hits[d]
-                    if h["text"] not in seen_texts:
-                        seen_texts.add(h["text"])
-                        h["sub_query"] = sq
-                        merged_results.append(h)
+            level = [(sq, hits[d]) for sq, hits in sub_hits if d < len(hits)]
+            level.sort(key=lambda pair: _rank(pair[1]), reverse=True)
+            for sq, h in level:
+                if h["text"] in seen_texts:
+                    continue
+                seen_texts.add(h["text"])
+                h["sub_query"] = sq
+                merged_results.append(h)
 
         return merged_results[:safe_top_k]
 

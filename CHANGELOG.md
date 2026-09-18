@@ -5,6 +5,59 @@ number below is from one of those files.
 
 ---
 
+## 0.7.13 — engine 3.4.1 (untouched)
+
+**Which sub-query came first decided rank 1, so a pasted preamble answered the
+question instead of the question.** Found by the second black-box review.
+
+`search` decomposes a composite question, runs one scan per sub-query, and
+interleaves the hits. The interleave walked the sub-queries in INPUT ORDER, so
+rank 1 was always the best hit of whatever text appeared first — which, for a
+pasted email, a chat turn, or any question asked after context, is the preamble.
+Five unrelated questions behind one 46-word preamble:
+
+```
+wrapper                    words  subs  default  no-decomp  distinct answers
+none                           8   1.0      5/5        5/5                 5
+short (no clause commas)      13   1.0      5/5        5/5                 5
+email with clause commas      46   2.0      0/5        5/5                 1
+long thread (x3)             122   4.0      0/5        5/5                 1
+```
+
+The control is the finding: the preamble ALONE returns the same record as the
+preamble plus any of the five questions. The question contributed nothing to
+rank 1. `benchmarks/decompose_order_results.json`.
+
+Only the order WITHIN an interleave level changes, from input position to score.
+Each sub-query still contributes its best hit before any contributes a second,
+so a genuine composite question still answers every part — pinned by its own
+test.
+
+**This corrects 0.7.10.** That release removed the 100-word query cap for
+exactly this shape — a question asked after a long preamble — and the defect
+survived it, because the cap was not the only thing discarding the question. It
+was verified on the one path where this cannot happen: both the regression test
+and the release check against the published wheel passed `decompose=False`, to
+isolate the truncation. Isolating the mechanism under test is right; letting
+that isolated path stand as the verification of a user-facing claim is not. The
+0.7.10 test now says so in its own docstring and names the default-path test
+beside it.
+
+The measuring script fails against the pre-fix merge (0/5, and it names the two
+wrappers whose answers collapse), so it can detect the defect it certifies gone.
+
+Suite 595 -> 598. Engine untouched: the 520-result ranking baseline is bitwise
+identical, the clean-chat benchmark is unchanged at 97.2% / 100.0% top-3 / 94.4%
+end-to-end, and the adjacent-attribute numbers are unchanged.
+
+**Still open from the same review**, each getting its own release: `history()`
+applies the relevance floor and can return a truncated chain reported as
+"never changed" — which makes the README's new "history is authoritative" claim
+false as written — and query-intent classification can hoist a different
+declared attribute past a 0.27 cosine margin.
+
+---
+
 ## 0.7.12 — engine 3.4.1 (untouched)
 
 The black-box review's highest-ranked finding: `search` and `history` disagree

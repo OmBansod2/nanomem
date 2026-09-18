@@ -1155,6 +1155,14 @@ def test_a_question_past_word_100_still_reaches_the_query(tmp_path, offline_embe
     the real question LAST. The assertion is on the TEXT the engine is asked
     about, not on a rank, because the offline encoder here is lexical and the
     measurement that motivated this is in query_truncation_results.json.
+
+    `decompose=False` is here to isolate the truncation, and that isolation is
+    exactly how 0.7.10 shipped an incomplete fix: on the DEFAULT path the
+    question was still discarded, by the merge ordering instead of by the cap,
+    and neither this test nor the release check could see it. The default path
+    is covered by
+    `test_the_question_beats_the_preamble_on_the_default_path`; do not let this
+    test stand alone for that shape again.
     """
     v = Vault(str(tmp_path / "trunc.dat"))
     v.add("The production database runs PostgreSQL 16 on the primary cluster.")
@@ -1420,4 +1428,81 @@ def test_cli_add_can_declare_an_entity(tmp_path, offline_embedder, capsys):
                for r in v.get_all_records())
     cur = [e["text"] for e in v.history("where do I work") if not e.get("superseded")]
     assert v.search("where do I work", top_k=1)[0]["text"] in cur
+    v.close()
+
+
+# --- decomposition must not let input ORDER decide rank 1 --------------------
+
+_F2_FACTS = [
+    "The staging database listens on port 5433.",
+    "Backups run nightly at 0200 UTC.",
+    "The Zurich office parking code is 4417.",
+    "The VPN concentrator sits in rack B12.",
+    "The on-call rota rolls over every Monday at 09:00.",
+]
+_F2_PREAMBLE = ("Hi all, following up on yesterday's thread, a few bits are still "
+                "open and I wanted them written down, also the room booking has "
+                "moved again, apologies for the churn ")
+
+
+def _f2_vault(tmp_path, name):
+    v = Vault(str(tmp_path / name))
+    for f in _F2_FACTS:
+        v.add(f)
+    v.flush()
+    return v
+
+
+def test_rank_one_is_not_decided_by_which_sub_query_came_first(
+        tmp_path, offline_embedder):
+    """The merge interleaved sub-query hits round-robin IN INPUT ORDER, so rank 1
+    was always the best hit of whatever text appeared first.
+
+    For a pasted email, chat turn, or any question-after-context, that is the
+    preamble — so the user's actual question contributed nothing to rank 1. The
+    control that proves it: the preamble ALONE returns the same record as the
+    preamble plus any question.
+    """
+    v = _f2_vault(tmp_path, "order.dat")
+    preamble_only = v.search(_F2_PREAMBLE, top_k=1)[0]["text"]
+
+    distinct = set()
+    for q in ("Which port does the staging database listen on?",
+              "What is the Zurich parking code?",
+              "Where is the VPN concentrator?"):
+        full = _F2_PREAMBLE + q
+        assert len(Vault.decompose_query(full)) > 1, "no longer decomposes"
+        distinct.add(v.search(full, top_k=1)[0]["text"])
+
+    assert len(distinct) > 1, (
+        "every question returned the same record; rank 1 ignored the question")
+    assert distinct != {preamble_only}, (
+        "rank 1 is exactly what the preamble alone returns")
+    v.close()
+
+
+def test_the_question_beats_the_preamble_on_the_default_path(
+        tmp_path, offline_embedder):
+    """0.7.10 removed the 100-word query cap for exactly this shape and verified
+    it with `decompose=False` — the one path where this defect cannot appear.
+    The default path is what users get."""
+    v = _f2_vault(tmp_path, "default.dat")
+    for q, want in (("Which port does the staging database listen on?", "5433"),
+                    ("What is the Zurich parking code?", "4417"),
+                    ("Where is the VPN concentrator?", "B12")):
+        top = v.search(_F2_PREAMBLE + q, top_k=1)[0]["text"]
+        assert want in top, f"{q!r} -> {top!r} (default path, decompose on)"
+    v.close()
+
+
+def test_a_composite_question_still_answers_every_part(tmp_path, offline_embedder):
+    """The reason the merge interleaves at all: a real multi-part question must
+    get hits for each part, not top_k hits for its strongest clause. Ordering by
+    score must not cost that."""
+    v = _f2_vault(tmp_path, "composite.dat")
+    q = "What is the Zurich parking code, and where is the VPN concentrator?"
+    assert len(Vault.decompose_query(q)) > 1
+    texts = " ".join(h["text"] for h in v.search(q, top_k=4))
+    assert "4417" in texts and "B12" in texts, \
+        f"a composite question lost one of its parts: {texts!r}"
     v.close()

@@ -65,7 +65,7 @@ TOOLS = [
     {
         "name": "nanomem_history",
         "description": (
-            "Every value a fact has held, oldest first, with the current one marked. This is AUTHORITATIVE about what is current: nanomem_search is ranked by relevance and, on a chain whose attribute was not declared with `entity`, can put a superseded value first. If the two disagree, believe this one."
+            "Every value a fact has held, oldest first, with the current one marked. Cross-check with nanomem_changes before relying on it: this view applies a relevance filter and can return a SHORTER chain than exists, including a single entry marked current when later revisions were written. nanomem_changes is unfiltered."
             "asserted. The last entry is the current value. Use this when the user asks "
             "what something used to be, when it changed, or whether it changed at all. "
             "A fact that never changed returns a single entry, which is an answer."),
