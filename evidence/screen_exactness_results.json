@@ -1,0 +1,68 @@
+{
+ "experiment": "float32 accumulation order vs search results",
+ "spec": "design/screen_exactness_spec.md (pre-registered)",
+ "date": "2026-09-17",
+ "bar": "<= 1.0% of queries undetermined at k=4",
+ "local_blas": "accelerate",
+ "runs": [
+  {
+   "n_rows": 4000,
+   "dim": 128,
+   "n_queries": 150,
+   "err_max": 1.8491858300162534e-07,
+   "err_mean": 1.2522647945523557e-08,
+   "err_p99": 6.015264782371217e-08,
+   "by_k": {
+    "1": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 1.6475206549182442e-05,
+     "gap_median": 0.010168481497823123
+    },
+    "4": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 4.4635400532344605e-06,
+     "gap_median": 0.004337675871738819
+    },
+    "10": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 1.7536347654278917e-06,
+     "gap_median": 0.0019310355342915947
+    }
+   }
+  },
+  {
+   "n_rows": 4000,
+   "dim": 768,
+   "n_queries": 150,
+   "err_max": 2.0092351549205745e-07,
+   "err_mean": 1.2470612412904453e-08,
+   "err_p99": 6.034490162259125e-08,
+   "by_k": {
+    "1": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 0.0004014065813455203,
+     "gap_median": 0.006056257340959145
+    },
+    "4": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 2.9888594709870375e-05,
+     "gap_median": 0.0015735343906625593
+    },
+    "10": {
+     "undetermined": 0,
+     "pct": 0.0,
+     "gap_min": 2.0447666326806058e-07,
+     "gap_median": 0.0006213051208232567
+    }
+   }
+  }
+ ],
+ "worst_pct_at_k4": 0.0,
+ "passed": true,
+ "verdict": "0.0% of queries undetermined at k=4, within the 1.0% bar: the exactness claim stands with a stated tie-band, and test_screen.py asserts the portable property instead of the bits"
+}

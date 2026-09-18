@@ -1,0 +1,125 @@
+{
+ "engine_version": "3.0.3",
+ "corpus": "hotpot_train_8k_embeds.npz",
+ "docs": 71433,
+ "questions": 1000,
+ "top_k": 4,
+ "recluster_seconds": 3.84,
+ "decision_rule": "DECISIONS #3: ship router='auto' by default only if the router is within 1.0 pt of exhaustive at its default budget on the RECLUSTERED 71k corpus (95% CI lower bound >= -1.0 pt).",
+ "arms": [
+  {
+   "router": "GlobalCellRouter",
+   "layout": "reclustered",
+   "cell_target": 25,
+   "beam_frac": 0.1,
+   "cells": 2858,
+   "recall_at_4_pct": 78.05,
+   "delta_vs_exhaustive_pt": -0.6,
+   "ci95_pt": [
+    -1.0,
+    -0.25
+   ],
+   "scan_fraction": 0.1211,
+   "fit_seconds": 8.61,
+   "search_seconds_total": 2.13,
+   "passes_gate": true
+  },
+  {
+   "router": "GlobalCellRouter",
+   "layout": "reclustered",
+   "cell_target": 25,
+   "beam_frac": 0.25,
+   "cells": 2858,
+   "recall_at_4_pct": 78.6,
+   "delta_vs_exhaustive_pt": -0.05,
+   "ci95_pt": [
+    -0.2,
+    0.1
+   ],
+   "scan_fraction": 0.2897,
+   "fit_seconds": 8.1,
+   "search_seconds_total": 3.48,
+   "passes_gate": true
+  },
+  {
+   "router": "GlobalCellRouter",
+   "layout": "reclustered",
+   "cell_target": 25,
+   "beam_frac": 0.5,
+   "cells": 2858,
+   "recall_at_4_pct": 78.65,
+   "delta_vs_exhaustive_pt": 0.0,
+   "ci95_pt": [
+    0.0,
+    0.0
+   ],
+   "scan_fraction": 0.5557,
+   "fit_seconds": 7.39,
+   "search_seconds_total": 5.98,
+   "passes_gate": true
+  },
+  {
+   "router": "GlobalCellRouter",
+   "layout": "random (no recluster)",
+   "cell_target": 25,
+   "beam_frac": 0.25,
+   "cells": 2858,
+   "recall_at_4_pct": 78.7,
+   "delta_vs_exhaustive_pt": 0.05,
+   "ci95_pt": [
+    0.0,
+    0.15
+   ],
+   "scan_fraction": 0.2915,
+   "note": "the GlobalCellRouter clusters the VECTORS, so file order barely matters to it; this is the control."
+  },
+  {
+   "router": "PageLandmarkRouter (ablation)",
+   "layout": "reclustered",
+   "landmarks_per_block": 8,
+   "beam_frac": 0.25,
+   "recall_at_4_pct": 78.5,
+   "delta_vs_exhaustive_pt": -0.15,
+   "ci95_pt": [
+    -0.35,
+    0.05
+   ],
+   "scan_fraction": 0.2505
+  }
+ ],
+ "exhaustive": {
+  "recall_at_4_pct": 78.65,
+  "seconds_total": 0.66
+ },
+ "engine_end_to_end_71433": {
+  "off": {
+   "ingest_seconds": 1.17,
+   "open_seconds": 0.15,
+   "search_p50_ms": 1.919,
+   "search_p95_ms": 2.125,
+   "recall_at_4_pct": 78.65,
+   "routing_mode": "exhaustive",
+   "documents": 71433
+  },
+  "auto": {
+   "ingest_seconds": 13.22,
+   "open_seconds": 7.51,
+   "search_p50_ms": 3.604,
+   "search_p95_ms": 3.897,
+   "recall_at_4_pct": 78.7,
+   "routing_mode": "cells",
+   "documents": 71433
+  }
+ },
+ "verdict": {
+  "recall_gate_passes": true,
+  "recall_gate_passing_beam_fracs": [
+   0.1,
+   0.25,
+   0.5
+  ],
+  "router_is_faster_in_the_engine": false,
+  "shipped_router_default": "off",
+  "why": "DECISIONS #3's RECALL gate passes -- at the default beam_frac=0.25 the IVF router is within 0.05 pt of exhaustive on the reclustered 71k corpus (95% CI [-0.2, +0.1] pt). It still ships OFF, because the point of a router is speed and it does not deliver any: in the engine it makes search SLOWER (p50 3.604 ms vs 1.919 ms) for the same recall, and it adds 7.4 s to every open because the k-means fit is not persisted and is recomputed each time. A 29% fancy-index gather over the arena costs more than one contiguous 71,433 x 768 matmul. router='auto' remains available and now has numbers attached."
+ }
+}

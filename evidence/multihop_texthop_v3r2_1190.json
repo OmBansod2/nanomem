@@ -1,0 +1,18 @@
+{
+ "corpus_docs": 1190,
+ "questions": 120,
+ "embeddings": "embeds_val.npz",
+ "shape": "re-opened vault",
+ "results": {
+  "4": {
+   "single_pass_pct": 68.3,
+   "text_hop_pct": 79.2,
+   "n": 120
+  },
+  "8": {
+   "single_pass_pct": 90.0,
+   "text_hop_pct": 92.5,
+   "n": 120
+  }
+ }
+}

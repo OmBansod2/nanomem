@@ -1,0 +1,26 @@
+{
+ "what": "stats()['active_heap_ram_kb'] against real RSS, measured in a process that does nothing but OPEN the vault and read stats",
+ "sizes": [
+  {
+   "records": 10000,
+   "rss_before_mb": 36.2,
+   "rss_after_mb": 117.8,
+   "reported_active_heap_mb": 50.3,
+   "process_rss_mb": 117.8,
+   "index_mb": 15.5,
+   "rss_delta_mb": 81.6,
+   "ratio_rss_delta_over_reported": 1.62
+  },
+  {
+   "records": 71433,
+   "rss_before_mb": 36.2,
+   "rss_after_mb": 648.4,
+   "reported_active_heap_mb": 401.6,
+   "process_rss_mb": 648.4,
+   "index_mb": 111.1,
+   "rss_delta_mb": 612.2,
+   "ratio_rss_delta_over_reported": 1.52
+  }
+ ],
+ "engine_version": "3.0.3"
+}

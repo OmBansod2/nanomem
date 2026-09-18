@@ -1,0 +1,45 @@
+{
+ "engine_version": "3.0.3",
+ "embed_dim": 768,
+ "kdf": "scrypt n=2^16 r=8 p=1",
+ "sizes": {
+  "1190": {
+   "plain_open_ms_p50": 2.606,
+   "password_open_ms_p50": 102.276,
+   "open_overhead_ms": 99.67,
+   "plain_search_ms_p50": 0.0434,
+   "password_search_ms_p50": 0.0431,
+   "search_overhead_ms_p50": -0.0003,
+   "file_bytes_plain": 1954420,
+   "file_bytes_password": 1954420
+  },
+  "5000": {
+   "plain_open_ms_p50": 10.62,
+   "password_open_ms_p50": 115.502,
+   "open_overhead_ms": 104.88,
+   "plain_search_ms_p50": 0.1373,
+   "password_search_ms_p50": 0.1393,
+   "search_overhead_ms_p50": 0.002,
+   "file_bytes_plain": 8211322,
+   "file_bytes_password": 8211322
+  },
+  "40000": {
+   "plain_open_ms_p50": 85.802,
+   "password_open_ms_p50": 251.167,
+   "open_overhead_ms": 165.36,
+   "plain_search_ms_p50": 0.8949,
+   "password_search_ms_p50": 0.8905,
+   "search_overhead_ms_p50": -0.0043,
+   "file_bytes_plain": 65728108,
+   "file_bytes_password": 65728108
+  }
+ },
+ "scrypt_ms_per_derivation": 95.67,
+ "offline_guesses_per_second_per_core": 10.5,
+ "open_of_2000_records": {
+  "blocks": 40,
+  "block_tag_calls_per_block": 1.0,
+  "keystream_calls_per_block": 1.0,
+  "note": "3.0.1 measured 2.0 block_tag calls per block: the scan verified the trailer and crypto.open_block then recomputed the identical tag."
+ }
+}

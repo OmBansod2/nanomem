@@ -1,0 +1,1760 @@
+{
+ "lopo": {
+  "full": {
+   "selected": {
+    "head": "full",
+    "l2": 0.003,
+    "class_weight": 1.685,
+    "threshold": 0.6,
+    "emb_scale": 5.0,
+    "lopo_acc": 0.951439110952998,
+    "lopo_f1": 0.9315472473637048,
+    "per_persona_acc": {
+     "gradstudent-saopaulo": 0.9322033898305084,
+     "nurse-lagos": 0.9652173913043478,
+     "retired-osaka": 0.9568965517241379
+    }
+   },
+   "mean_acc": 0.951439110952998,
+   "mean_f1": 0.9315472473637048,
+   "per_persona": {
+    "gradstudent-saopaulo": {
+     "tp": 35,
+     "fp": 0,
+     "fn": 8,
+     "tn": 75,
+     "accuracy": 0.9322033898305084,
+     "precision": 1.0,
+     "recall": 0.813953488372093,
+     "f1": 0.8974358974358974
+    },
+    "nurse-lagos": {
+     "tp": 45,
+     "fp": 4,
+     "fn": 0,
+     "tn": 66,
+     "accuracy": 0.9652173913043478,
+     "precision": 0.9183673469387755,
+     "recall": 1.0,
+     "f1": 0.9574468085106383
+    },
+    "retired-osaka": {
+     "tp": 39,
+     "fp": 2,
+     "fn": 3,
+     "tn": 72,
+     "accuracy": 0.9568965517241379,
+     "precision": 0.9512195121951219,
+     "recall": 0.9285714285714286,
+     "f1": 0.9397590361445782
+    }
+   }
+  },
+  "surface": {
+   "selected": {
+    "head": "surface",
+    "l2": 0.03,
+    "class_weight": 1.685,
+    "threshold": 0.6,
+    "emb_scale": 1.0,
+    "lopo_acc": 0.9256481928527261,
+    "lopo_f1": 0.8977854833263942,
+    "per_persona_acc": {
+     "gradstudent-saopaulo": 0.9067796610169492,
+     "nurse-lagos": 0.9391304347826087,
+     "retired-osaka": 0.9310344827586207
+    }
+   },
+   "mean_acc": 0.9256481928527261,
+   "mean_f1": 0.8977854833263942,
+   "per_persona": {
+    "gradstudent-saopaulo": {
+     "tp": 34,
+     "fp": 2,
+     "fn": 9,
+     "tn": 73,
+     "accuracy": 0.9067796610169492,
+     "precision": 0.9444444444444444,
+     "recall": 0.7906976744186046,
+     "f1": 0.8607594936708861
+    },
+    "nurse-lagos": {
+     "tp": 45,
+     "fp": 7,
+     "fn": 0,
+     "tn": 63,
+     "accuracy": 0.9391304347826087,
+     "precision": 0.8653846153846154,
+     "recall": 1.0,
+     "f1": 0.9278350515463918
+    },
+    "retired-osaka": {
+     "tp": 38,
+     "fp": 4,
+     "fn": 4,
+     "tn": 70,
+     "accuracy": 0.9310344827586207,
+     "precision": 0.9047619047619048,
+     "recall": 0.9047619047619048,
+     "f1": 0.9047619047619048
+    }
+   }
+  }
+ },
+ "grid": [
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.951439110952998,
+   "lopo_f1": 0.9315472473637048,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.9652173913043478,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9486392397021829,
+   "lopo_f1": 0.925896028964479,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9486392397021829,
+   "lopo_f1": 0.925896028964479,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.945765676483792,
+   "lopo_f1": 0.9231601784844564,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9456669970099695,
+   "lopo_f1": 0.9244585823533192,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9428421382529075,
+   "lopo_f1": 0.9206719329970495,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9400422670020921,
+   "lopo_f1": 0.9149681103026399,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9652173913043478,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9399186000220229,
+   "lopo_f1": 0.9178268900984863,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9397962035931187,
+   "lopo_f1": 0.9207267173306302,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9373398046739343,
+   "lopo_f1": 0.9054963373319107,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9372174082450301,
+   "lopo_f1": 0.910084105418635,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9652173913043478,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9371437162774545,
+   "lopo_f1": 0.9116086478166375,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9370937412649608,
+   "lopo_f1": 0.9129282799367182,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.937070024309879,
+   "lopo_f1": 0.9130795333231662,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9369713448360565,
+   "lopo_f1": 0.9170129764895182,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9369713448360565,
+   "lopo_f1": 0.9170129764895182,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9369226403747279,
+   "lopo_f1": 0.9178567424754142,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9368976528684811,
+   "lopo_f1": 0.9183287059442845,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.9217391304347826,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9343425744754742,
+   "lopo_f1": 0.9045364809253696,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9343425744754742,
+   "lopo_f1": 0.9045364809253696,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9342688825078986,
+   "lopo_f1": 0.9074482851559867,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9342688825078986,
+   "lopo_f1": 0.9074482851559867,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9342688825078986,
+   "lopo_f1": 0.906975807008101,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9342201780465699,
+   "lopo_f1": 0.9088295541058352,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.934195190540323,
+   "lopo_f1": 0.9097723784008461,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.934195190540323,
+   "lopo_f1": 0.9097723784008461,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9341714735852413,
+   "lopo_f1": 0.9120880567734461,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.934047806605172,
+   "lopo_f1": 0.9133215443560271,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.9130434782608695,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9339991021438433,
+   "lopo_f1": 0.9152984029139816,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.9130434782608695,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9314690112570835,
+   "lopo_f1": 0.9007223687101735,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9314690112570835,
+   "lopo_f1": 0.9001126126126126,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9314690112570835,
+   "lopo_f1": 0.9001126126126126,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9314452943020015,
+   "lopo_f1": 0.9042966064951408,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9313953192895079,
+   "lopo_f1": 0.9038003143397533,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9287928069863374,
+   "lopo_f1": 0.887938808373591,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8813559322033898,
+    "nurse-lagos": 0.9826086956521739,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9287428319738437,
+   "lopo_f1": 0.8906977577190344,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8813559322033898,
+    "nurse-lagos": 0.9652173913043478,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9287191150187618,
+   "lopo_f1": 0.8898865812343497,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9286691400062681,
+   "lopo_f1": 0.8927923794542396,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9286441525000212,
+   "lopo_f1": 0.8941649104320337,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9285717310836108,
+   "lopo_f1": 0.9007485205941137,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9285704605324456,
+   "lopo_f1": 0.8980814393185529,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9482758620689655
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9280796042656637,
+   "lopo_f1": 0.9121037309873223,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9576271186440678,
+    "nurse-lagos": 0.8869565217391304,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9257705892816303,
+   "lopo_f1": 0.8902700710941565,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9253284374761771,
+   "lopo_f1": 0.9058519405546459,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9252784624636834,
+   "lopo_f1": 0.9071645326434599,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.940677966101695,
+    "nurse-lagos": 0.8782608695652174,
+    "retired-osaka": 0.9568965517241379
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9228970260632395,
+   "lopo_f1": 0.8911435786435787,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9225772706866905,
+   "lopo_f1": 0.9004421041355072,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9043478260869565,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9225772706866905,
+   "lopo_f1": 0.9004421041355072,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.9043478260869565,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 27.712812921102035,
+   "lopo_acc": 0.9203432182213978,
+   "lopo_f1": 0.8690840327381607,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.991304347826087,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9200471797999304,
+   "lopo_f1": 0.8892960339814232,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8813559322033898,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9200234628448487,
+   "lopo_f1": 0.8875954927425517,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9173459880229378,
+   "lopo_f1": 0.8786031272033511,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9652173913043478,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9172223210428685,
+   "lopo_f1": 0.8835589718549087,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9171986040877865,
+   "lopo_f1": 0.8863505747126436,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8813559322033898,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9145461167721224,
+   "lopo_f1": 0.8664637397031764,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.9739130434782609,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9143974622858062,
+   "lopo_f1": 0.8807490254344147,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9139802979865999,
+   "lopo_f1": 0.8914721444133208,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 5.0,
+   "lopo_acc": 0.9136118381487223,
+   "lopo_f1": 0.8982537806901326,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9576271186440678,
+    "nurse-lagos": 0.8521739130434782,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9115738740799092,
+   "lopo_f1": 0.86973366177474,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9111554392295377,
+   "lopo_f1": 0.8869779772685513,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9087003108615184,
+   "lopo_f1": 0.865116578566871,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9051724137931034
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9085266688689554,
+   "lopo_f1": 0.8765556040545128,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.9130434782608695,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9054570172540849,
+   "lopo_f1": 0.8782959607520727,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9054570172540849,
+   "lopo_f1": 0.8782959607520727,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9026321584970227,
+   "lopo_f1": 0.8735785061701197,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8998560042012892,
+   "lopo_f1": 0.8671901441819534,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8972547624492839,
+   "lopo_f1": 0.8424375866447651,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.8793103448275862
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8968350570477474,
+   "lopo_f1": 0.8679223975728344,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.8782608695652174,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8936667259590544,
+   "lopo_f1": 0.8721132897603486,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.923728813559322,
+    "nurse-lagos": 0.8434782608695652,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8935930339914787,
+   "lopo_f1": 0.8738512354898104,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.8347826086956521,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8877959325422035,
+   "lopo_f1": 0.8704020225759357,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.8173913043478261,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "full",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.885192149687868,
+   "lopo_f1": 0.8586269196025293,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8434782608695652,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9256481928527261,
+   "lopo_f1": 0.8977854833263942,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9229220135694866,
+   "lopo_f1": 0.8936640803169871,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9200234628448487,
+   "lopo_f1": 0.8875954927425517,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9200234628448487,
+   "lopo_f1": 0.8875954927425517,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9139802979865999,
+   "lopo_f1": 0.8914721444133208,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9115738740799092,
+   "lopo_f1": 0.86973366177474,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9114989115611686,
+   "lopo_f1": 0.8775931238985426,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9396551724137931
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9111554392295377,
+   "lopo_f1": 0.8869779772685513,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9067796610169492,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9087003108615184,
+   "lopo_f1": 0.865116578566871,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.864406779661017,
+    "nurse-lagos": 0.9565217391304348,
+    "retired-osaka": 0.9051724137931034
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9085766438814491,
+   "lopo_f1": 0.8750152177850624,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.9304347826086956,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9054570172540849,
+   "lopo_f1": 0.8782959607520727,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9054570172540849,
+   "lopo_f1": 0.8782959607520727,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8956521739130435,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9029019388610778,
+   "lopo_f1": 0.8650961441659115,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.9217391304347826,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.9001520426227563,
+   "lopo_f1": 0.8560425914183046,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.847457627118644,
+    "nurse-lagos": 0.9478260869565217,
+    "retired-osaka": 0.9051724137931034
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8971048374118026,
+   "lopo_f1": 0.8590955441059056,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.9043478260869565,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8939614938293565,
+   "lopo_f1": 0.8645932257043367,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.8782608695652174,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8939365063231096,
+   "lopo_f1": 0.8651751448255817,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8898305084745762,
+    "nurse-lagos": 0.8695652173913043,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.03,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8935930339914787,
+   "lopo_f1": 0.8738512354898104,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.8347826086956521,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.0,
+   "threshold": 0.6,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8914576610000085,
+   "lopo_f1": 0.8352691278634031,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8559322033898306,
+    "nurse-lagos": 0.9391304347826087,
+    "retired-osaka": 0.8793103448275862
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.0,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8911603520273762,
+   "lopo_f1": 0.8587867828374156,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.8695652173913043,
+    "retired-osaka": 0.9310344827586207
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.01,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8908418672019923,
+   "lopo_f1": 0.8677248677248678,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9152542372881356,
+    "nurse-lagos": 0.8434782608695652,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.1,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8877959325422035,
+   "lopo_f1": 0.8704020225759357,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.9322033898305084,
+    "nurse-lagos": 0.8173913043478261,
+    "retired-osaka": 0.9137931034482759
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.5,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8853882380843476,
+   "lopo_f1": 0.8526865301821492,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8728813559322034,
+    "nurse-lagos": 0.8608695652173913,
+    "retired-osaka": 0.9224137931034483
+   }
+  },
+  {
+   "head": "surface",
+   "l2": 0.003,
+   "class_weight": 1.685,
+   "threshold": 0.4,
+   "emb_scale": 1.0,
+   "lopo_acc": 0.8822935989632302,
+   "lopo_f1": 0.8560784996229168,
+   "per_persona_acc": {
+    "gradstudent-saopaulo": 0.8983050847457628,
+    "nurse-lagos": 0.8347826086956521,
+    "retired-osaka": 0.9137931034482759
+   }
+  }
+ ],
+ "lopo_shipped_with_rules": {
+  "full": {
+   "mean_acc": 0.9486142521959359,
+   "mean_f1": 0.9277605980074352,
+   "per_persona": {
+    "gradstudent-saopaulo": {
+     "tp": 35,
+     "fp": 1,
+     "fn": 8,
+     "tn": 74,
+     "accuracy": 0.923728813559322,
+     "precision": 0.9722222222222222,
+     "recall": 0.813953488372093,
+     "f1": 0.8860759493670887
+    },
+    "nurse-lagos": {
+     "tp": 45,
+     "fp": 4,
+     "fn": 0,
+     "tn": 66,
+     "accuracy": 0.9652173913043478,
+     "precision": 0.9183673469387755,
+     "recall": 1.0,
+     "f1": 0.9574468085106383
+    },
+    "retired-osaka": {
+     "tp": 39,
+     "fp": 2,
+     "fn": 3,
+     "tn": 72,
+     "accuracy": 0.9568965517241379,
+     "precision": 0.9512195121951219,
+     "recall": 0.9285714285714286,
+     "f1": 0.9397590361445782
+    }
+   }
+  },
+  "surface": {
+   "mean_acc": 0.9228233340956641,
+   "mean_f1": 0.8941989854360988,
+   "per_persona": {
+    "gradstudent-saopaulo": {
+     "tp": 34,
+     "fp": 3,
+     "fn": 9,
+     "tn": 72,
+     "accuracy": 0.8983050847457628,
+     "precision": 0.918918918918919,
+     "recall": 0.7906976744186046,
+     "f1": 0.85
+    },
+    "nurse-lagos": {
+     "tp": 45,
+     "fp": 7,
+     "fn": 0,
+     "tn": 63,
+     "accuracy": 0.9391304347826087,
+     "precision": 0.8653846153846154,
+     "recall": 1.0,
+     "f1": 0.9278350515463918
+    },
+    "retired-osaka": {
+     "tp": 38,
+     "fp": 4,
+     "fn": 4,
+     "tn": 70,
+     "accuracy": 0.9310344827586207,
+     "precision": 0.9047619047619048,
+     "recall": 0.9047619047619048,
+     "f1": 0.9047619047619048
+    }
+   }
+  }
+ },
+ "ablation_embedding_only": {
+  "best_config": "l2=0.03,scale=27.71",
+  "lopo_acc": 0.902903209412243,
+  "lopo_f1": 0.8528346181910473,
+  "all": {
+   "l2=0.003,scale=1.00": {
+    "lopo_acc": 0.8373957089251984,
+    "lopo_f1": 0.6970461460446247
+   },
+   "l2=0.003,scale=5.00": {
+    "lopo_acc": 0.891506365461337,
+    "lopo_f1": 0.8309262460965247
+   },
+   "l2=0.003,scale=27.71": {
+    "lopo_acc": 0.8999309667200297,
+    "lopo_f1": 0.8522361276274815
+   },
+   "l2=0.01,scale=1.00": {
+    "lopo_acc": 0.7081937844637004,
+    "lopo_f1": 0.3300723873778902
+   },
+   "l2=0.01,scale=5.00": {
+    "lopo_acc": 0.8916050449351595,
+    "lopo_f1": 0.8257541097289723
+   },
+   "l2=0.01,scale=27.71": {
+    "lopo_acc": 0.9028295174446676,
+    "lopo_f1": 0.85538618490125
+   },
+   "l2=0.03,scale=1.00": {
+    "lopo_acc": 0.6274066356652183,
+    "lopo_f1": 0.0
+   },
+   "l2=0.03,scale=5.00": {
+    "lopo_acc": 0.8688113570333478,
+    "lopo_f1": 0.773866000832293
+   },
+   "l2=0.03,scale=27.71": {
+    "lopo_acc": 0.902903209412243,
+    "lopo_f1": 0.8528346181910473
+   },
+   "l2=0.1,scale=1.00": {
+    "lopo_acc": 0.6274066356652183,
+    "lopo_f1": 0.0
+   },
+   "l2=0.1,scale=5.00": {
+    "lopo_acc": 0.8259001855004701,
+    "lopo_f1": 0.6716791979949875
+   },
+   "l2=0.1,scale=27.71": {
+    "lopo_acc": 0.8972784794043656,
+    "lopo_f1": 0.8392060588556208
+   }
+  }
+ },
+ "in_sample_3_personas": {
+  "full": {
+   "tp": 130,
+   "fp": 0,
+   "fn": 0,
+   "tn": 219,
+   "accuracy": 1.0,
+   "precision": 1.0,
+   "recall": 1.0,
+   "f1": 1.0
+  },
+  "surface": {
+   "tp": 122,
+   "fp": 11,
+   "fn": 8,
+   "tn": 208,
+   "accuracy": 0.9455587392550143,
+   "precision": 0.9172932330827067,
+   "recall": 0.9384615384615385,
+   "f1": 0.9277566539923955
+  }
+ },
+ "heldout": {
+  "n": 231,
+  "n_positive": 88,
+  "note": "'full'/'surface' are the SHIPPED decision function (head + 3 rule layers); head_only is the bare head",
+  "full": {
+   "tp": 75,
+   "fp": 9,
+   "fn": 13,
+   "tn": 134,
+   "accuracy": 0.9047619047619048,
+   "precision": 0.8928571428571429,
+   "recall": 0.8522727272727273,
+   "f1": 0.872093023255814
+  },
+  "surface": {
+   "tp": 72,
+   "fp": 14,
+   "fn": 16,
+   "tn": 129,
+   "accuracy": 0.8701298701298701,
+   "precision": 0.8372093023255814,
+   "recall": 0.8181818181818182,
+   "f1": 0.8275862068965518
+  },
+  "head_only": {
+   "full": {
+    "tp": 75,
+    "fp": 9,
+    "fn": 13,
+    "tn": 134,
+    "accuracy": 0.9047619047619048,
+    "precision": 0.8928571428571429,
+    "recall": 0.8522727272727273,
+    "f1": 0.872093023255814
+   },
+   "surface": {
+    "tp": 72,
+    "fp": 13,
+    "fn": 16,
+    "tn": 130,
+    "accuracy": 0.8744588744588745,
+    "precision": 0.8470588235294118,
+    "recall": 0.8181818181818182,
+    "f1": 0.8323699421965318
+   }
+  },
+  "per_persona": {
+   "fisher-halifax": {
+    "full": {
+     "tp": 34,
+     "fp": 3,
+     "fn": 10,
+     "tn": 67,
+     "accuracy": 0.8859649122807017,
+     "precision": 0.918918918918919,
+     "recall": 0.7727272727272727,
+     "f1": 0.8395061728395061
+    },
+    "surface": {
+     "tp": 31,
+     "fp": 5,
+     "fn": 13,
+     "tn": 65,
+     "accuracy": 0.8421052631578947,
+     "precision": 0.8611111111111112,
+     "recall": 0.7045454545454546,
+     "f1": 0.775
+    }
+   },
+   "illustrator-berlin": {
+    "full": {
+     "tp": 41,
+     "fp": 6,
+     "fn": 3,
+     "tn": 67,
+     "accuracy": 0.9230769230769231,
+     "precision": 0.8723404255319149,
+     "recall": 0.9318181818181818,
+     "f1": 0.9010989010989012
+    },
+    "surface": {
+     "tp": 41,
+     "fp": 9,
+     "fn": 3,
+     "tn": 64,
+     "accuracy": 0.8974358974358975,
+     "precision": 0.82,
+     "recall": 0.9318181818181818,
+     "f1": 0.8723404255319149
+    }
+   }
+  }
+ },
+ "via_vault": {
+  "train_3_personas": {
+   "tp": 130,
+   "fp": 1,
+   "fn": 0,
+   "tn": 218,
+   "accuracy": 0.997134670487106,
+   "precision": 0.9923664122137404,
+   "recall": 1.0,
+   "f1": 0.9961685823754789,
+   "p50_ms": 18.28912500059232,
+   "p90_ms": 44.586300399350876,
+   "in_sample": true
+  },
+  "heldout_2_personas": {
+   "tp": 75,
+   "fp": 9,
+   "fn": 13,
+   "tn": 134,
+   "accuracy": 0.9047619047619048,
+   "precision": 0.8928571428571429,
+   "recall": 0.8522727272727273,
+   "f1": 0.872093023255814,
+   "p50_ms": 13.198333999753231,
+   "p90_ms": 18.524416999753157,
+   "in_sample": false
+  }
+ },
+ "short_utterance_probe": {
+  "note": "hand-written generic short sentences; reporting only, never used for selection",
+  "n_facts": 15,
+  "n_chaff": 16,
+  "full": {
+   "tp": 12,
+   "fp": 0,
+   "fn": 3,
+   "tn": 16,
+   "accuracy": 0.9032258064516129,
+   "precision": 1.0,
+   "recall": 0.8,
+   "f1": 0.888888888888889
+  },
+  "surface": {
+   "tp": 12,
+   "fp": 0,
+   "fn": 3,
+   "tn": 16,
+   "accuracy": 0.9032258064516129,
+   "precision": 1.0,
+   "recall": 0.8,
+   "f1": 0.888888888888889
+  },
+  "facts_missed_full": [
+   "I have a cat.",
+   "I use a standing desk.",
+   "I turned 34 last week."
+  ]
+ },
+ "provenance": {
+  "train_set": "clean_chat_benchmark.json",
+  "heldout_set": "clean_chat_benchmark_heldout.json",
+  "embedding_model": "nomic-embed-text",
+  "selection": "mean LOPO accuracy over 3 personas, tie-break mean LOPO F1",
+  "seed": 0,
+  "generated_at": "2026-09-16T07:20:03"
+ }
+}

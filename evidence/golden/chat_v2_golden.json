@@ -1,0 +1,349 @@
+{
+ "turns": [
+  "My name is Rohan Mehta and I work as a data engineer at Verdant Grid in Pune.",
+  "My phone number is 020-4455-7788.",
+  "I live in Koregaon Park, Pune, near the German Bakery.",
+  "I'm allergic to shellfish, especially prawns.",
+  "My emergency contact is my sister Nidhi, 98220-11223.",
+  "Update: my new phone number is 020-9911-2233, the old one is cancelled.",
+  "I moved to Baner last week, the flat is on Pancard Club Road.",
+  "I got promoted to lead data engineer at Verdant Grid.",
+  "My dog is a beagle called Simba, we walk at 7am every day.",
+  "My favourite board game is Terraforming Mars.",
+  "I switched to a Keychron K2 mechanical keyboard.",
+  "Actually my sister's number changed too, emergency contact Nidhi is now 98220-99887.",
+  "I bought a Royal Enfield Hunter 350 in matte green.",
+  "Birthday is 14 March 1993."
+ ],
+ "queries": [
+  [
+   "What is my current phone number?",
+   "current"
+  ],
+  [
+   "What was my original phone number?",
+   "historical"
+  ],
+  [
+   "Where do I live now?",
+   "current"
+  ],
+  [
+   "Where did I live before?",
+   "historical"
+  ],
+  [
+   "What is my job title?",
+   "current"
+  ],
+  [
+   "Who is my emergency contact and their number?",
+   "current"
+  ],
+  [
+   "What was my emergency contact's first number?",
+   "historical"
+  ],
+  [
+   "What am I allergic to?",
+   "current"
+  ],
+  [
+   "Tell me about my dog",
+   "current"
+  ],
+  [
+   "What keyboard do I use?",
+   "current"
+  ],
+  [
+   "When is my birthday?",
+   "current"
+  ],
+  [
+   "What motorcycle do I ride?",
+   "current"
+  ]
+ ],
+ "old_engine_results": {
+  "What is my current phone number?|current": [
+   {
+    "text": "Update: my new phone number is 020-9911-2233, the old one is cancelled.",
+    "revision": 1,
+    "entity": "Update",
+    "score": 0.4196
+   },
+   {
+    "text": "My phone number is 020-4455-7788.",
+    "revision": 1,
+    "entity": null,
+    "score": 0.4167
+   },
+   {
+    "text": "Actually my sister's number changed too, emergency contact Nidhi is now 98220-99887.",
+    "revision": 2,
+    "entity": "emergency_contact",
+    "score": 0.3571
+   }
+  ],
+  "What was my original phone number?|historical": [
+   {
+    "text": "Update: my new phone number is 020-9911-2233, the old one is cancelled.",
+    "revision": 1,
+    "entity": "Update",
+    "score": 0.4617
+   },
+   {
+    "text": "My phone number is 020-4455-7788.",
+    "revision": 1,
+    "entity": null,
+    "score": 0.4011
+   },
+   {
+    "text": "Actually my sister's number changed too, emergency contact Nidhi is now 98220-99887.",
+    "revision": 2,
+    "entity": "emergency_contact",
+    "score": 0.3931
+   }
+  ],
+  "Where do I live now?|current": [
+   {
+    "text": "I moved to Baner last week, the flat is on Pancard Club Road.",
+    "revision": 2,
+    "entity": "location",
+    "score": 1.5716
+   },
+   {
+    "text": "I live in Koregaon Park, Pune, near the German Bakery.",
+    "revision": 1,
+    "entity": "location",
+    "score": 0.5962
+   },
+   {
+    "text": "Update: my new phone number is 020-9911-2233, the old one is cancelled.",
+    "revision": 1,
+    "entity": "Update",
+    "score": 0.3051
+   }
+  ],
+  "Where did I live before?|historical": [
+   {
+    "text": "I live in Koregaon Park, Pune, near the German Bakery.",
+    "revision": 1,
+    "entity": "location",
+    "score": 1.5963
+   },
+   {
+    "text": "I moved to Baner last week, the flat is on Pancard Club Road.",
+    "revision": 2,
+    "entity": "location",
+    "score": 0.5736
+   },
+   {
+    "text": "I switched to a Keychron K2 mechanical keyboard.",
+    "revision": 1,
+    "entity": "keyboard",
+    "score": 0.2716
+   }
+  ],
+  "What is my job title?|current": [
+   {
+    "text": "I got promoted to lead data engineer at Verdant Grid.",
+    "revision": 2,
+    "entity": "career",
+    "score": 1.5392
+   },
+   {
+    "text": "My name is Rohan Mehta and I work as a data engineer at Verdant Grid in Pune.",
+    "revision": 1,
+    "entity": "career",
+    "score": 0.5606
+   },
+   {
+    "text": "My phone number is 020-4455-7788.",
+    "revision": 1,
+    "entity": null,
+    "score": 0.262
+   }
+  ],
+  "Who is my emergency contact and their number?|current": [
+   {
+    "text": "My emergency contact is my sister Nidhi, 98220-11223.",
+    "revision": 1,
+    "entity": "emergency_contact",
+    "score": 0.6999
+   },
+   {
+    "text": "Actually my sister's number changed too, emergency contact Nidhi is now 98220-99887.",
+    "revision": 2,
+    "entity": "emergency_contact",
+    "score": 0.655
+   },
+   {
+    "text": "My phone number is 020-4455-7788.",
+    "revision": 1,
+    "entity": null,
+    "score": 0.3951
+   }
+  ],
+  "What was my emergency contact's first number?|historical": [
+   {
+    "text": "My emergency contact is my sister Nidhi, 98220-11223.",
+    "revision": 1,
+    "entity": "emergency_contact",
+    "score": 1.6613
+   },
+   {
+    "text": "Actually my sister's number changed too, emergency contact Nidhi is now 98220-99887.",
+    "revision": 2,
+    "entity": "emergency_contact",
+    "score": 0.6559
+   },
+   {
+    "text": "Update: my new phone number is 020-9911-2233, the old one is cancelled.",
+    "revision": 1,
+    "entity": "Update",
+    "score": 0.3923
+   }
+  ],
+  "What am I allergic to?|current": [
+   {
+    "text": "I'm allergic to shellfish, especially prawns.",
+    "revision": 1,
+    "entity": "allergy",
+    "score": 0.6751
+   },
+   {
+    "text": "My name is Rohan Mehta and I work as a data engineer at Verdant Grid in Pune.",
+    "revision": 1,
+    "entity": "career",
+    "score": 0.2593
+   },
+   {
+    "text": "My dog is a beagle called Simba, we walk at 7am every day.",
+    "revision": 1,
+    "entity": "pet",
+    "score": 0.2546
+   }
+  ],
+  "Tell me about my dog|current": [
+   {
+    "text": "My dog is a beagle called Simba, we walk at 7am every day.",
+    "revision": 1,
+    "entity": "pet",
+    "score": 0.6063
+   },
+   {
+    "text": "I bought a Royal Enfield Hunter 350 in matte green.",
+    "revision": 1,
+    "entity": "Royal Enfield Hunter",
+    "score": 0.2902
+   },
+   {
+    "text": "My emergency contact is my sister Nidhi, 98220-11223.",
+    "revision": 1,
+    "entity": "emergency_contact",
+    "score": 0.2449
+   }
+  ],
+  "What keyboard do I use?|current": [
+   {
+    "text": "I switched to a Keychron K2 mechanical keyboard.",
+    "revision": 1,
+    "entity": "keyboard",
+    "score": 0.6553
+   },
+   {
+    "text": "My dog is a beagle called Simba, we walk at 7am every day.",
+    "revision": 1,
+    "entity": "pet",
+    "score": 0.264
+   },
+   {
+    "text": "I live in Koregaon Park, Pune, near the German Bakery.",
+    "revision": 1,
+    "entity": "location",
+    "score": 0.2515
+   }
+  ],
+  "When is my birthday?|current": [
+   {
+    "text": "Birthday is 14 March 1993.",
+    "revision": 1,
+    "entity": "birthday",
+    "score": 0.6623
+   },
+   {
+    "text": "My dog is a beagle called Simba, we walk at 7am every day.",
+    "revision": 1,
+    "entity": "pet",
+    "score": 0.3088
+   },
+   {
+    "text": "My phone number is 020-4455-7788.",
+    "revision": 1,
+    "entity": null,
+    "score": 0.2955
+   }
+  ],
+  "What motorcycle do I ride?|current": [
+   {
+    "text": "I bought a Royal Enfield Hunter 350 in matte green.",
+    "revision": 1,
+    "entity": "Royal Enfield Hunter",
+    "score": 0.3281
+   },
+   {
+    "text": "My dog is a beagle called Simba, we walk at 7am every day.",
+    "revision": 1,
+    "entity": "pet",
+    "score": 0.3008
+   },
+   {
+    "text": "My name is Rohan Mehta and I work as a data engineer at Verdant Grid in Pune.",
+    "revision": 1,
+    "entity": "career",
+    "score": 0.2766
+   }
+  ]
+ },
+ "expected_top1_substring": {
+  "What is my current phone number?|current": "020-9911-2233",
+  "What was my original phone number?|historical": "020-4455-7788",
+  "Where do I live now?|current": "Baner",
+  "Where did I live before?|historical": "Koregaon Park",
+  "What is my job title?|current": "lead data engineer",
+  "Who is my emergency contact and their number?|current": "98220-99887",
+  "What was my emergency contact's first number?|historical": "98220-11223",
+  "What am I allergic to?|current": "shellfish",
+  "Tell me about my dog|current": "Simba",
+  "What keyboard do I use?|current": "Keychron K2",
+  "When is my birthday?|current": "14 March 1993",
+  "What motorcycle do I ride?|current": "Hunter 350"
+ },
+ "old_engine_top1_correct": {
+  "What is my current phone number?|current": true,
+  "What was my original phone number?|historical": false,
+  "Where do I live now?|current": true,
+  "Where did I live before?|historical": true,
+  "What is my job title?|current": true,
+  "Who is my emergency contact and their number?|current": false,
+  "What was my emergency contact's first number?|historical": true,
+  "What am I allergic to?|current": true,
+  "Tell me about my dog|current": true,
+  "What keyboard do I use?|current": true,
+  "When is my birthday?|current": true,
+  "What motorcycle do I ride?|current": true
+ },
+ "stats": {
+  "file_path": "<repo>/evidence/golden/chat_v2.dat",
+  "file_size_mb": 0.097,
+  "total_documents": 14,
+  "compacted_blocks": 1,
+  "memtable_pending": 0,
+  "active_heap_ram_kb": 160.0,
+  "encrypted_at_rest": true,
+  "cipher": "256-bit Projected Stream Cipher"
+ },
+ "note": "chat_v2.dat is a v2 container written by the ORIGINAL engine from ordinary vocabulary. The new engine must open it (migration) and answer expected_top1_substring; the old engine got only 10/12 right. book_v2_golden.json top-4 lists are informational; the authoritative check for the migrated book vault is top-4 == exhaustive cosine over the migrated vectors."
+}

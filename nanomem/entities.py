@@ -113,7 +113,7 @@ _STRUCTURAL = (
 # WHICH attribute the value belongs to. Measured: 3 of the 5 remaining generic
 # revision-probe failures and 1 of 2 remaining round-4 dev-persona failures were
 # a frame class overriding an explicit slot
-# (scratch/refound/ranking_dev_r4_frame.json).
+# (`ranking_dev_r4_frame.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
 FRAME_CLASSES = frozenset({"location", "career", "name", "allergy", "birthday",
                            "routine", "emergency_contact"})
 
@@ -145,7 +145,7 @@ def _structural_class(text: str, lowered: str):
 # number is ..." and "their address is ..." produced NO entity at all and then
 # inherited the user's own entity by anaphora -- a contact's number was stored
 # as revision 2 of the user's own phone number and returned as the answer to
-# "what is my phone number?" (measured: scratch/refound/third_party_v3r4.json).
+# "what is my phone number?" (measured: evidence/third_party_v3r4.json).
 # The contraction stems are excluded so "it's name is ..." is not read as a
 # possessive.
 _CONTRACTION_STEMS = r"it|he|she|that|there|what|who|here|let|one|how|where|when|why"
@@ -167,7 +167,7 @@ FIRST_PERSON_POSSESSIVES = frozenset({"my", "our", "your"})
 # building badge number as <value>" named no attribute at all, the record fell
 # through to the anaphora path and inherited the entity of whatever the previous
 # chat turn was about (`membership`), and the badge's two values never formed a
-# revision group (scratch/refound/temporal_bench_results.json -> by_subtype ->
+# revision group (evidence/temporal_bench_results.json -> by_subtype ->
 # current/badge_id).
 P1 = re.compile(_POSS + r"\s+(?P<slot>[a-z][a-z'\- ]{1,64}?)\s+(?:is|are|was|were|will be|has been|as|=|:)\s")
 P2 = re.compile(_POSS + r"\s+(?P<slot>[a-z][a-z'\- ]{1,40}?)'s name is")
@@ -199,7 +199,7 @@ P6 = re.compile(r"\b(?:new|current|old|previous|latest|former)\s+"
 # language"). 3.0.1 stripped these too, so both records were tagged
 # ``email_address``, joined one revision group, and the later one was promoted
 # over the answer. Measured on the generic adjacent-attribute probes:
-# ``scratch/refound/adjacent_attributes_v3r3.json``.
+# ``evidence/adjacent_attributes_v3r3.json``.
 REVISION_MODIFIERS = {"new", "old", "current", "latest", "previous", "original",
                       "former", "updated", "recent", "own", "daily", "usual", "go_to"}
 DISTINGUISHING_MODIFIERS = {"first", "second", "third", "primary", "secondary",
@@ -256,7 +256,7 @@ FUNCTION_TOKENS = {"the", "a", "an", "of", "from", "for", "to", "in", "on", "at"
 # word is. Without this, "my personal account JUST before this one" produced the
 # entity `personal_account_just`, which matched no record at all and left the
 # whole layer silent on that question (measured: boost +0.000,
-# scratch/refound/ranking_dev_r5_*.json).
+# `ranking_dev_r5_*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
 TAIL_ADVERBS = {"just", "only", "really", "actually", "ever", "back", "then",
                 "now", "today", "currently", "again", "still", "anymore",
                 "recently", "originally", "previously", "formerly", "initially",
@@ -289,7 +289,7 @@ def _singularise(tok: str) -> str:
 # marker, and produced a bare `desk_phone_number` -- so the two never matched and
 # the user's OWN number answered every question about the colleague's. Measured:
 # 0/10 on that phrasing against 10/10 for a plain cosine scan
-# (``scratch/refound/temporal_bench_results.json`` -> ``own_fact_leak``).
+# (``evidence/temporal_bench_results.json`` -> ``own_fact_leak``).
 _INNER_POSSESSIVE = re.compile(
     r"^(?P<lead>.*?)\b(?P<owner>[a-z\u00c0-\u024f]+)'s\s+(?P<attr>\S.*)$")
 
@@ -361,7 +361,7 @@ _WEAK_SLOT_PATTERNS = (P6, P3)
 # and "what car do I drive?" was decided by raw cosine. (The vocabulary-free
 # cosine window would have grouped them, but it refuses candidates the tagger has
 # positively called different attributes, and here the tagger had.) Measured:
-# ``scratch/refound/temporal_bench_results.json`` -> ``by_subtype`` ->
+# ``evidence/temporal_bench_results.json`` -> ``by_subtype`` ->
 # ``current/vehicle``.
 _SENTENCE_BREAK = ".!?;:\n\u2014-\"'\u201c(["
 _NAME_TOKEN = re.compile(r"\b[A-Z][A-Za-z\u00c0-\u024f'\u2019-]*")
@@ -440,7 +440,7 @@ def detect_entity(text):
         # 3.0.1 took the class and stopped, so those pairs shared one revision
         # group and the later one was promoted over the answer -- 3 of the 4
         # remaining failures on the generic adjacent-attribute probes
-        # (scratch/refound/adjacent_attributes_v3r3.json).
+        # (evidence/adjacent_attributes_v3r3.json).
         ent = slot
     if ent and is_third_party(t):
         return OTHER_PREFIX + ent
@@ -463,7 +463,7 @@ def _specialises(slot: str, cls: str) -> bool:
     email address" was read as the *location* word "address" and did not
     specialise ``email_address`` at all -- both the primary and the backup record
     stayed bare ``email_address``, shared one revision group, and the later one
-    was promoted over the answer (``scratch/refound/temporal_bench_results.json``
+    was promoted over the answer (``evidence/temporal_bench_results.json``
     -> ``by_subtype`` -> ``adjacent/backup_email_vs_primary_email``, 4/10).
     Reading the longest trailing class run instead gets "email address" right and
     leaves the qualifier "backup" to distinguish the two.
@@ -517,7 +517,7 @@ def inherit_entity(previous, text):
     fact the follow-up was. Two chat turns -- the user's own number, then a
     contact's -- put the contact's number in the user's own revision group as
     revision 2, and it was returned at rank 1 for "what is my phone number?"
-    despite the LOWER cosine (measured: scratch/refound/third_party_v3r4.json).
+    despite the LOWER cosine (measured: evidence/third_party_v3r4.json).
 
     Ownership is taken from the FOLLOW-UP when it states one, and carried over
     from the previous subject when it does not.
@@ -579,7 +579,7 @@ def is_third_party(text) -> bool:
     colleague <name>'s desk phone is ..." carries "my", so 3.0.3 called it the
     user's own fact and the user's own number then answered questions about the
     colleague's. Measured: 0/10 on that phrasing against 10/10 for a plain cosine
-    scan (``scratch/refound/temporal_bench_results.json``).
+    scan (``evidence/temporal_bench_results.json``).
     """
     low = _norm_text(text).lower()
     # FAST PATH, and exact: with no non-first-person possessive anywhere, every
@@ -665,7 +665,7 @@ Q_SLOT_3 = re.compile(r"\bwhat (?P<slot>[a-z][a-z'\- ]{1,40}?) "
 # personal-memory questions. That is no longer what keeps a document corpus
 # exact -- the record-level rule in `VaultEngine._is_revisable` does, and it
 # holds whatever the wording (measured: 0/120 either way,
-# scratch/refound/exactness_v3r2.json) -- but a question about somebody else is
+# evidence/exactness_v3r2.json) -- but a question about somebody else is
 # still not a question about the user, so the set stays tight. "we"/"us" are out
 # too: "us" collides with the lower-cased country abbreviation.
 PERSONAL_MARKERS = {"my", "mine", "myself", "i", "me", "im", "our", "ours",
@@ -726,7 +726,7 @@ def query_intent(query, self_named: bool = False):
     ``None`` for every such question -- ``is_personal_query`` was the only gate
     and it looks for first-person markers -- so the whole entity/temporal layer
     was silent, the measured boost was exactly +0.000 and search degenerated to
-    raw cosine. Measured: scratch/refound/third_party_v3r4.json.
+    raw cosine. Measured: evidence/third_party_v3r4.json.
 
     A question that names the VAULT'S OWNER ("what is <owner> allergic to?",
     "what keyboard does <owner> use?") is a first-person question written in the
@@ -750,7 +750,7 @@ def query_intent(query, self_named: bool = False):
     # address record carries, so the home record collected intent_boost +
     # group_hoist (+0.50) and the work record collected nothing. Measured: it was
     # the last adjacent-attribute failure left after the window fix
-    # (scratch/refound/adjacent_attributes_v3r3.json).
+    # (evidence/adjacent_attributes_v3r3.json).
     out = query_intents(query, self_named)
     return out[0] if out else None
 
@@ -789,7 +789,7 @@ def query_intents(query, self_named: bool = False):
     # address record carries, so the home record collected intent_boost +
     # group_hoist (+0.50) and the work record collected nothing. Measured: it was
     # the last adjacent-attribute failure left after the window fix
-    # (scratch/refound/adjacent_attributes_v3r3.json).
+    # (evidence/adjacent_attributes_v3r3.json).
     for pat in (Q_SLOT_3, Q_SLOT_2, Q_SLOT_1, Q_SLOT_0):
         m = pat.search(low)
         if m:
@@ -865,7 +865,7 @@ def split_qualified(entity):
     ``desk_phone_number`` were different facts; the question then fell through to
     its coarser second candidate ``phone_number`` and the user's MOBILE collected
     the boost. Measured: 0/20 on that sibling pair, and 2/20 on the shared-head
-    email pair (``scratch/refound/temporal_bench_results.json`` ->
+    email pair (``evidence/temporal_bench_results.json`` ->
     ``by_subtype``).
     """
     e = normalize_entity(entity)
@@ -904,7 +904,7 @@ def entities_match(a, b) -> bool:
     ("my NEW phone number" is still the same fact as "my phone number"); those
     are stripped by :func:`normalize_slot` before an entity is ever stored, so
     what is left has to agree. Measured: the last 2 of 40 generic
-    adjacent-attribute probes (``scratch/refound/adjacent_attributes_v3r3.json``).
+    adjacent-attribute probes (``evidence/adjacent_attributes_v3r3.json``).
     """
     na, nb = normalize_entity(a), normalize_entity(b)
     if not na or not nb:
@@ -995,7 +995,7 @@ def has_temporal_cue(query) -> bool:
 # layer and ordered the group NEWEST-FIRST, which is the exact opposite of what
 # it asked for. Measured on the temporal benchmark: 9.0% top-1 on historical
 # questions against 22.0% for a plain cosine scan -- the layer was worse than
-# doing nothing (``scratch/refound/temporal_bench_results.json`` ->
+# doing nothing (``evidence/temporal_bench_results.json`` ->
 # ``arms.nanomem_default.by_type``). The shipped ``chat.py`` and ``cli.py`` never
 # set ``temporal_direction``, so that WAS the out-of-the-box behaviour.
 #
@@ -1177,7 +1177,7 @@ REVISION_LEAD = 0.20        # ... and the member of that group the question aske
 # another record's score: measured excess +0.6402 against a published cap of
 # 0.50, and scores that fell BELOW their own cosine. Measured excess under this
 # build over the same probes: 0.6113, inside the 0.70 cap
-# (scratch/refound/adjacent_attributes_v3r3.json).
+# (evidence/adjacent_attributes_v3r3.json).
 #
 # REVISION_LEAD is a CAP, not a tuned weight: `apply_revision_lead` raises the
 # wanted revision to a hair above the best score already held inside its own
@@ -1202,10 +1202,10 @@ WINDOW_SIM = 0.60           # ... and they must look like each other by this muc
 # ("I moved to ...", "my new ...", "changed to ..."). Widening it for marked
 # candidates alone is SAFE -- 15 of 16 generic revision probes carry a marker on
 # the newer statement and 0 of 40 adjacent-attribute probes carry one at all
-# (scratch/refound/marker_separation_v3r4.json) -- but it is not
+# (evidence/marker_separation_v3r4.json) -- but it is not
 # USEFUL: measured at 0.18 / 0.20 / 0.22 / 0.30 it wins nothing on the revision
 # probes and costs up to 2 of 36 on the 3-persona chat set and 1 of 24 on the
-# round-4 dev personas (scratch/refound/ranking_dev_H_wide*.json,
+# round-4 dev personas (`ranking_dev_H_wide*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings),
 # ranking_dev_r4_current.json). It therefore ships EQUAL to WINDOW_DELTA, i.e.
 # off, and remains a constructor knob so the ablation is reproducible.
 WINDOW_DELTA_MARKED = WINDOW_DELTA
@@ -1223,7 +1223,7 @@ WINDOW_DELTA_MARKED = WINDOW_DELTA
 # cosine; 3.0.1 scored 30/40), revision top-1 14/16 (plain cosine 3/16; 3.0.2
 # scored 11/16), historical 16/16, selection chat 33/36 top-1 and 36/36 top-3,
 # dev chat 23/24 top-1 and 24/24 top-3, golden 12/12. Grid, ablations and
-# per-case failures: scratch/refound/ranking_dev_r4_*.json.
+# per-case failures: `ranking_dev_r4_*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
 
 
 def apply_intent_boost(cos, entity_id, intent_ids, mask=None, weight=INTENT_BOOST):
@@ -1237,14 +1237,41 @@ def apply_intent_boost(cos, entity_id, intent_ids, mask=None, weight=INTENT_BOOS
 
 
 def resolve_top_entity(scored, entity_id, entity_names, intent=None):
-    """The entity the answer is about: the question's intent, else the best hit's."""
-    if intent:
+    """The entity the answer is about: the question's intent, else the best hit's.
+
+    AN INTENT THAT NAMES NOTHING IN THIS VAULT IS NOT EVIDENCE ABOUT IT.
+    This was ``if intent: return intent``, unconditionally. The intent is
+    inferred from the question's wording, so it can easily name an attribute the
+    vault does not hold -- "where is my desk" infers ``desk`` against a vault
+    whose records are all tagged ``office``. ``matching_ids`` then returns
+    nothing, the tagged group is EMPTY, and the caller falls back to the cosine
+    window.
+
+    For :meth:`VaultEngine.history` that was severe: a three-revision declared
+    chain came back as ONE entry flagged ``superseded=False``, which this
+    library defines as "this fact has never changed", while ``changes()`` and
+    ``get_all_records()` saw all three in the same vault. Reported against 0.7.12
+    by an outside review, which attributed it to the relevance floor -- as did I.
+    The floor is not involved; ``history`` already passes ``apply_floor=False``.
+
+    When the intent matches nothing the best hit's own tag is the only evidence
+    there is, which is exactly the no-intent case, so it takes that path. An
+    intent that DOES match keeps priority and nothing about that case changes.
+    The fallback can only ever name an entity some candidate actually carries,
+    so it cannot invent a group across attributes.
+    """
+    best_entity = None
+    if getattr(scored, "size", 0):
+        best = int(np.argmax(scored))
+        eid = int(np.asarray(entity_id)[best])
+        if 0 <= eid < len(entity_names):
+            best_entity = entity_names[eid]
+    if intent and matching_ids(intent, entity_names).size:
         return intent
-    if scored.size == 0:
-        return None
-    best = int(np.argmax(scored))
-    eid = int(np.asarray(entity_id)[best])
-    return entity_names[eid] if 0 <= eid < len(entity_names) else None
+    if intent and best_entity is None:
+        # Nothing to fall back to; keep the old answer rather than inventing one.
+        return intent
+    return best_entity
 
 
 def temporal_applies(top_entity, query_text, temporal_direction, intent=None) -> bool:
@@ -1289,7 +1316,7 @@ def temporal_question(query_text, temporal_direction, intent=None,
     guard is the DATA, not the question: ``personal_corpus`` here, and inside the
     engine the rule that only a revisable record (entity-tagged, or written by a
     chat session) may join a revision group. Measured after both:
-    0/120 (``scratch/refound/exactness_v3r2.json``).
+    0/120 (``evidence/exactness_v3r2.json``).
     """
     if is_explicit_history(temporal_direction):
         return True
@@ -1309,7 +1336,7 @@ REVISION_MARKERS = ("changed", "change", "changing", "switched", "switch", "swit
                     # restatements that announce a change in words this list did
                     # not contain. No corpus-specific vocabulary; the separation
                     # this list buys is measured in
-                    # scratch/refound/marker_separation_v3r4.json.
+                    # evidence/marker_separation_v3r4.json.
                     "rescheduled", "reschedule", "upgraded", "upgrade",
                     "downgraded", "swapped", "swap", "transferred", "reassigned",
                     "relocated", "renewed", "superseded", "supersedes")
@@ -1397,7 +1424,7 @@ def apply_revision_lead(final: np.ndarray, rows, rev, ts, historical: bool,
       contract DECISIONS #8 makes binding. 3.0.1 PERMUTED the group's scores
       instead, handing one record another record's score: measured excess
       +0.6402 against a published cap of 0.50, and scores that fell BELOW their
-      own cosine (``scratch/refound/adjacent_attributes_v3r3.json`` -> "v3.0.1").
+      own cosine (``evidence/adjacent_attributes_v3r3.json`` -> "v3.0.1").
     * it is MINIMAL -- the winner is lifted to the top of its own group and no
       further, so it can never displace a record that already outscores the
       whole group. A flat ``+weight`` could.
@@ -1408,7 +1435,7 @@ def apply_revision_lead(final: np.ndarray, rows, rev, ts, historical: bool,
     shipped ``weight`` (``REVISION_LEAD`` = 0.20) is a hard cap rather than a
     tuned value and is not the binding constraint. Measured over every lift this
     release's five ranking sets apply: 72 calls, maximum lift 0.1563, cap reached
-    0 times (``scratch/refound/ranking_dev_r4_shipped.json`` ->
+    0 times (``ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)` ->
     ``revision_lead_applied``). 3.0.2's docstring quoted 0.3928 against a 0.20
     clamp, which is arithmetically impossible -- stale round-2 text for a
     ``weight`` of 0.50 that never shipped.

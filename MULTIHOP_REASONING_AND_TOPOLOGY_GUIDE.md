@@ -15,7 +15,7 @@ Engine 3.0.3. Every number names the results JSON it comes from.
   the same `top_k` budget. It is **opt-in** (`search(multihop=True)` or
   `search_multihop(...)`).
 * Measured, equal budget, 1,190 documents, evidence recall@4
-  (`scratch/refound/multihop_texthop_v3r2_1190.json`): **68.3 % → 79.2 %** at
+  (`evidence/multihop_texthop_v3r2_1190.json`): **68.3 % → 79.2 %** at
   `top_k=4`, and 90.0 % → 92.5 % at `top_k=8`.
 * **Simply raising `top_k` is the larger lever**: single-pass `top_k=8` scores
   90.0 % against 79.2 % for the bridge at `top_k=4`.
@@ -63,13 +63,13 @@ comparison against single-pass is fair.
 
 Pass 2 costs one extra embedding call (roughly 9–16 ms to a local
 `nomic-embed-text`) and one extra scan (0.052 ms at 1,190 documents, 1.762 ms at
-71,433 — `scratch/refound/scale_results_v3r4.json`). The embedding call dominates.
+71,433 — `evidence/scale_results_v3r4.json`). The embedding call dominates.
 It burns no LLM tokens, but it is not free and it is not "under 2 ms": earlier
 revisions of this guide said both.
 
 ### Measured, in the shipped engine
 
-`scratch/refound/multihop_texthop_v3r2_1190.json` — 1,190 HotpotQA paragraphs,
+`evidence/multihop_texthop_v3r2_1190.json` — 1,190 HotpotQA paragraphs,
 120 real questions, re-opened vault, equal budget, evidence recall@4 (every gold
 paragraph must appear):
 
@@ -80,7 +80,7 @@ paragraph must appear):
 
 ### Measured in the research harness, on the same corpus
 
-`scratch/refound/experiment_4d_bridge_results.json`, arm `text_hop_reembed`, with
+`evidence/experiment_4d_bridge_results.json`, arm `text_hop_reembed`, with
 its own merge rule (top-2 query ∪ top-2 bridge against single-pass top-4):
 
 | Corpus | single pass R@4 | text hop R@4 | wider lever: single pass R@8 |
@@ -105,7 +105,7 @@ construction — it steers toward a document that is not on the path:
 | wrong-anchor subset, 1,190 docs (n=12) | 25.0 % | **0.0 %** |
 | wrong-anchor subset, 71,433 docs (n=218) | 25.2 % | **14.2 %** |
 
-`scratch/refound/experiment_4d_bridge_results.json`. There is also a metric on
+`evidence/experiment_4d_bridge_results.json`. There is also a metric on
 which the bridge is plainly worse: scored as a *retriever of the gold pair*, the
 re-embedded query has MRR 0.694 against 0.727 for the query alone, 95 % CI
 [−0.062, −0.009] — significantly worse. The end-to-end gain comes from the union
@@ -117,7 +117,7 @@ That is the whole case for keeping it opt-in.
 
 ## 4. What was tried and did not work
 
-The pre-registered rule (`scratch/refound/design/DECISIONS.md`, 4D §3): a
+The pre-registered rule (`evidence/design/DECISIONS.md`, 4D §3): a
 mechanism stays opt-in only if the 95 % CI lower bound is above zero, and becomes
 the default only if the end-to-end CI lower bound is at least +1.0 point.
 
@@ -140,7 +140,7 @@ query-only baseline.
 | trained residual MLP, 3 seeds | 0.7094 | [−0.032, −0.006] | worse |
 | RK4 neural ODE, 3 seeds | 0.7217 | [−0.021, +0.008] | no effect |
 
-`scratch/refound/experiment_4d_bridge_results.json`.
+`evidence/experiment_4d_bridge_results.json`.
 
 Three conclusions, all of them negative and all of them stated as such:
 
@@ -170,7 +170,7 @@ docs.
 Neither hop uses an approximate index below `n_exhaustive` (50,000). Both are
 exact fp32 scans, and that is measured: 0 of 120 top-4 order differences and 0 of
 120 rank-1 differences against exhaustive fp32 cosine on a re-opened 1,190-document
-vault with the real question strings (`scratch/refound/exactness_v3r2.json`). So
+vault with the real question strings (`evidence/exactness_v3r2.json`). So
 any difference you see between single-pass and multi-hop is the bridge, not
 index noise.
 

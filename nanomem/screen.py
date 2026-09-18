@@ -15,13 +15,13 @@ and the only thing that changes is how many rows the exact kernel has to read.
 It is NOT an approximate-nearest-neighbour index. It has no recall knob, no
 beam, and no accuracy/speed trade-off: turning it on cannot change a result.
 That is also why it was never a "win" under the recall-delta rule
-``scratch/refound/exotic_routing_results.json`` pre-registered -- an
+``evidence/exotic_routing_results.json`` pre-registered -- an
 exactness-preserving mechanism has a recall delta of identically 0, so a bar
 phrased as "CI lower bound > 0 on a recall delta" is unreachable by
 construction rather than merely unmet. The bar this mechanism is measured
 against instead (exact agreement + a measured p50 speedup + no small-corpus
 regression) was pre-registered before the module was written, in
-``scratch/refound/pca_screen_results.json``.
+``evidence/pca_screen_results.json``.
 
 THE BOUND, AND WHY IT IS ADMISSIBLE FOR *ANY* MATRIX ``B``
 ----------------------------------------------------------
@@ -91,7 +91,7 @@ WHAT IT COSTS. ``m * 4 + 8`` bytes per document resident (``1032`` B/doc at the
 default ``m = 256``, against the fp32 arena's ``embed_dim * 4`` = 3072 B/doc),
 plus ``embed_dim * m * 4`` bytes for the basis itself. Measured totals and the
 measured speedup are in :class:`nanomem.engine.VaultEngine`'s ``screen``
-argument docstring and in ``scratch/refound/pca_screen_results.json``.
+argument docstring and in ``evidence/pca_screen_results.json``.
 """
 
 from typing import Iterable, Optional

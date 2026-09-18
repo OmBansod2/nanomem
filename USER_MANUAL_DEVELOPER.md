@@ -5,10 +5,10 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.13 · engine 3.4.1 · container format 3 · arena cache format 3.
+Package 0.7.14 · engine 3.4.2 · container format 3 · arena cache format 3.
 
 Every performance number in this manual comes from a results JSON in
-`scratch/refound/` produced by a script in this repository, and the file is named
+`evidence/` produced by a script in this repository, and the file is named
 next to the number.
 
 ---
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.13 3.4.1
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.14 3.4.2
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -102,8 +102,8 @@ n = vault.add_batch([
 **Cost of a write.** The storage side is 19.81 µs mean over the first 500 of
 4,000 adds and 19.32 µs over the last 500 — a ratio of 0.975, i.e. flat as the
 vault grows (median 10.63 µs, p95 12.08 µs, max 598.29 µs on a block spill;
-`scratch/refound/headtohead_v3.json`). On a re-opened 71,433-document vault it is
-17.9 µs mean / 7.0 µs p50 (`scratch/refound/scale_results_v3r4.json`). Those
+`evidence/headtohead_v3.json`). On a re-opened 71,433-document vault it is
+17.9 µs mean / 7.0 µs p50 (`evidence/scale_results_v3r4.json`). Those
 exclude embedding, which dominates: one local `nomic-embed-text` call is roughly
 9–16 ms. With precomputed vectors, ingesting 71,433 documents takes 1.3 s of
 storage time; through the embedding daemon it is bounded by the daemon.
@@ -147,7 +147,7 @@ same thing whether or not the entity/temporal layer fires.
 
 **Latency and recall** — real HotpotQA paragraphs in random insertion order, 500
 questions, `top_k=4`, measured on a re-opened vault
-(`scratch/refound/scale_results_v3r4.json`, `headtohead_v3.json`):
+(`evidence/scale_results_v3r4.json`, `headtohead_v3.json`):
 
 | Corpus | p50 | p95 | recall@4 | exhaustive numpy | FAISS `IndexFlatIP` | index |
 | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
@@ -159,12 +159,12 @@ questions, `top_k=4`, measured on a re-opened vault
 The engine matches exhaustive fp32 cosine in recall at every size above, and in
 *ordering* too at 1,190 and 4,760 documents: 0 of 120 top-4 order differences and
 0 of 120 rank-1 differences with the real question strings, on a re-opened vault
-(`scratch/refound/exactness_v3r2.json`, `headtohead_v3.json`).
+(`evidence/exactness_v3r2.json`, `headtohead_v3.json`).
 
 At 10,000 and 71,433 documents the ordering is not quite identical: 2 of 500 and
 5 of 500 questions have a different top-4 order, every case a tie or near-tie with
 a cosine gap of at most 2.2e-05 and two of them exactly 0.0
-(`scratch/refound/verify_round3_v3r3.json`, `F_top4_differences_are_ties`). The
+(`evidence/verify_round3_v3r3.json`, `F_top4_differences_are_ties`). The
 cause is the fp16 vectors on disk, whose worst per-row cosine against the fp32
 original is 0.99999988. Recall is unaffected.
 
@@ -206,7 +206,7 @@ hits = vault.search_multihop("Which university did the creator of Python attend?
 
 Pass 2 re-embeds the question together with the hop-1 winner's text and merges
 under the same `top_k` budget. Measured, equal budget, 1,190 documents, evidence
-recall@4 (`scratch/refound/multihop_texthop_v3r2_1190.json`): 68.3 % single pass
+recall@4 (`evidence/multihop_texthop_v3r2_1190.json`): 68.3 % single pass
 → **79.2 %** with the bridge at `top_k=4`; 90.0 % → 92.5 % at `top_k=8`.
 Raising `top_k` is the larger lever, and the bridge *hurts* when the hop-1 anchor
 is wrong. Full analysis, including the trained latent bridges that did not work:
@@ -228,7 +228,7 @@ vault.search("Where was the server?", temporal_direction="historical") # revisio
 > the data, not a recommendation. Measured on the fixture-free temporal set,
 > writing facts with an explicit entity tag scores **59.2 %** against **90.5 %**
 > for writing them with no tag at all and letting the engine detect one
-> (`scratch/refound/temporal_bench_results.json`). Earlier revisions of this
+> (`evidence/temporal_bench_results.json`). Earlier revisions of this
 > manual recommended the tag; following that advice makes the engine worse. The
 > tag remains supported because a caller that has a *reliable* extractor can
 > still beat detection — but it overrides the engine's own grouping, so a tag
@@ -237,18 +237,18 @@ vault.search("Where was the server?", temporal_direction="historical") # revisio
 Revision groups are scoped by `(user_id, project, entity)`. On the release's own
 generic probes the current revision is ranked first in 14 of 16 cases against 3
 of 16 for plain cosine, and historical lookups are 16 of 16
-(`scratch/refound/ranking_dev_r4_shipped.json`).
+(`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
 
 **On adjacent attributes the layer is worse than doing nothing, and this manual
 used to claim parity.** On the fixture-free set — "backup email" against
 "primary email" — nanomem scores **90.0 %** where a plain cosine scan scores
 **100.0 %**, with a 10.0 % sibling-confusion rate against plain cosine's 0.0 %
-(`scratch/refound/temporal_bench_results.json`). Third-party facts are the same
+(`evidence/temporal_bench_results.json`). Third-party facts are the same
 shape: 96.7 % against 100.0 %. If your corpus is mostly near-identical sibling
 attributes and never supersedes anything, this layer costs you.
 
 Statements about third parties are namespaced separately, so "his number is …"
-cannot become revision 2 of your own (`scratch/refound/third_party_v3r4.json`).
+cannot become revision 2 of your own (`evidence/third_party_v3r4.json`).
 
 ### CRUD
 
@@ -264,7 +264,7 @@ info = vault.inspect()                            # sources + metadata summary
 
 **`delete`, `update` and `prune` are full atomic rewrites.** There are no
 tombstones in 3.0 (planned for 3.1). Deleting one record costs **7.5 ms at 1,000
-records and 70.5 ms at 10,000** (`scratch/refound/rewrite_cost_v3r4.json`),
+records and 70.5 ms at 10,000** (`evidence/rewrite_cost_v3r4.json`),
 roughly a second at 71k, and the rewrite holds the exclusive lock throughout, so
 appenders block. Batch your deletions.
 
@@ -313,7 +313,7 @@ current. Merge when you want one calibrated ranking.
 All measured on this build. Unlike the performance tables above, these came from
 one-off scripts run by hand during implementation and independently reproduced
 during verification; they are not written into a results JSON in
-`scratch/refound/`, so treat them as reproducible procedures rather than citable
+`evidence/`, so treat them as reproducible procedures rather than citable
 numbers. The commands are in the release notes.
 
 * **Threads.** 4 writer + 4 reader threads on one engine: 1,200/1,200 records,
@@ -347,7 +347,7 @@ allocated. It is not the process cost.
 document) was measured before 0.3.2 and is gone.** The arena no longer
 over-allocates as it grows, so the per-document figure fell with it. Measured on
 this build, a process that opens a vault another process wrote and serves 500
-queries (`scratch/refound/reopen_results.json`, `headline`;
+queries (`evidence/reopen_results.json`, `headline`;
 `memory_results.json`, `reopen_only`):
 
 | Documents | peak RSS, scanned arena | peak RSS, mapped arena (0.4.0 layout) | `phys_footprint`, mapped |
@@ -359,7 +359,7 @@ queries (`scratch/refound/reopen_results.json`, `headline`;
 > release.** The sidecar no longer holds fp32 vectors to map, so the upcast is
 > anonymous memory again: at 71,433 rows `phys_footprint` reads **270.5 MB**
 > where 0.4.0's layout read 43.5 MB, and peak `ru_maxrss` 331.0 MB against
-> 318.4 MB in the same harness (`scratch/refound/sidecar_size_results.json`).
+> 318.4 MB in the same harness (`evidence/sidecar_size_results.json`).
 > That bought 253 MiB of disk. `arena_cache_vectors="cache"` restores 0.4.0's
 > profile; `"offsets"` is lower than either (57.1 MB) at ×1.73 on p50. The rows
 > above were measured on 0.4.0 and were not re-run.
@@ -397,7 +397,7 @@ the vault uuid, compared with `compare_digest` before any decryption.
 
 **Not AES. Not a NIST AEAD. Not audited.** `stats()['cipher']` says so verbatim.
 
-Measured overhead (`scratch/refound/crypto_overhead_v3r3.json`): one scrypt
+Measured overhead (`evidence/crypto_overhead_v3r3.json`): one scrypt
 derivation 95.67 ms ≈ 10.5 offline guesses/s/core; open +99.67 ms at 1,190 docs,
 +104.88 at 5,000, +165.36 at 40,000 (it grows — every block's MAC is verified);
 per-search −0.0003 / +0.002 / −0.0043 ms, i.e. noise. Encrypted and plaintext
@@ -425,9 +425,9 @@ with Vault("old_memory.dat") as v:
     print(v.stats()["format_version"])   # 3
 ```
 
-Verified on two golden fixtures in `scratch/refound/golden/`: a chat vault
+Verified on two golden fixtures in `evidence/golden/`: a chat vault
 answers 12 of 12 expected top-1 queries after migration — that arm is recorded in
-`scratch/refound/ranking_dev_r4_shipped.json` (`golden_chat_v2`), and the v2
+`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) (`golden_chat_v2`), and the v2
 engine answered 10 of 12 on the same fixture. A book vault migrates 845 of 845
 documents with 0 of 20 top-4 differences from exhaustive fp32 cosine computed
 over `iter_records()`; that second arm was run by hand and is not in a results
@@ -454,8 +454,8 @@ VaultEngine(path, arena_cache="off")     # 0.3.2 behaviour: no sidecar at all
 ```
 
 Measured, in-process median opens
-(`scratch/refound/reopen_results.json` for 0.4.0's layout,
-`scratch/refound/quality_summary.json` for 0.5.0's):
+(`evidence/reopen_results.json` for 0.4.0's layout,
+`evidence/quality_summary.json` for 0.5.0's):
 
 | rows | `arena_cache="off"` | `"map"` | speedup |
 | ---: | ---: | ---: | ---: |
@@ -571,7 +571,7 @@ kernel the full scan uses. Its recall delta is **identically 0 by construction**
 no recall improvement is claimed.
 
 71,433 documents, 200 questions × 5 paired interleaved cycles
-(`scratch/refound/pca_screen_results.json`, `phaseC_latency_full`):
+(`evidence/pca_screen_results.json`, `phaseC_latency_full`):
 
 | arm | p50 | p95 |
 | :--- | ---: | ---: |
@@ -628,8 +628,8 @@ at 100.0 % precision and **64.6 % recall**, which made **32.1 % of a 420-questio
 benchmark unanswerable before retrieval ran**.
 
 Measured end to end on a 300-question held-out split
-(`scratch/refound/write_policy_results.json`, pre-registered, scored once;
-reproduced through the shipped classifier in `scratch/refound/quality_summary.json`):
+(`evidence/write_policy_results.json`, pre-registered, scored once;
+reproduced through the shipped classifier in `evidence/quality_summary.json`):
 
 | | top-1 | gate recall / precision | docs / 10 personas | MiB |
 | :--- | ---: | ---: | ---: | ---: |
@@ -690,10 +690,10 @@ Switching it on triggers a one-time `compact(recluster=True)` — random-order
 blocks are unroutable. That is recorded in the file header, so successive opens
 do not rewrite the file again (measured: open 0 rewrites once at 45.2 ms, opens 1
 and 2 do not, same inode and uuid, 16.6 / 16.9 ms; 12 of 12 concurrent first
-opens succeed — `scratch/refound/router_persist_v3r4.json`).
+opens succeed — `evidence/router_persist_v3r4.json`).
 
 Measured on the reclustered 71,433-document corpus, 1,000 held-out questions,
-paired bootstrap (`scratch/refound/router_gate_v3r3.json`):
+paired bootstrap (`evidence/router_gate_v3r3.json`):
 
 | Arm | recall@4 | Δ vs exhaustive | 95 % CI | scan fraction |
 | :--- | ---: | ---: | :--- | ---: |
@@ -781,7 +781,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**598 tests**, no network required, nothing skipped when a local embedder is
+**602 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 
@@ -807,7 +807,7 @@ one and it never existed.
    ceiling from query text is **66.4 % [61.8, 70.8]**. When the question *does*
    name the attribute the same build scores 84.3 % [80.5, 87.5], so the lever is
    the question, not the engine. Four mechanisms aimed at that ceiling were
-   pre-registered and all failed (`scratch/refound/context_lever_results.json`).
+   pre-registered and all failed (`evidence/context_lever_results.json`).
    End to end — with the write gate deciding rather than gold labels — the same
    build scored 35.7 % in 0.4.0 and **49.0 % in 0.5.0** on a 300-question
    held-out split (§7c); a perfect write gate reaches 52.3 %. **The deployment

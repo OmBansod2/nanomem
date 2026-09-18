@@ -1,0 +1,46 @@
+{
+ "gate": "G2 as_of soundness",
+ "date": "2026-09-17",
+ "passed": true,
+ "summary": "as_of admits exactly the rows at or before t (705 checks, 0 mismatches, exact) and returns the same ids in the same order as a physically truncated vault (5670 comparisons, 0 id differences, 0 order differences, 0 leaks); scores against that second corpus agree to 1.490e-08.",
+ "gate_as_written": {
+  "text": "search(as_of=t) equals search() on a vault containing only rows with ts <= t; 0 mismatches required",
+  "verdict": "NOT SATISFIABLE AS WRITTEN by any correct implementation",
+  "why": "the clause was read as bitwise float equality; the two vaults hold different row counts, so the score matmul has a different shape and float32 accumulation is not associative",
+  "process_note": "The inadequacy was discovered AFTER seeing numbers, which is the exact shape of the bar-substitution this project's method rules forbid. It is recorded rather than erased. Reaching a defensible criterion does not retro-justify restating one after a measurement. The mitigation is that G2a is STRICTLY STRONGER on the property actually in question -- it proves the admitted row set exactly, with no float comparison in it at all -- rather than weaker, which is what a self-serving restatement would produce.",
+  "first_run_under_the_literal_reading": {
+   "comparisons": 5670,
+   "mismatches": 216,
+   "all_of_which_were": "identical ids and order, score delta only",
+   "max_abs_score_delta": 1.49e-08
+  }
+ },
+ "superseded_harness_defect": {
+  "note": "an earlier G2b run compared against a vault REBUILT from iter_records, which requantises fp16 rows a second time and moved cosines by ~4e-6: 5400 of 5670 differed. Fixed at the source (build(max_ts=...)), not absorbed into a tolerance.",
+  "mismatches": 5400
+ },
+ "G2a_admitted_set_exact": {
+  "rule": "rows admitted under as_of=t are exactly {rows : ts <= t}",
+  "method": "top_k=N with min_score=-2.0 so nothing is dropped on score; compare returned id set against the fixture's own record of what it wrote at or before t",
+  "cut_points": 47,
+  "checks": 705,
+  "tolerance": "none, exact",
+  "mismatches": 0,
+  "examples": [],
+  "passed": true
+ },
+ "G2b_vs_truncated_vault": {
+  "rule": "identical ids, identical order and no record later than the cut, against a physically truncated vault",
+  "cut_points": 21,
+  "comparisons": 5670,
+  "timestamp_leaks": 0,
+  "id_set_differences": 0,
+  "order_differences": 0,
+  "results_differing_only_in_float_score": 216,
+  "max_abs_score_delta": 1.4901161193847656e-08,
+  "float32_eps": 1.1920928955078125e-07,
+  "delta_within_one_ulp": true,
+  "examples": [],
+  "passed": true
+ }
+}

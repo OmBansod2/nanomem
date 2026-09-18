@@ -15,7 +15,7 @@ results JSON produced by a script in this repository, and the file is named.
 * Package version 0.3.0, engine `ENGINE_VERSION` 3.0.3, container format 3.
 * Embeddings: `nomic-embed-text` (768-d) through a local Ollama-compatible daemon.
 * Measurements on Apple M4 Pro, macOS 26.5, Python 3.12, numpy 2.5.3.
-* Every `scratch/refound/…` path in these documents is relative to the
+* Every `evidence/…` path in these documents is relative to the
   repository root; the results JSONs and the scripts that wrote them live there.
 
 ---
@@ -46,14 +46,14 @@ Real HotpotQA paragraphs in **random insertion order**, 500 held-out questions,
 | 10,000 docs | 24.0 % | **70.4 %** | 44.01 ms | **0.345 ms** | 0.378 ms | 71.8 MB | **22.0 MB** |
 | 71,433 docs | 5.8 % | **60.6 %** | 461.22 ms | **1.762 ms** | 2.010 ms | 511.5 MB | **155.9 MB** |
 
-Sources: before — `scratch/refound/scale_results_current_engine.json`; after —
-`scratch/refound/scale_results_v3r4.json` (10k, 71k) and
-`scratch/refound/headtohead_v3.json` (1,190).
+Sources: before — `evidence/scale_results_current_engine.json`; after —
+`evidence/scale_results_v3r4.json` (10k, 71k) and
+`evidence/headtohead_v3.json` (1,190).
 
 ¹ The 1,190-document corpus was never run against the 0.1.x engine as a shipped
 arm. The mechanism behind the 24.0 % and 5.8 % figures is measured there instead:
 in random insertion order, the block-page router of 0.1.x recalled 3.3–21.7 %
-against 68.3 % exhaustive (`scratch/refound/sweep_routing_1190.txt`, random-order
+against 68.3 % exhaustive (`evidence/sweep_routing_1190.txt`, random-order
 table).
 
 ### The recall is exactly exhaustive recall
@@ -65,11 +65,11 @@ table).
 | 10,000 | 70.4 % | 70.4 % | 70.4 % |
 | 71,433 | 60.6 % | 60.6 % | 60.6 % |
 
-`scratch/refound/headtohead_v3.json`, `scratch/refound/scale_results_v3r4.json`.
+`evidence/headtohead_v3.json`, `evidence/scale_results_v3r4.json`.
 At 1,190 and 4,760 documents there are 0 of 120 top-4 order differences against
 exhaustive fp32 cosine, and 0 of 120 differences between searching with a query
 vector and searching with the real question string.
-`scratch/refound/exactness_v3r2.json` repeats this on a re-opened vault with the
+`evidence/exactness_v3r2.json` repeats this on a re-opened vault with the
 real question strings: 0/120 top-4 order differences and 0/120 rank-1
 differences. A `metadata_filter` search matches a brute-force filtered scan on
 0/120 queries; a filter matching nothing costs a full scan (p50 3.09 ms at 1,190
@@ -79,7 +79,7 @@ At 10,000 and 71,433 documents the *sets* still match exhaustive exactly — the
 recall figures above are identical — but a handful of top-4 **orderings** differ:
 2 of 500 questions at 10,000 and 5 of 500 at 71,433, every one of them a tie or a
 near-tie (largest cosine gap 2.2e-05, two of them exactly 0.0), caused by the
-fp16 vectors on disk. `scratch/refound/verify_round3_v3r3.json`,
+fp16 vectors on disk. `evidence/verify_round3_v3r3.json`,
 `F_top4_differences_are_ties`. "Exactly exhaustive" is measured at 1,190 and
 4,760 documents; at scale it holds for recall and up to tie-breaking for order.
 
@@ -92,7 +92,7 @@ everything in fp32.
 
 nanomem holds an fp32 arena in RAM and fp16 vectors on disk. Measured in a
 process that does nothing but open the vault and read `stats()`
-(`scratch/refound/rss_v3r4.json`):
+(`evidence/rss_v3r4.json`):
 
 | Documents | RSS growth on open | `stats()['active_heap_ram_kb']` | ratio | RSS per document |
 | ---: | ---: | ---: | ---: | ---: |
@@ -102,7 +102,7 @@ process that does nothing but open the vault and read `stats()`
 Read that as **roughly 8–9 KB of resident memory per document** at 768
 dimensions. The fp32 vector alone is 768 × 4 = 3.0 KB per document, and the
 engine over-allocates arena capacity as it grows (`resident_arena_mb` works out
-at 4.9–5.5 KB per document in `scratch/refound/scale_results_v3r4.json`); the
+at 4.9–5.5 KB per document in `evidence/scale_results_v3r4.json`); the
 rest is record text, metadata and Python objects. `active_heap_ram_kb` is a
 measured value — a sum of the buffers the vault has actually allocated — and it
 under-reports the process by the ratio in the table, which the
@@ -117,31 +117,31 @@ regardless of corpus size.
 Appending is a memtable write plus a periodic block flush; it does not slow down
 as the vault grows. Over 4,000 chat-shaped adds the first 500 averaged 19.81 µs
 and the last 500 averaged 19.32 µs, a ratio of 0.975 (median 10.63 µs, p95 12.08
-µs, max 598.29 µs on a block spill) — `scratch/refound/headtohead_v3.json`. On a
+µs, max 598.29 µs on a block spill) — `evidence/headtohead_v3.json`. On a
 re-opened 71,433-document vault the write path is 17.9 µs mean / 7.0 µs p50
-(`scratch/refound/scale_results_v3r4.json`). These figures exclude embedding,
+(`evidence/scale_results_v3r4.json`). These figures exclude embedding,
 which is the dominant cost in practice (one local `nomic-embed-text` call is
 roughly 9–16 ms).
 
 ### Index size on disk
 
 2,208.8 bytes per document at 1,190 docs — 0.609× the raw UTF-8 text plus fp32
-vectors it stands in for (`scratch/refound/headtohead_v3.json`). It holds at
+vectors it stands in for (`evidence/headtohead_v3.json`). It holds at
 scale: 2,307 B/doc at 10,000 and 2,289 B/doc at 71,433
-(`scratch/refound/scale_results_v3r4.json`).
+(`evidence/scale_results_v3r4.json`).
 
 ### Deletes and rewrites
 
 There are no tombstones in 3.0. `delete`, `update` and `prune` are full atomic
 rewrites of the container. Deleting one record costs **7.5 ms at 1,000 records
-and 70.5 ms at 10,000** (`scratch/refound/rewrite_cost_v3r4.json`), and roughly a
+and 70.5 ms at 10,000** (`evidence/rewrite_cost_v3r4.json`), and roughly a
 second at 71k. The rewrite holds the exclusive lock for its whole duration, so
 concurrent appenders block.
 
 ### Password mode
 
 Optional and off by default. Measured overhead
-(`scratch/refound/crypto_overhead_v3r3.json`):
+(`evidence/crypto_overhead_v3r3.json`):
 
 | Documents | extra open time | extra per-search time | file size difference |
 | ---: | ---: | ---: | ---: |
@@ -165,10 +165,10 @@ already stored, isolating ranking from the write gate.
 | 2-persona held-out set (n=24) | 33.3 % | **75.0 %** | 95.8 % | 79.2 % |
 | 3-persona dev set (n=24, new) | — | 95.8 % | 100.0 % | 87.5 % |
 
-Before: `scratch/refound/clean_chat_results_current_engine.json` and
-`scratch/refound/clean_chat_results_heldout_baseline.json`. After:
+Before: `evidence/clean_chat_results_current_engine.json` and
+`clean_chat_results_heldout_baseline.json` — derived from a fixture held out of development so a score against it means something, and therefore not published. After:
 `clean_chat_results_v3r4_engine.json`, `clean_chat_results_v3r4_engine_heldout.json`,
-`clean_chat_results_v3r4_engine_devpersona.json`, all in `scratch/refound/`.
+`clean_chat_results_v3r4_engine_devpersona.json`, in `evidence/`.
 
 **The release target was ≥ 80 % gold-store top-1 on both persona sets. The
 held-out set missed it at 75.0 % (18 of 24).** Five of the six failures are
@@ -182,7 +182,7 @@ out-of-sample estimate.
 
 A numpy logistic head over the embedding plus generic surface features, trained
 on the 3-persona set and scored once on two unseen personas
-(`scratch/refound/write_classifier_v2_results.json`, `heldout`):
+(`evidence/write_classifier_v2_results.json`, `heldout`):
 
 | Arm | Accuracy | F1 |
 | :--- | ---: | ---: |
@@ -203,7 +203,7 @@ the prototype asset built from paraphrases of it.
 The shipped bridge is a **text hop**: re-embed the question together with the
 hop-1 winner's text and search again, then merge under the same `top_k` budget.
 Equal budget, 1,190 documents, evidence recall@4
-(`scratch/refound/multihop_texthop_v3r2_1190.json`):
+(`evidence/multihop_texthop_v3r2_1190.json`):
 
 | | single pass | text hop |
 | :--- | ---: | ---: |
@@ -225,7 +225,7 @@ recall@4 against exhaustive 78.65 % (−0.05 pt, 95 % CI [−0.20, +0.10]) while
 scanning 29 % of the corpus — it passes the recall gate. **It still ships off**,
 because inside the engine it is *slower* for the same recall: p50 3.604 ms versus
 1.919 ms exhaustive, plus 7.51 s added to every open.
-`scratch/refound/router_gate_v3r3.json`.
+`evidence/router_gate_v3r3.json`.
 
 ---
 
@@ -245,7 +245,7 @@ because inside the engine it is *slower* for the same recall: p50 3.604 ms versu
 * **0.1.x (`format_version` 2) files migrate on first open.** The original is kept
   beside the new one as `<path>.v2.bak`, byte-identical to the source. Migration
   is verified on two golden vaults: 12/12 expected top-1 answers on a chat vault
-  (`scratch/refound/ranking_dev_r4_shipped.json`, `golden_chat_v2`), and 845/845
+  (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings), `golden_chat_v2`), and 845/845
   documents with 0/20 top-4 differences from exhaustive fp32 cosine on a book
   vault (run by hand; not in a results JSON).
 * **`stats()` values are measured.** `active_heap_ram_kb` is no longer the

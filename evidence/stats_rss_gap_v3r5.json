@@ -1,0 +1,57 @@
+{
+ "what": "the gap between stats()['active_heap_ram_mb'] and what the process actually costs, re-measured on the build where Arena.reserve is the default. One subprocess per size; the measured process OPENS a vault it did not write and reads stats once.",
+ "generated_at": "2026-09-16T19:46:42+0530",
+ "script": "<repo>/evidence/bench_stats_rss_gap.py",
+ "engine_version": "3.0.4",
+ "package_version": "0.3.1",
+ "machine": {
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "cpus": 12,
+  "python": "3.12.12",
+  "numpy": "2.5.3",
+  "load_avg_at_start": [
+   2.5,
+   2.5,
+   2.58
+  ]
+ },
+ "supersedes": "scratch/refound/rss_v3r4.json, measured before Arena.reserve was the default",
+ "sizes": {
+  "n10000": {
+   "rows": 10000,
+   "open_s": 0.024,
+   "reported_active_heap_ram_mb": 36.8,
+   "process_rss_kb_from_stats_mb": 77.5,
+   "ru_maxrss_delta_mb": 50.7,
+   "live_rss_delta_mb": 50.7,
+   "residency": "float32",
+   "resident_arena_mb": 29.297,
+   "arena_reserved_rows": 10000,
+   "load_avg": [
+    2.5,
+    2.5,
+    2.58
+   ],
+   "gap_vs_ru_maxrss": 1.378,
+   "gap_vs_live_rss": 1.378
+  },
+  "n71433": {
+   "rows": 71433,
+   "open_s": 0.169,
+   "reported_active_heap_ram_mb": 262.0,
+   "process_rss_kb_from_stats_mb": 315.8,
+   "ru_maxrss_delta_mb": 288.9,
+   "live_rss_delta_mb": 288.9,
+   "residency": "float32",
+   "resident_arena_mb": 209.276,
+   "arena_reserved_rows": 71433,
+   "load_avg": [
+    2.38,
+    2.48,
+    2.57
+   ],
+   "gap_vs_ru_maxrss": 1.103,
+   "gap_vs_live_rss": 1.103
+  }
+ }
+}

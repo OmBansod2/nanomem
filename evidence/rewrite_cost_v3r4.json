@@ -1,0 +1,16 @@
+{
+ "what": "cost of deleting ONE record: there are no tombstones (DECISIONS #11), so it is a full atomic rewrite",
+ "sizes": [
+  {
+   "records": 1000,
+   "delete_one_ms": 7.5,
+   "per_record_us": 7.51
+  },
+  {
+   "records": 10000,
+   "delete_one_ms": 70.5,
+   "per_record_us": 7.05
+  }
+ ],
+ "engine_version": "3.0.3"
+}

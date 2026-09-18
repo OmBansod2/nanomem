@@ -1,0 +1,1749 @@
+{
+ "preregistration": {
+  "written_before_any_number": true,
+  "baseline": {
+   "arm": "L0_shipped_gate",
+   "what": "nanomem.classifier as shipped (rule layers + logistic head, threshold 0.60) deciding every write, shipped ranking, no oracle",
+   "handed_down_all420_top1_pct": 38.1,
+   "handed_down_source": "scratch/refound/chat_target_decision.json -> chat_bench_v2_oracle_ladder.L0_shipped_deployment",
+   "reproduction_required": "this file recomputes it; a deviation is reported, not hidden"
+  },
+  "oracle_reference": {
+   "arm": "L1_gold_gate",
+   "handed_down_all420_top1_pct": 53.3,
+   "status": "ORACLE -- reads the fixture's should_store label, declares an oracle budget of 1 read per turn in the leak audit, and is never eligible to be the winner"
+  },
+  "metric": "end-to-end top-1: expected_substring occurs in the text of the rank-1 hit returned by Vault.search(temporal_direction='current'). Identical scorer for every arm.",
+  "corpus": {
+   "file": "scratch/refound/chat_bench_v2.json",
+   "personas": 14,
+   "turns": 1652,
+   "questions": 420,
+   "storable_turns": 588
+  },
+  "split": {
+   "dev": [
+    "p01",
+    "p02",
+    "p03",
+    "p04"
+   ],
+   "dev_questions": 120,
+   "test": [
+    "p05",
+    "p06",
+    "p07",
+    "p08",
+    "p09",
+    "p10",
+    "p11",
+    "p12",
+    "p13",
+    "p14"
+   ],
+   "test_questions": 300,
+   "rule": "every sweep (weight, threshold, min_score) is selected on dev ONLY; test is scored once with the frozen selection",
+   "all420_note": "an all-420 aggregate (dev+test) is also reported, for comparability with the handed-down 38.1 / 53.3 only.  It is the same frozen arms re-aggregated, never a new selection, and the bar is judged on test alone."
+  },
+  "arms": {
+   "a_store_all": "no gate at all",
+   "b_confidence_downweight": "store everything, P(store) into metadata, retrieval subtracts weight*(1-conf) (linear) or weight*[conf<0.6] (step); weight swept on dev",
+   "c_threshold": "gate kept, store-threshold swept 0.90..0.00 (0.60 = shipped, 0.00 = rules only)",
+   "d_two_tier": "high-confidence tier searched first, long tail searched only when the first pass returns nothing above min_score; min_score swept on dev"
+  },
+  "seeds": {
+   "bootstrap_seed": 20260917,
+   "bootstrap_iters": 10000,
+   "resampling": "paired by qid (primary) and clustered by persona (secondary, reported beside it)"
+  },
+  "bar": {
+   "primary": "paired bootstrap 95% CI on (arm - L0_shipped) over the TEST split has lower bound > 0 AND the point estimate is >= +5.0 pt",
+   "strict_also_prereg": "the stricter reading -- CI lower bound itself >= +5.0 pt -- is registered now and reported beside the primary, so neither can be selected after seeing the numbers",
+   "secondary_criteria_declared_now": [
+    "docs stored, vault bytes and p50 retrieval latency are reported for every arm as COSTS; no accuracy bar is traded against them after the fact",
+    "the gate's own false-negative rate and the fraction of dropped turns later asked about are reported for every arm whether or not the arm wins"
+   ],
+   "clean_negative_is_a_deliverable": true
+  },
+  "leak_audit": {
+   "mechanism": "TurnView exposes text and original_index only; every read of should_store/entity/fid/category/rationale/registry_attribute/supersedes_turn_index during the store decision is counted per arm and checked against a declared budget",
+   "budgets": {
+    "L0_shipped_gate": 0,
+    "a_store_all": 0,
+    "b_confidence_downweight": 0,
+    "c_threshold": 0,
+    "d_two_tier": 0,
+    "L1_gold_gate": "1 per turn (declared oracle)"
+   },
+   "on_mismatch": "AssertionError -- the run fails, it does not report"
+  },
+  "quarantine": "quarantine_guard.enforce() installs a read barrier over builtins.open / io.open / os.open / os.fdopen / numpy.load before any fixture is opened; the quarantined paths are never named in this file.  Non-access is by construction, not by atime."
+ },
+ "preregistration_sha256": "b8039d10b1233e448ae83e0a4bdf13185032a40f252a25d50c225793248aaff6",
+ "gate_table": {
+  "distinct_utterances": 613,
+  "newly_computed": 0,
+  "shipped_threshold": 0.6000000238418579,
+  "threshold_sweep_reproduces_shipped_at_threshold": true,
+  "seconds": 0.0
+ },
+ "dev": {
+  "L0_shipped": {
+   "n": 120,
+   "hits": 53,
+   "top1_pct": 44.2,
+   "ci95": [
+    35.6,
+    53.1
+   ],
+   "top3_pct": 56.7,
+   "top1_id_pct": 44.2,
+   "top5_id_pct": 60.8,
+   "top10_id_pct": 65.8,
+   "gold_stored_pct": 70.8,
+   "p50_ms": 0.2117,
+   "p95_ms": 0.3183,
+   "rerank_window_unsafe": 0,
+   "fallback_pct": 0.0
+  },
+  "a_store_all": {
+   "n": 120,
+   "hits": 65,
+   "top1_pct": 54.2,
+   "ci95": [
+    45.3,
+    62.8
+   ],
+   "top3_pct": 69.2,
+   "top1_id_pct": 54.2,
+   "top5_id_pct": 75.0,
+   "top10_id_pct": 80.8,
+   "gold_stored_pct": 100.0,
+   "p50_ms": 0.3271,
+   "p95_ms": 0.4341,
+   "rerank_window_unsafe": 0,
+   "fallback_pct": 0.0
+  },
+  "b_sweep": [
+   {
+    "mode": "linear",
+    "weight": 0.0,
+    "top1_pct": 54.2,
+    "hits": 65,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.01,
+    "top1_pct": 42.5,
+    "hits": 51,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.02,
+    "top1_pct": 43.3,
+    "hits": 52,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.05,
+    "top1_pct": 40.8,
+    "hits": 49,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.1,
+    "top1_pct": 40.0,
+    "hits": 48,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.2,
+    "top1_pct": 34.2,
+    "hits": 41,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.35,
+    "top1_pct": 32.5,
+    "hits": 39,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.5,
+    "top1_pct": 30.0,
+    "hits": 36,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 0.8,
+    "top1_pct": 28.3,
+    "hits": 34,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "linear",
+    "weight": 1.2,
+    "top1_pct": 29.2,
+    "hits": 35,
+    "n": 120,
+    "rerank_window_unsafe": 2
+   },
+   {
+    "mode": "step",
+    "weight": 0.0,
+    "top1_pct": 54.2,
+    "hits": 65,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.01,
+    "top1_pct": 52.5,
+    "hits": 63,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.02,
+    "top1_pct": 52.5,
+    "hits": 63,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.05,
+    "top1_pct": 50.0,
+    "hits": 60,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.1,
+    "top1_pct": 47.5,
+    "hits": 57,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.2,
+    "top1_pct": 45.8,
+    "hits": 55,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.35,
+    "top1_pct": 46.7,
+    "hits": 56,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.5,
+    "top1_pct": 46.7,
+    "hits": 56,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 0.8,
+    "top1_pct": 45.0,
+    "hits": 54,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   },
+   {
+    "mode": "step",
+    "weight": 1.2,
+    "top1_pct": 45.0,
+    "hits": 54,
+    "n": 120,
+    "rerank_window_unsafe": 0
+   }
+  ],
+  "b_selected": {
+   "mode": "linear",
+   "weight": 0.0,
+   "top1_pct": 54.2,
+   "hits": 65,
+   "n": 120,
+   "rerank_window_unsafe": 0
+  },
+  "b_selected_nonzero_weight": {
+   "mode": "step",
+   "weight": 0.01,
+   "top1_pct": 52.5,
+   "hits": 63,
+   "n": 120,
+   "rerank_window_unsafe": 0
+  },
+  "b_note": "the dev argmax of the confidence down-weight is weight=0, i.e. the mechanism switched off, which is exactly arm (a).  Both the argmax and the best strictly-positive weight are frozen and scored on test.",
+  "c_sweep": [
+   {
+    "threshold": 0.95,
+    "top1_pct": 16.7,
+    "docs": 31,
+    "bytes": 60350,
+    "p50_ms": 0.131,
+    "gate_recall_pct": 18.5,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 81.5,
+    "dropped_and_later_asked_questions": 91
+   },
+   {
+    "threshold": 0.9,
+    "top1_pct": 20.0,
+    "docs": 43,
+    "bytes": 82774,
+    "p50_ms": 0.1499,
+    "gate_recall_pct": 25.6,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 74.4,
+    "dropped_and_later_asked_questions": 81
+   },
+   {
+    "threshold": 0.8,
+    "top1_pct": 30.0,
+    "docs": 68,
+    "bytes": 129930,
+    "p50_ms": 0.1766,
+    "gate_recall_pct": 40.5,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 59.5,
+    "dropped_and_later_asked_questions": 63
+   },
+   {
+    "threshold": 0.7,
+    "top1_pct": 36.7,
+    "docs": 87,
+    "bytes": 165686,
+    "p50_ms": 0.193,
+    "gate_recall_pct": 51.8,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 48.2,
+    "dropped_and_later_asked_questions": 50
+   },
+   {
+    "threshold": 0.6000000238418579,
+    "top1_pct": 44.2,
+    "docs": 109,
+    "bytes": 207121,
+    "p50_ms": 0.1648,
+    "gate_recall_pct": 64.9,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 35.1,
+    "dropped_and_later_asked_questions": 35
+   },
+   {
+    "threshold": 0.5,
+    "top1_pct": 48.3,
+    "docs": 125,
+    "bytes": 237353,
+    "p50_ms": 0.2078,
+    "gate_recall_pct": 74.4,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 25.6,
+    "dropped_and_later_asked_questions": 27
+   },
+   {
+    "threshold": 0.4,
+    "top1_pct": 50.0,
+    "docs": 132,
+    "bytes": 250607,
+    "p50_ms": 0.197,
+    "gate_recall_pct": 78.6,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 21.4,
+    "dropped_and_later_asked_questions": 22
+   },
+   {
+    "threshold": 0.3,
+    "top1_pct": 52.5,
+    "docs": 145,
+    "bytes": 275077,
+    "p50_ms": 0.2342,
+    "gate_recall_pct": 86.3,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 13.7,
+    "dropped_and_later_asked_questions": 14
+   },
+   {
+    "threshold": 0.2,
+    "top1_pct": 55.0,
+    "docs": 154,
+    "bytes": 292074,
+    "p50_ms": 0.2786,
+    "gate_recall_pct": 91.7,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 8.3,
+    "dropped_and_later_asked_questions": 9
+   },
+   {
+    "threshold": 0.1,
+    "top1_pct": 55.0,
+    "docs": 168,
+    "bytes": 316388,
+    "p50_ms": 0.2045,
+    "gate_recall_pct": 92.9,
+    "gate_precision_pct": 92.9,
+    "gate_fnr_pct": 7.1,
+    "dropped_and_later_asked_questions": 7
+   },
+   {
+    "threshold": 0.05,
+    "top1_pct": 55.8,
+    "docs": 170,
+    "bytes": 320155,
+    "p50_ms": 0.2118,
+    "gate_recall_pct": 94.0,
+    "gate_precision_pct": 92.9,
+    "gate_fnr_pct": 6.0,
+    "dropped_and_later_asked_questions": 6
+   },
+   {
+    "threshold": 0.02,
+    "top1_pct": 55.8,
+    "docs": 184,
+    "bytes": 344696,
+    "p50_ms": 0.2196,
+    "gate_recall_pct": 95.2,
+    "gate_precision_pct": 87.0,
+    "gate_fnr_pct": 4.8,
+    "dropped_and_later_asked_questions": 5
+   },
+   {
+    "threshold": 0.0,
+    "top1_pct": 55.0,
+    "docs": 452,
+    "bytes": 808950,
+    "p50_ms": 0.2292,
+    "gate_recall_pct": 95.2,
+    "gate_precision_pct": 35.4,
+    "gate_fnr_pct": 4.8,
+    "dropped_and_later_asked_questions": 5
+   }
+  ],
+  "c_selected": {
+   "threshold": 0.05,
+   "top1_pct": 55.8,
+   "docs": 170,
+   "bytes": 320155,
+   "p50_ms": 0.2118,
+   "gate_recall_pct": 94.0,
+   "gate_precision_pct": 92.9,
+   "gate_fnr_pct": 6.0,
+   "dropped_and_later_asked_questions": 6
+  },
+  "d_sweep": [
+   {
+    "tt_mode": "replace",
+    "min_score": 0.0,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.1,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.2,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.3,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.35,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.4,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.45,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.8,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.5,
+    "top1_pct": 43.3,
+    "fallback_pct": 11.7,
+    "p50_ms": 0.1746
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.55,
+    "top1_pct": 42.5,
+    "fallback_pct": 25.0,
+    "p50_ms": 0.1804
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.6,
+    "top1_pct": 42.5,
+    "fallback_pct": 35.8,
+    "p50_ms": 0.1921
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.7,
+    "top1_pct": 41.7,
+    "fallback_pct": 47.5,
+    "p50_ms": 0.2076
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.8,
+    "top1_pct": 35.0,
+    "fallback_pct": 56.7,
+    "p50_ms": 0.3707
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 0.9,
+    "top1_pct": 35.0,
+    "fallback_pct": 56.7,
+    "p50_ms": 0.3707
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 1.0,
+    "top1_pct": 35.0,
+    "fallback_pct": 58.3,
+    "p50_ms": 0.3722
+   },
+   {
+    "tt_mode": "replace",
+    "min_score": 2.0,
+    "top1_pct": 14.2,
+    "fallback_pct": 100.0,
+    "p50_ms": 0.4437
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.0,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.1,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.2,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.3,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.35,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.4,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.0,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.45,
+    "top1_pct": 44.2,
+    "fallback_pct": 0.8,
+    "p50_ms": 0.1706
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.5,
+    "top1_pct": 45.0,
+    "fallback_pct": 11.7,
+    "p50_ms": 0.1746
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.55,
+    "top1_pct": 46.7,
+    "fallback_pct": 25.0,
+    "p50_ms": 0.1804
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.6,
+    "top1_pct": 47.5,
+    "fallback_pct": 35.8,
+    "p50_ms": 0.1921
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.7,
+    "top1_pct": 49.2,
+    "fallback_pct": 47.5,
+    "p50_ms": 0.2076
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.8,
+    "top1_pct": 45.8,
+    "fallback_pct": 56.7,
+    "p50_ms": 0.3707
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 0.9,
+    "top1_pct": 45.8,
+    "fallback_pct": 56.7,
+    "p50_ms": 0.3707
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 1.0,
+    "top1_pct": 45.8,
+    "fallback_pct": 58.3,
+    "p50_ms": 0.3722
+   },
+   {
+    "tt_mode": "merge",
+    "min_score": 2.0,
+    "top1_pct": 46.7,
+    "fallback_pct": 100.0,
+    "p50_ms": 0.4437
+   }
+  ],
+  "d_selected": {
+   "tt_mode": "merge",
+   "min_score": 0.7,
+   "top1_pct": 49.2,
+   "fallback_pct": 47.5,
+   "p50_ms": 0.2076
+  },
+  "d_sharding_diagnostic": {
+   "one_vault_top1_pct": 54.2,
+   "two_vaults_same_docs_top1_pct": 46.7,
+   "sharding_cost_pt": -7.5,
+   "docs_one_vault": 472,
+   "docs_two_vaults": 472,
+   "note": "identical documents, identical scorer; the only difference is one vault versus two.  nanomem's entity boosts are per-vault statistics, so a confidence shard is not a free index split."
+  }
+ },
+ "frozen_selection": {
+  "b_mode": "linear",
+  "b_weight": 0.0,
+  "b_mode_nz": "step",
+  "b_weight_nz": 0.01,
+  "c_threshold": 0.05,
+  "d_min_score": 0.7,
+  "d_tt_mode": "merge"
+ },
+ "test": {
+  "L0_shipped_gate": {
+   "top1_pct": 35.7,
+   "ci95": [
+    30.5,
+    41.2
+   ],
+   "n": 300,
+   "hits": 107,
+   "top3_pct": 51.7,
+   "top1_id_pct": 35.7,
+   "top5_id_pct": 54.7,
+   "top10_id_pct": 58.3,
+   "delta_vs_shipped_pt": 0.0,
+   "delta_ci95_paired": [
+    0.0,
+    0.0
+   ],
+   "delta_ci95_persona_cluster": [
+    0.0,
+    0.0
+   ],
+   "docs_stored": 271,
+   "turns_seen": 1180,
+   "store_rate_pct": 23.0,
+   "vault_bytes": 515478,
+   "vault_bytes_per_doc": 1902.1,
+   "p50_ms": 0.2291,
+   "p95_ms": 0.3373,
+   "answerable_pct": 66.7,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 271,
+    "dropped": 909,
+    "recall_pct": 64.5,
+    "precision_pct": 100.0,
+    "fnr_pct": 35.5,
+    "fpr_pct": 0.0,
+    "f1": 0.7844,
+    "dropped_facts": 149,
+    "dropped_and_later_asked_docs": 100,
+    "dropped_and_later_asked_pct_of_dropped": 11.0,
+    "dropped_and_later_asked_questions": 100,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 33.3
+   },
+   "passes_primary_bar": false,
+   "passes_strict_bar": false,
+   "oracle": false
+  },
+  "a_store_all": {
+   "top1_pct": 49.7,
+   "ci95": [
+    44.0,
+    55.3
+   ],
+   "n": 300,
+   "hits": 149,
+   "top3_pct": 68.3,
+   "top1_id_pct": 49.7,
+   "top5_id_pct": 71.7,
+   "top10_id_pct": 80.3,
+   "delta_vs_shipped_pt": 14.0,
+   "delta_ci95_paired": [
+    8.3,
+    19.7
+   ],
+   "delta_ci95_persona_cluster": [
+    9.7,
+    18.3
+   ],
+   "docs_stored": 1180,
+   "turns_seen": 1180,
+   "store_rate_pct": 100.0,
+   "vault_bytes": 2111879,
+   "vault_bytes_per_doc": 1789.7,
+   "p50_ms": 0.3187,
+   "p95_ms": 0.4521,
+   "answerable_pct": 100.0,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 1180,
+    "dropped": 0,
+    "recall_pct": 100.0,
+    "precision_pct": 35.6,
+    "fnr_pct": 0.0,
+    "fpr_pct": 100.0,
+    "f1": 0.525,
+    "dropped_facts": 0,
+    "dropped_and_later_asked_docs": 0,
+    "dropped_and_later_asked_pct_of_dropped": 0.0,
+    "dropped_and_later_asked_questions": 0,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 0.0
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": true,
+   "oracle": false
+  },
+  "b_confidence_downweight": {
+   "top1_pct": 49.7,
+   "ci95": [
+    44.0,
+    55.3
+   ],
+   "n": 300,
+   "hits": 149,
+   "top3_pct": 68.3,
+   "top1_id_pct": 49.7,
+   "top5_id_pct": 71.7,
+   "top10_id_pct": 80.3,
+   "delta_vs_shipped_pt": 14.0,
+   "delta_ci95_paired": [
+    8.3,
+    19.7
+   ],
+   "delta_ci95_persona_cluster": [
+    9.7,
+    18.3
+   ],
+   "docs_stored": 1180,
+   "turns_seen": 1180,
+   "store_rate_pct": 100.0,
+   "vault_bytes": 2111879,
+   "vault_bytes_per_doc": 1789.7,
+   "p50_ms": 0.3187,
+   "p95_ms": 0.4521,
+   "answerable_pct": 100.0,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 1180,
+    "dropped": 0,
+    "recall_pct": 100.0,
+    "precision_pct": 35.6,
+    "fnr_pct": 0.0,
+    "fpr_pct": 100.0,
+    "f1": 0.525,
+    "dropped_facts": 0,
+    "dropped_and_later_asked_docs": 0,
+    "dropped_and_later_asked_pct_of_dropped": 0.0,
+    "dropped_and_later_asked_questions": 0,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 0.0
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": true,
+   "oracle": false
+  },
+  "b_confidence_downweight_nonzero": {
+   "top1_pct": 49.0,
+   "ci95": [
+    43.4,
+    54.6
+   ],
+   "n": 300,
+   "hits": 147,
+   "top3_pct": 68.7,
+   "top1_id_pct": 49.0,
+   "top5_id_pct": 73.7,
+   "top10_id_pct": 80.7,
+   "delta_vs_shipped_pt": 13.3,
+   "delta_ci95_paired": [
+    8.0,
+    18.7
+   ],
+   "delta_ci95_persona_cluster": [
+    8.7,
+    17.7
+   ],
+   "docs_stored": 1180,
+   "turns_seen": 1180,
+   "store_rate_pct": 100.0,
+   "vault_bytes": 2111879,
+   "vault_bytes_per_doc": 1789.7,
+   "p50_ms": 0.3187,
+   "p95_ms": 0.4521,
+   "answerable_pct": 100.0,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 1180,
+    "dropped": 0,
+    "recall_pct": 100.0,
+    "precision_pct": 35.6,
+    "fnr_pct": 0.0,
+    "fpr_pct": 100.0,
+    "f1": 0.525,
+    "dropped_facts": 0,
+    "dropped_and_later_asked_docs": 0,
+    "dropped_and_later_asked_pct_of_dropped": 0.0,
+    "dropped_and_later_asked_questions": 0,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 0.0
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": true,
+   "oracle": false
+  },
+  "c_threshold": {
+   "top1_pct": 49.0,
+   "ci95": [
+    43.4,
+    54.6
+   ],
+   "n": 300,
+   "hits": 147,
+   "top3_pct": 71.0,
+   "top1_id_pct": 49.0,
+   "top5_id_pct": 75.0,
+   "top10_id_pct": 80.7,
+   "delta_vs_shipped_pt": 13.3,
+   "delta_ci95_paired": [
+    8.7,
+    18.3
+   ],
+   "delta_ci95_persona_cluster": [
+    9.7,
+    16.7
+   ],
+   "docs_stored": 425,
+   "turns_seen": 1180,
+   "store_rate_pct": 36.0,
+   "vault_bytes": 800599,
+   "vault_bytes_per_doc": 1883.8,
+   "p50_ms": 0.2515,
+   "p95_ms": 0.3981,
+   "answerable_pct": 94.7,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 425,
+    "dropped": 755,
+    "recall_pct": 94.0,
+    "precision_pct": 92.9,
+    "fnr_pct": 6.0,
+    "fpr_pct": 3.9,
+    "f1": 0.9349,
+    "dropped_facts": 25,
+    "dropped_and_later_asked_docs": 16,
+    "dropped_and_later_asked_pct_of_dropped": 2.1,
+    "dropped_and_later_asked_questions": 16,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 5.3
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": true,
+   "oracle": false
+  },
+  "d_two_tier": {
+   "top1_pct": 43.7,
+   "ci95": [
+    38.2,
+    49.3
+   ],
+   "n": 300,
+   "hits": 131,
+   "top3_pct": 62.3,
+   "top1_id_pct": 43.7,
+   "top5_id_pct": 66.3,
+   "top10_id_pct": 73.7,
+   "delta_vs_shipped_pt": 8.0,
+   "delta_ci95_paired": [
+    3.7,
+    12.3
+   ],
+   "delta_ci95_persona_cluster": [
+    3.7,
+    12.3
+   ],
+   "docs_stored": 1180,
+   "turns_seen": 1180,
+   "store_rate_pct": 100.0,
+   "vault_bytes": 2114122,
+   "vault_bytes_per_doc": 1791.6,
+   "p50_ms": 0.3789,
+   "p95_ms": 0.5874,
+   "answerable_pct": 100.0,
+   "fallback_pct": 55.3,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 1180,
+    "dropped": 0,
+    "recall_pct": 100.0,
+    "precision_pct": 35.6,
+    "fnr_pct": 0.0,
+    "fpr_pct": 100.0,
+    "f1": 0.525,
+    "dropped_facts": 0,
+    "dropped_and_later_asked_docs": 0,
+    "dropped_and_later_asked_pct_of_dropped": 0.0,
+    "dropped_and_later_asked_questions": 0,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 0.0
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": false,
+   "oracle": false
+  },
+  "L1_gold_gate": {
+   "top1_pct": 52.3,
+   "ci95": [
+    46.7,
+    57.9
+   ],
+   "n": 300,
+   "hits": 157,
+   "top3_pct": 73.3,
+   "top1_id_pct": 52.3,
+   "top5_id_pct": 78.3,
+   "top10_id_pct": 84.7,
+   "delta_vs_shipped_pt": 16.6,
+   "delta_ci95_paired": [
+    11.7,
+    22.0
+   ],
+   "delta_ci95_persona_cluster": [
+    12.0,
+    21.0
+   ],
+   "docs_stored": 420,
+   "turns_seen": 1180,
+   "store_rate_pct": 35.6,
+   "vault_bytes": 796595,
+   "vault_bytes_per_doc": 1896.7,
+   "p50_ms": 0.2936,
+   "p95_ms": 0.4166,
+   "answerable_pct": 100.0,
+   "fallback_pct": 0.0,
+   "rerank_window_unsafe": 0,
+   "gate": {
+    "stored": 420,
+    "dropped": 760,
+    "recall_pct": 100.0,
+    "precision_pct": 100.0,
+    "fnr_pct": 0.0,
+    "fpr_pct": 0.0,
+    "f1": 1.0,
+    "dropped_facts": 0,
+    "dropped_and_later_asked_docs": 0,
+    "dropped_and_later_asked_pct_of_dropped": 0.0,
+    "dropped_and_later_asked_questions": 0,
+    "questions_in_scope": 300,
+    "dropped_questions_pct_of_scope": 0.0
+   },
+   "passes_primary_bar": true,
+   "passes_strict_bar": true,
+   "oracle": true
+  }
+ },
+ "tradeoff_curve_test": [
+  {
+   "arm": "L0_shipped_gate",
+   "top1_pct": 35.7,
+   "docs": 271,
+   "mib": 0.492,
+   "delta_mib": 0.0,
+   "delta_pt": 0.0,
+   "pt_per_mib": null,
+   "p50_ms": 0.2291,
+   "gate_fnr_pct": 35.5,
+   "dropped_later_asked_questions": 100,
+   "oracle": false
+  },
+  {
+   "arm": "c_threshold",
+   "top1_pct": 49.0,
+   "docs": 425,
+   "mib": 0.764,
+   "delta_mib": 0.272,
+   "delta_pt": 13.3,
+   "pt_per_mib": 48.91,
+   "p50_ms": 0.2515,
+   "gate_fnr_pct": 6.0,
+   "dropped_later_asked_questions": 16,
+   "oracle": false
+  },
+  {
+   "arm": "d_two_tier",
+   "top1_pct": 43.7,
+   "docs": 1180,
+   "mib": 2.016,
+   "delta_mib": 1.525,
+   "delta_pt": 8.0,
+   "pt_per_mib": 5.25,
+   "p50_ms": 0.3789,
+   "gate_fnr_pct": 0.0,
+   "dropped_later_asked_questions": 0,
+   "oracle": false
+  },
+  {
+   "arm": "b_confidence_downweight_nonzero",
+   "top1_pct": 49.0,
+   "docs": 1180,
+   "mib": 2.014,
+   "delta_mib": 1.522,
+   "delta_pt": 13.3,
+   "pt_per_mib": 8.74,
+   "p50_ms": 0.3187,
+   "gate_fnr_pct": 0.0,
+   "dropped_later_asked_questions": 0,
+   "oracle": false
+  },
+  {
+   "arm": "b_confidence_downweight",
+   "top1_pct": 49.7,
+   "docs": 1180,
+   "mib": 2.014,
+   "delta_mib": 1.522,
+   "delta_pt": 14.0,
+   "pt_per_mib": 9.2,
+   "p50_ms": 0.3187,
+   "gate_fnr_pct": 0.0,
+   "dropped_later_asked_questions": 0,
+   "oracle": false
+  },
+  {
+   "arm": "a_store_all",
+   "top1_pct": 49.7,
+   "docs": 1180,
+   "mib": 2.014,
+   "delta_mib": 1.522,
+   "delta_pt": 14.0,
+   "pt_per_mib": 9.2,
+   "p50_ms": 0.3187,
+   "gate_fnr_pct": 0.0,
+   "dropped_later_asked_questions": 0,
+   "oracle": false
+  },
+  {
+   "arm": "L1_gold_gate",
+   "top1_pct": 52.3,
+   "docs": 420,
+   "mib": 0.76,
+   "delta_mib": 0.268,
+   "delta_pt": 16.6,
+   "pt_per_mib": 61.92,
+   "p50_ms": 0.2936,
+   "gate_fnr_pct": 0.0,
+   "dropped_later_asked_questions": 0,
+   "oracle": true
+  }
+ ],
+ "storage_economics_test": {
+  "measured_bytes_per_doc_shipped_arm": 1902.1,
+  "per_arm": [
+   {
+    "arm": "c_threshold",
+    "extra_docs": 154,
+    "extra_mib": 0.272,
+    "delta_pt": 13.3,
+    "mib_per_point": 0.0205,
+    "oracle": false
+   },
+   {
+    "arm": "d_two_tier",
+    "extra_docs": 909,
+    "extra_mib": 1.525,
+    "delta_pt": 8.0,
+    "mib_per_point": 0.1906,
+    "oracle": false
+   },
+   {
+    "arm": "b_confidence_downweight_nonzero",
+    "extra_docs": 909,
+    "extra_mib": 1.522,
+    "delta_pt": 13.3,
+    "mib_per_point": 0.1144,
+    "oracle": false
+   },
+   {
+    "arm": "b_confidence_downweight",
+    "extra_docs": 909,
+    "extra_mib": 1.522,
+    "delta_pt": 14.0,
+    "mib_per_point": 0.1087,
+    "oracle": false
+   },
+   {
+    "arm": "a_store_all",
+    "extra_docs": 909,
+    "extra_mib": 1.522,
+    "delta_pt": 14.0,
+    "mib_per_point": 0.1087,
+    "oracle": false
+   },
+   {
+    "arm": "L1_gold_gate",
+    "extra_docs": 149,
+    "extra_mib": 0.268,
+    "delta_pt": 16.6,
+    "mib_per_point": 0.0161,
+    "oracle": true
+   }
+  ],
+  "projection_note": "these vaults hold ~100-1200 rows each, one per persona; the published single-vault figure is 71,433 documents in 148.7 MiB (scratch/refound/scale_results_v3_verify_r3.json), i.e. 2183 bytes/doc, against 1902 bytes/doc measured here -- the same order, so the per-point storage price below is not an artefact of the small vaults."
+ },
+ "recovery_analysis_test": {
+  "questions_the_shipped_gate_made_unanswerable": 100,
+  "of_test_questions_pct": 33.3,
+  "per_arm": {
+   "L0_shipped_gate": {
+    "recovered_of_lost": 0,
+    "lost_n": 100,
+    "recovered_pct": 0.0,
+    "recovered_ci95": [
+     0.0,
+     3.7
+    ],
+    "on_questions_the_gate_did_not_break": 53.5,
+    "kept_n": 200
+   },
+   "a_store_all": {
+    "recovered_of_lost": 51,
+    "lost_n": 100,
+    "recovered_pct": 51.0,
+    "recovered_ci95": [
+     41.3,
+     60.6
+    ],
+    "on_questions_the_gate_did_not_break": 49.0,
+    "kept_n": 200
+   },
+   "b_confidence_downweight": {
+    "recovered_of_lost": 51,
+    "lost_n": 100,
+    "recovered_pct": 51.0,
+    "recovered_ci95": [
+     41.3,
+     60.6
+    ],
+    "on_questions_the_gate_did_not_break": 49.0,
+    "kept_n": 200
+   },
+   "b_confidence_downweight_nonzero": {
+    "recovered_of_lost": 46,
+    "lost_n": 100,
+    "recovered_pct": 46.0,
+    "recovered_ci95": [
+     36.6,
+     55.7
+    ],
+    "on_questions_the_gate_did_not_break": 50.5,
+    "kept_n": 200
+   },
+   "c_threshold": {
+    "recovered_of_lost": 44,
+    "lost_n": 100,
+    "recovered_pct": 44.0,
+    "recovered_ci95": [
+     34.7,
+     53.8
+    ],
+    "on_questions_the_gate_did_not_break": 51.5,
+    "kept_n": 200
+   },
+   "d_two_tier": {
+    "recovered_of_lost": 36,
+    "lost_n": 100,
+    "recovered_pct": 36.0,
+    "recovered_ci95": [
+     27.3,
+     45.8
+    ],
+    "on_questions_the_gate_did_not_break": 47.5,
+    "kept_n": 200
+   },
+   "L1_gold_gate": {
+    "recovered_of_lost": 53,
+    "lost_n": 100,
+    "recovered_pct": 53.0,
+    "recovered_ci95": [
+     43.3,
+     62.5
+    ],
+    "on_questions_the_gate_did_not_break": 52.0,
+    "kept_n": 200
+   }
+  },
+  "reading": "the shipped gate scores 0.0% on these by construction -- it refused to write the answer.  Everything an arm scores here is accuracy the gate was destroying at write time.  The second column shows that the arms are not trading it back on the questions the gate did NOT break."
+ },
+ "threshold_curve_test_descriptive": {
+  "status": "REPORTED AFTER THE FACT.  The frozen selection (threshold 0.05, taken from dev alone) and its single test score are already written above with the pre-registration sha256; this curve is descriptive shape, never a re-selection, and the bar is judged only at the frozen point.",
+  "curve": [
+   {
+    "threshold": 0.95,
+    "top1_pct": 10.0,
+    "ci95": [
+     7.1,
+     13.9
+    ],
+    "docs": 73,
+    "mib": 0.1355,
+    "p50_ms": 0.1389,
+    "p95_ms": 0.1937,
+    "gate_recall_pct": 17.4,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 82.6,
+    "gate_f1": 0.2961,
+    "questions_made_unanswerable": 245,
+    "answerable_pct": 18.3
+   },
+   {
+    "threshold": 0.9,
+    "top1_pct": 16.3,
+    "ci95": [
+     12.6,
+     20.9
+    ],
+    "docs": 126,
+    "mib": 0.2307,
+    "p50_ms": 0.1566,
+    "p95_ms": 0.2252,
+    "gate_recall_pct": 30.0,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 70.0,
+    "gate_f1": 0.4615,
+    "questions_made_unanswerable": 203,
+    "answerable_pct": 32.3
+   },
+   {
+    "threshold": 0.8,
+    "top1_pct": 29.0,
+    "ci95": [
+     24.2,
+     34.4
+    ],
+    "docs": 200,
+    "mib": 0.3641,
+    "p50_ms": 0.1899,
+    "p95_ms": 0.2886,
+    "gate_recall_pct": 47.6,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 52.4,
+    "gate_f1": 0.6452,
+    "questions_made_unanswerable": 149,
+    "answerable_pct": 50.3
+   },
+   {
+    "threshold": 0.7,
+    "top1_pct": 35.0,
+    "ci95": [
+     29.8,
+     40.6
+    ],
+    "docs": 247,
+    "mib": 0.4485,
+    "p50_ms": 0.2069,
+    "p95_ms": 0.3188,
+    "gate_recall_pct": 58.8,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 41.2,
+    "gate_f1": 0.7406,
+    "questions_made_unanswerable": 115,
+    "answerable_pct": 61.7
+   },
+   {
+    "threshold": 0.6,
+    "top1_pct": 35.7,
+    "ci95": [
+     30.5,
+     41.2
+    ],
+    "docs": 271,
+    "mib": 0.4916,
+    "p50_ms": 0.2143,
+    "p95_ms": 0.3286,
+    "gate_recall_pct": 64.5,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 35.5,
+    "gate_f1": 0.7844,
+    "questions_made_unanswerable": 100,
+    "answerable_pct": 66.7
+   },
+   {
+    "threshold": 0.5,
+    "top1_pct": 38.7,
+    "ci95": [
+     33.3,
+     44.3
+    ],
+    "docs": 310,
+    "mib": 0.5618,
+    "p50_ms": 0.2365,
+    "p95_ms": 0.3495,
+    "gate_recall_pct": 73.8,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 26.2,
+    "gate_f1": 0.8493,
+    "questions_made_unanswerable": 74,
+    "answerable_pct": 75.3
+   },
+   {
+    "threshold": 0.4,
+    "top1_pct": 43.7,
+    "ci95": [
+     38.2,
+     49.3
+    ],
+    "docs": 339,
+    "mib": 0.614,
+    "p50_ms": 0.2349,
+    "p95_ms": 0.3721,
+    "gate_recall_pct": 80.7,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 19.3,
+    "gate_f1": 0.8933,
+    "questions_made_unanswerable": 52,
+    "answerable_pct": 82.7
+   },
+   {
+    "threshold": 0.3,
+    "top1_pct": 45.0,
+    "ci95": [
+     39.5,
+     50.7
+    ],
+    "docs": 361,
+    "mib": 0.6534,
+    "p50_ms": 0.2275,
+    "p95_ms": 0.3629,
+    "gate_recall_pct": 86.0,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 14.0,
+    "gate_f1": 0.9245,
+    "questions_made_unanswerable": 38,
+    "answerable_pct": 87.3
+   },
+   {
+    "threshold": 0.2,
+    "top1_pct": 47.3,
+    "ci95": [
+     41.8,
+     53.0
+    ],
+    "docs": 376,
+    "mib": 0.6804,
+    "p50_ms": 0.2161,
+    "p95_ms": 0.3434,
+    "gate_recall_pct": 89.5,
+    "gate_precision_pct": 100.0,
+    "gate_fnr_pct": 10.5,
+    "gate_f1": 0.9447,
+    "questions_made_unanswerable": 26,
+    "answerable_pct": 91.3
+   },
+   {
+    "threshold": 0.1,
+    "top1_pct": 48.7,
+    "ci95": [
+     43.1,
+     54.3
+    ],
+    "docs": 417,
+    "mib": 0.7492,
+    "p50_ms": 0.2323,
+    "p95_ms": 0.3787,
+    "gate_recall_pct": 92.1,
+    "gate_precision_pct": 92.8,
+    "gate_fnr_pct": 7.9,
+    "gate_f1": 0.9247,
+    "questions_made_unanswerable": 20,
+    "answerable_pct": 93.3
+   },
+   {
+    "threshold": 0.05,
+    "top1_pct": 49.0,
+    "ci95": [
+     43.4,
+     54.6
+    ],
+    "docs": 425,
+    "mib": 0.7635,
+    "p50_ms": 0.2228,
+    "p95_ms": 0.367,
+    "gate_recall_pct": 94.0,
+    "gate_precision_pct": 92.9,
+    "gate_fnr_pct": 6.0,
+    "gate_f1": 0.9349,
+    "questions_made_unanswerable": 16,
+    "answerable_pct": 94.7
+   },
+   {
+    "threshold": 0.02,
+    "top1_pct": 48.7,
+    "ci95": [
+     43.1,
+     54.3
+    ],
+    "docs": 460,
+    "mib": 0.822,
+    "p50_ms": 0.2269,
+    "p95_ms": 0.3431,
+    "gate_recall_pct": 95.0,
+    "gate_precision_pct": 86.7,
+    "gate_fnr_pct": 5.0,
+    "gate_f1": 0.9068,
+    "questions_made_unanswerable": 14,
+    "answerable_pct": 95.3
+   },
+   {
+    "threshold": 0.0,
+    "top1_pct": 46.3,
+    "ci95": [
+     40.8,
+     52.0
+    ],
+    "docs": 1128,
+    "mib": 1.9256,
+    "p50_ms": 0.2335,
+    "p95_ms": 0.2833,
+    "gate_recall_pct": 95.0,
+    "gate_precision_pct": 35.4,
+    "gate_fnr_pct": 5.0,
+    "gate_f1": 0.5155,
+    "questions_made_unanswerable": 14,
+    "answerable_pct": 95.3
+   }
+  ]
+ },
+ "all420_reproduction": {
+  "L0_shipped_gate": {
+   "top1_pct": 38.1,
+   "ci95": [
+    33.6,
+    42.8
+   ],
+   "handed_down": 38.1,
+   "deviation_pt": 0.0
+  },
+  "L1_gold_gate": {
+   "top1_pct": 53.3,
+   "ci95": [
+    48.6,
+    58.1
+   ],
+   "handed_down": 53.3,
+   "deviation_pt": 0.0
+  },
+  "a_store_all": {
+   "top1_pct": 51.0,
+   "ci95": [
+    46.2,
+    55.7
+   ],
+   "delta_vs_shipped_pt": 12.9,
+   "delta_ci95_paired": [
+    8.3,
+    17.4
+   ]
+  },
+  "note": "ids are opaque (persona_tNNNN) here and the harness never short-circuits a question whose answer was dropped -- it runs the query and scores what comes back.  Any deviation from the handed-down figure is reported above."
+ },
+ "gate_drop_analysis": {
+  "shipped_gate_all420": {
+   "stored": 380,
+   "dropped": 1272,
+   "recall_pct": 64.6,
+   "precision_pct": 100.0,
+   "fnr_pct": 35.4,
+   "fpr_pct": 0.0,
+   "f1": 0.7851,
+   "dropped_facts": 208,
+   "dropped_and_later_asked_docs": 135,
+   "dropped_and_later_asked_pct_of_dropped": 10.6,
+   "dropped_and_later_asked_questions": 135,
+   "questions_in_scope": 420,
+   "dropped_questions_pct_of_scope": 32.1
+  },
+  "store_all_all420": {
+   "stored": 1652,
+   "dropped": 0,
+   "recall_pct": 100.0,
+   "precision_pct": 35.6,
+   "fnr_pct": 0.0,
+   "fpr_pct": 100.0,
+   "f1": 0.525,
+   "dropped_facts": 0,
+   "dropped_and_later_asked_docs": 0,
+   "dropped_and_later_asked_pct_of_dropped": 0.0,
+   "dropped_and_later_asked_questions": 0,
+   "questions_in_scope": 420,
+   "dropped_questions_pct_of_scope": 0.0
+  },
+  "reading": "dropped_and_later_asked_questions is the count of the 420 questions whose gold answer the gate refused to write.  Those questions are unanswerable for that arm no matter how good retrieval gets."
+ },
+ "latency_note": {
+  "measured_here": "p50 per query, Vault.search on a per-persona vault of 73-1128 rows, query embedding served from the shared cache so this is the retrieval side only",
+  "shipped_p50_at_71k_docs_ms": 1.1494,
+  "shipped_p50_source": "scratch/refound/pca_screen_results.json (exact scan with the PCA-256 Cauchy-Schwarz screen on, 71,433 rows)",
+  "honest_projection": "nanomem's scan is linear, so a 2.8x larger vault costs about 2.8x the scan time at scale.  At these per-persona sizes fixed overhead dominates and the measured p50 moves far less than 2.8x; do not read the sub-linear number here as a claim about 71k rows."
+ },
+ "headline": {
+  "baseline_test_top1_pct": 35.7,
+  "oracle_gate_test_top1_pct": 52.3,
+  "best_shippable_arm": "a_store_all",
+  "best_shippable_test_top1_pct": 49.7,
+  "best_shippable_delta_pt": 14.0,
+  "best_shippable_delta_ci95_paired": [
+   8.3,
+   19.7
+  ],
+  "arms_passing_primary_bar": [
+   "a_store_all",
+   "b_confidence_downweight",
+   "b_confidence_downweight_nonzero",
+   "c_threshold",
+   "d_two_tier"
+  ],
+  "arms_passing_strict_bar": [
+   "a_store_all",
+   "b_confidence_downweight",
+   "b_confidence_downweight_nonzero",
+   "c_threshold"
+  ],
+  "clean_negatives": {
+   "b_confidence_downweight": "the dev argmax of the down-weight is weight=0 (mechanism off); every strictly positive weight scores at or below arm (a) on dev and on test",
+   "d_two_tier": "sharding the corpus by confidence costs accuracy even when both tiers are always searched and merged -- see dev.d_sharding_diagnostic"
+  }
+ },
+ "leak_audit_final": {
+  "L1_gold_gate/test": {
+   "should_store": 1180
+  },
+  "L1_gold_gate/all": {
+   "should_store": 1652
+  }
+ },
+ "leak_audit_totals": {
+  "L1_gold_gate/test": 1180,
+  "L1_gold_gate/all": 1652
+ },
+ "quarantine_witness": {
+  "clean_chat_benchmark_persona4.json": {
+   "size": 169538,
+   "mtime": "2026-09-16T16:42:25",
+   "ctime": "2026-09-16T16:42:25",
+   "atime_NOT_A_READ_WITNESS": "2026-09-16T16:42:25"
+  },
+  "clean_chat_benchmark_heldout.json": {
+   "size": 74418,
+   "mtime": "2026-09-16T06:33:15",
+   "ctime": "2026-09-16T06:33:15",
+   "atime_NOT_A_READ_WITNESS": "2026-09-16T06:33:21"
+  },
+  "clean_chat_embeds_heldout.npz": {
+   "size": 709888,
+   "mtime": "2026-09-16T06:33:54",
+   "ctime": "2026-09-16T06:33:54",
+   "atime_NOT_A_READ_WITNESS": "2026-09-16T06:33:54"
+  },
+  "_note": "size+mtime+ctime is a NON-MODIFICATION witness only. atime is a write witness on this volume and proves nothing about reads -- see probe_atime(). Use enforce() for read compliance."
+ },
+ "quarantine_self_test": {
+  "clean_chat_benchmark_persona4.json": "blocked",
+  "clean_chat_benchmark_heldout.json": "blocked",
+  "clean_chat_embeds_heldout.npz": "blocked",
+  "_control_chat_bench_v2.json": "opens normally"
+ },
+ "quarantine_matches_manifest": {},
+ "requiesced_reconfirmation": {
+  "why": "the first run was taken against a working tree a sibling agent was editing, and the report that quoted it cited 515,676 B for the L0 arm's vault where this file says 515,478 B. Re-run end to end after that work landed and after this session's own arena change, on an otherwise idle box.",
+  "when_iso": "2026-09-17T00:56:53+0530",
+  "loadavg": [
+   1.88,
+   1.93,
+   2.46
+  ],
+  "engine_state": "nanomem at the working tree including the new _VaultBacking._intact() truncation guard; VaultEngine defaults arena_cache_vectors='offsets_ram', arena_cache_records='vault'",
+  "fields_that_changed_at_all": [
+   "p50_ms",
+   "p95_ms"
+  ],
+  "what_did_NOT_change": "every top-1, every doc count, every byte count, every gate statistic, every paired and persona-clustered CI, the frozen selection and the pre-registration hash (b8039d10b1233e44..., re-verified). The ONLY fields that moved in the whole file are p50_ms and p95_ms, and every one of them moved DOWN, which is a quieter box and not a different answer.",
+  "the_515_676_figure": "came from an earlier run of the same code in the same session and was quoted in the prose report; it is not in this file and never was. The reproducible figure is 515,478 B (0.4916 MiB), which an independent re-run by a verifier also obtained, and which this re-run reproduces exactly.",
+  "test_arms_prev_vs_now": {
+   "L0_shipped_gate": {
+    "prev": 35.7,
+    "now": 35.7,
+    "docs_prev": 271,
+    "docs_now": 271,
+    "bytes_prev": 515478,
+    "bytes_now": 515478,
+    "p50_prev": 0.3127,
+    "p50_now": 0.2291
+   },
+   "a_store_all": {
+    "prev": 49.7,
+    "now": 49.7,
+    "docs_prev": 1180,
+    "docs_now": 1180,
+    "bytes_prev": 2111879,
+    "bytes_now": 2111879,
+    "p50_prev": 0.4255,
+    "p50_now": 0.3187
+   },
+   "b_confidence_downweight": {
+    "prev": 49.7,
+    "now": 49.7,
+    "docs_prev": 1180,
+    "docs_now": 1180,
+    "bytes_prev": 2111879,
+    "bytes_now": 2111879,
+    "p50_prev": 0.4255,
+    "p50_now": 0.3187
+   },
+   "b_confidence_downweight_nonzero": {
+    "prev": 49.0,
+    "now": 49.0,
+    "docs_prev": 1180,
+    "docs_now": 1180,
+    "bytes_prev": 2111879,
+    "bytes_now": 2111879,
+    "p50_prev": 0.4255,
+    "p50_now": 0.3187
+   },
+   "c_threshold": {
+    "prev": 49.0,
+    "now": 49.0,
+    "docs_prev": 425,
+    "docs_now": 425,
+    "bytes_prev": 800599,
+    "bytes_now": 800599,
+    "p50_prev": 0.3766,
+    "p50_now": 0.2515
+   },
+   "d_two_tier": {
+    "prev": 43.7,
+    "now": 43.7,
+    "docs_prev": 1180,
+    "docs_now": 1180,
+    "bytes_prev": 2114122,
+    "bytes_now": 2114122,
+    "p50_prev": 0.5479,
+    "p50_now": 0.3789
+   },
+   "L1_gold_gate": {
+    "prev": 52.3,
+    "now": 52.3,
+    "docs_prev": 420,
+    "docs_now": 420,
+    "bytes_prev": 796595,
+    "bytes_now": 796595,
+    "p50_prev": 0.3969,
+    "p50_now": 0.2936
+   }
+  }
+ }
+}

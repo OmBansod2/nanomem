@@ -1,0 +1,15 @@
+{
+ "what": "does an explicit revision marker separate a RESTATEMENT from a NEIGHBOURING attribute?",
+ "revision_probes": {
+  "n": 16,
+  "marker_on_new": 15,
+  "marker_on_old": 0,
+  "tagger_disagrees_about_the_pair": 5
+ },
+ "adjacent_probes": {
+  "n": 40,
+  "marker_on_either": 0
+ },
+ "conclusion": "15/16 restatements announce themselves; 0/40 adjacent-attribute pairs do. That is what makes `marker_overrides_tag` safe.",
+ "engine_version": "3.0.3"
+}

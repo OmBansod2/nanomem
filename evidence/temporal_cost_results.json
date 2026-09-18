@@ -1,0 +1,43 @@
+{
+ "gate": "G4 cost of the as_of branch",
+ "date": "2026-09-17",
+ "bar_preregistered": "as_of=None search p50 must not regress by more than 1.0%; if it does, the branch moves behind a flag",
+ "corpus_rows": 20000,
+ "dim": 768,
+ "queries_per_run": 400,
+ "warmup": 40,
+ "runs_per_arm": 6,
+ "alternated": true,
+ "old_build": "HEAD 9677619 (0.5.0 / engine 3.2.0)",
+ "old_p50_ms": [
+  0.5939374987065094,
+  0.5917079979553819,
+  0.5921869997109752,
+  0.5886460003239335,
+  0.5937705009273486,
+  0.6026045011822134
+ ],
+ "new_p50_ms": [
+  0.6050834999768995,
+  0.595437499214313,
+  0.5925624991505174,
+  0.592708500334993,
+  0.5883329995413078,
+  0.5960210000921506
+ ],
+ "old_median_of_p50": 0.5929787503191619,
+ "new_median_of_p50": 0.594072999774653,
+ "median_delta_pct": 0.1845343454385368,
+ "paired_delta_pct": [
+  1.8766286511062413,
+  0.6302942113032497,
+  0.06340892990313014,
+  0.690143143557223,
+  -0.9157580879394567,
+  -1.0925077853130882
+ ],
+ "mean_paired_delta_pct": 0.20870151043621654,
+ "stdev_paired_delta_pct": 1.1108710412817333,
+ "first_single_run_note": "the FIRST unrepeated pair read +1.88 pct, over the bar. It was not acted on in either direction: the bar was not restated, and the branch was not moved behind a flag on the strength of one sample. Five alternating pairs put the mean paired delta at +0.21 pct with stdev 1.11 pct, inside run-to-run noise on this machine.",
+ "passed": true
+}

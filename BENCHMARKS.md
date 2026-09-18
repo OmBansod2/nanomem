@@ -87,33 +87,14 @@ recall function lives in the driver so no arm can score itself. Every arm is
 built, closed, and **reopened from disk** before timing — which is where nanomem
 is weakest. 71,433 documents, 768-d (`benchmarks/competitors_standard_results.json`):
 
+<!-- GENERATED: headtohead -- rewritten by evidence/refresh_benchmarks.py -->
 | arm | recall@4 | p50 query | disk | reopen | peak RSS |
 |---|---|---|---|---|---|
-| FAISS flat IP | 60.6% | **1.17 ms** | 209 MB | **0.015 s** | **230 MB** |
-| **nanomem exact** | 60.6% | 2.14 ms | **149 MB** | 0.261 s | 325 MB |
-| sqlite-vec brute force | 60.6% | 56.17 ms | 258 MB | 0.001 s | 336 MB |
-| Chroma HNSW (tuned) | 60.6% | 8.45 ms | 514 MB | 0.002 s | 319 MB |
-| Chroma HNSW (default) | 55.0% | 1.36 ms | 488 MB | 0.002 s | 288 MB |
-
-Identical recall across the exact arms, because they are all exact. **FAISS wins
-on speed, RAM and reopen.** nanomem wins on disk, and on everything in the short
-version above that FAISS does not attempt.
-
----
-
-## 3. Where a query's time actually goes
-
-A single end-to-end number would be misleading — three different things own the
-cost (`benchmarks/latency_split_results.json`, 15,000 records, 5,000 entities, 60 distinct
-entities queried once each):
-
-<!-- GENERATED: latency -- rewritten by scratch/refound/refresh_benchmarks.py -->
-```
-store only, query already embedded      2.15 ms   <- the part nanomem owns
-embedding round-trip (local Ollama)     9.13 ms   <- your embedder, not the store
-Vault.search(decompose=False)          16.14 ms
-Vault.search(...)  the DEFAULT         50.37 ms   <- decomposition adds 34.2 ms
-```
+| FAISS flat IP | 60.6% | **1.08 ms** | 209 MB | 0.013 s | **230 MB** |
+| **nanomem exact** | 60.6% | 1.91 ms | **149 MB** | 0.247 s | 296 MB |
+| sqlite-vec brute force | 60.6% | 54.42 ms | 258 MB | **0.001 s** | 266 MB |
+| Chroma HNSW (tuned) | 60.6% | 8.53 ms | 514 MB | 0.002 s | 314 MB |
+| Chroma HNSW (default) | 55.0% | 1.25 ms | 488 MB | 0.002 s | 286 MB |
 <!-- /GENERATED -->
 
 Query decomposition is **on by default** and roughly triples end-to-end latency
@@ -132,11 +113,11 @@ Store-side filtered search, isolated from the embedder using the deterministic
 offline encoder — and pinned by `test_the_entity_prefilter_changes_no_result`,
 which re-runs the same queries down the old path and requires identical ids:
 
-<!-- GENERATED: storeside -- rewritten by scratch/refound/refresh_benchmarks.py -->
+<!-- GENERATED: storeside -- rewritten by evidence/refresh_benchmarks.py -->
 ```
-unfiltered                 0.78 ms       5 record decodes
+unfiltered                 0.79 ms       5 record decodes
 filtered, before 0.7.9    33.70 ms  15,001 record decodes   (the whole corpus)
-filtered, now              2.10 ms       4 record decodes
+filtered, now              2.12 ms       4 record decodes
 ```
 <!-- /GENERATED -->
 
@@ -226,8 +207,8 @@ dependency.
   legitimately matches every owner's rows — 100 of 150 returned rows belonged to
   other tenants in a 3-tenant probe. Pass the filter.
 - **The `router_auto` path is not the default and should not be used at scale**:
-  at 71,433 documents it shows 1,785 MB peak RSS and an 8.56 s reopen, against
-  325 MB and 0.26 s for the exact path.
+  at 71,433 documents it shows 1456 MB peak RSS and a 7.1 s reopen, against
+  296 MB and 0.25 s for the exact path.
 
 ---
 

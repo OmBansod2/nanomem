@@ -1,0 +1,310 @@
+{
+ "what_this_file_is": "The integration record for nanomem 0.5.0. It says what was shipped, what was measured and NOT shipped and against which criterion, and it carries the re-measurements this integration made on the final tree. It is not a study: no bar is registered here and nothing was tuned. The studies it integrates are hybrid_results.json, write_policy_results.json, selection_results.json, sidecar_size_results.json and turn_latency_results.json.",
+ "package": {
+  "version": "0.5.0",
+  "engine_version": "3.2.0",
+  "container_format_version": 3,
+  "arena_cache_format_version": 3,
+  "previous_release": {
+   "version": "0.4.0",
+   "engine_version": "3.1.0"
+  },
+  "pytest": "443 passed, 86 warnings in 12.19s",
+  "tests_at_0_4_0": 408
+ },
+ "machine": {
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "python": "3.12.12",
+  "loadavg_during_engine_runs": [
+   1.81591796875,
+   1.865234375,
+   2.14208984375
+  ],
+  "note": "quiet box: 1-minute load average 1.4-1.9 throughout. Earlier studies cited below were measured under load 4-6.6 and say so."
+ },
+ "shipped": [
+  {
+   "mechanism": "arena sidecar keeps OFFSETS into the vault instead of a second fp32 copy of its vectors and record text",
+   "flags": {
+    "arena_cache_vectors": "offsets_ram (new default)",
+    "arena_cache_records": "vault (new default)",
+    "restore_0_4_0": "arena_cache_vectors='cache', arena_cache_records='cache'"
+   },
+   "registered_criterion": "sidecar_size_results.json: four gates, all of which had to hold at n71433 -- total disk < 258.0 MiB, reopen < 0.0014 s, search p50 <= 1.2643 ms (1.10x of 1.1494), and bitwise-identical scores.",
+   "outcome": "CLEARED, on the bar as written, after a disclosed failure-and-repair: the p50 gate first failed for all six arms INCLUDING the unmodified baseline (a drifting box), was answered with a substituted paired-ratio criterion, and was then re-measured once on a quiet machine under a rule fixed in advance whose failing branch would have reverted the default. Baseline 1.2055 ms, shipped arm 1.2142 ms, only 'offsets' fails (2.0857 ms). The restatement is on the record in sidecar_size_results.json :: preregistration.restatements and the first verdict is kept marked SUPERSEDED.",
+   "cost_that_was_not_in_the_decision_rule": "serving phys_footprint 43.5 -> 270.5 MB, because the fp32 upcast moved from a mapped file to anonymous memory. Stated, not added to the rule after the fact."
+  },
+  {
+   "mechanism": "write gate decision point, full head: 0.60 -> 0.05 (nanomem.classifier.DEPLOYMENT_THRESHOLD_FULL)",
+   "registered_criterion": "write_policy_results.json: paired bootstrap 95% CI on (arm - shipped) with lower bound > 0 AND point estimate >= +5.0 pt on end-to-end top-1, dev-tuned, test scored once. A stricter reading (CI lower bound itself >= +5.0) was registered beside it.",
+   "outcome": "CLEARED under BOTH readings and under a persona-clustered bootstrap. +13.3 pt [+8.7, +18.3]; clustered [+9.7, +16.7].",
+   "what_was_deliberately_not_changed": [
+    "the surface (no-embedder) head still decides at 0.60 -- the study handed a real embedding to every turn, so it measured the full head and only the full head",
+    "the four rule layers, which are a SECOND write-time loss of ~3.4 pt that the threshold cannot reach"
+   ]
+  }
+ ],
+ "measured_and_not_shipped": [
+  {
+   "mechanism": "BM25 + dense fusion (numpy+stdlib inverted index)",
+   "source": "scratch/refound/hybrid_results.json",
+   "it_did_something_no_mechanism_in_this_project_had_done": "beat the exact-cosine ceiling on recall: evidence recall@10 71.2 -> 77.4% (+6.2 [+4.0, +8.6]), Bonferroni-positive over 7 fusion families, because BM25's top-200 holds 3.0 pt of gold the cosine never returns at any depth (union ceiling 95.4% vs dense 92.4%).",
+   "registered_primary_bar": "evidence recall@4, paired-bootstrap CI lower bound > 0 AND delta >= +2.0 pt",
+   "outcome_on_that_bar": "FAILED. Pre-committed arm +2.60 pt, CI [-0.20, +5.20]; no arm survives Bonferroni at @4 (best adjusted lower bound -0.40).",
+   "registered_cost_bars": {
+    "latency": "FAILED: +1.0611 ms added per query against a +1.0 ms limit. Measured at machine load 6.6 and deliberately NOT re-measured on the quiet box, because re-measuring until a bar is crossed is the failure mode this project has a rule against.",
+    "disk": "WITHDRAWN, then FAILED. The 50.39 MiB index is 12.4% of the 406.2 MiB vault it registered 25% against, and 32.9% of the 153.05 MiB vault this release writes. The denominator moved underneath it in the same session."
+   },
+   "the_fact_that_settled_it": "the win is at k=10 and this engine is not read that deep. nanomem_standalone/chat.py retrieves at top_k=1 and top_k=3; server.py defaults to 3 and 5. At the window the pipeline actually consumes, the mechanism's point estimate is +2.6 pt with an interval that includes zero.",
+   "verdict": "NOT integrated, not behind a flag, and it should not be the default. It would be worth ~+6 pt of evidence recall for ~50 MiB and ~1 ms to a caller that genuinely consumes a top-10 (a re-ranker or an LLM context stuffer). What would change the answer: such a caller, a single-query fusion path re-measured against the same +1.0 ms bar, and a disk criterion re-registered against 153.05 MiB. What would not: another fusion sweep.",
+   "also_unmeasured": "never run against the conversational benchmarks nanomem ships for, where 43.3% of questions never name the attribute they ask about."
+  },
+  {
+   "mechanism": "learned attribute selection replacing entities.query_intents (ensemble A7 / attribute-agnostic A8)",
+   "source": "scratch/refound/selection_results.json",
+   "registered_bar": "test overall top-1, paired CI lower bound > 0 AND delta >= +5.0 pt; plus, for the attribute-agnostic arm, leave-one-attribute-out",
+   "outcome_on_that_bar": "CLEARED. A7 +11.0 pt [+6.7, +15.7] overall and +10.7 [+3.8, +18.5] on head-dropped questions; A8 +5.3 [+1.7, +9.3] overall.",
+   "why_it_is_still_not_integrated": [
+    "A7's gain does not survive the study's own declared confound: held out by ATTRIBUTE, its two carrying components collapse to 3.7% and 1.9% selection accuracy and the ensemble falls to 57.0%, below untrained group cosine at 71.0%. It is per-attribute supervision transferring through a shared question-template table.",
+    "A8, which does survive that check, does NOTHING on the head-dropped questions the study exists for (-1.6 [-6.2, +3.1]); its whole gain is on questions that already name their attribute.",
+    "it replaces the hook the temporal layer's 90.5% depends on, and the temporal set was never run under it",
+    "it was measured only on the gold-store rung, never with the real write gate in the loop",
+    "no API exists for handing the engine a selector, and no place exists to keep per-vault fitted parameters"
+   ],
+   "verdict": "NOT integrated. This is a deferral on unmeasured regression risk, not a moved bar: the bar was cleared and is recorded as cleared. The three measurements that would decide it are named above.",
+   "the_durable_finding": "answer-type matching fails at exactly one step, and it is identified: value shape separates the attributes well (24 -> 2.73 candidates; an ORACLE answer type plus a group-cosine tiebreak selects at 87.9% overall / 72.3% head-dropped), but reading the answer type OFF THE QUESTION puts the gold attribute in the predicted tier only 57.0% of the time. That step is what an LLM or cross-encoder is for."
+  },
+  {
+   "mechanism": "write-confidence down-weighting at retrieval time",
+   "source": "scratch/refound/write_policy_results.json",
+   "outcome": "DEAD. Its dev argmax is weight 0 -- the mechanism switched off, which is store-everything relabelled. Every strictly positive weight scores at or below store-everything on dev AND test; the linear penalty is actively destructive (dev 54.2% -> 42.5% at w=0.01).",
+   "verdict": "NOT integrated."
+  },
+  {
+   "mechanism": "two-tier confidence shard (high-confidence vault searched first, long tail on fallback)",
+   "source": "scratch/refound/write_policy_results.json",
+   "outcome": "PASSES its bar (+8.0 [+3.7, +12.3]) and is Pareto-dominated on every axis: lower top-1 than either shipped-or-considered write arm, the largest footprint (2.016 MiB), the highest p50 (0.448 ms).",
+   "verdict": "NOT integrated, and it carries a general warning: splitting one vault into two costs -7.5 pt on dev EVEN WHEN both shards are always searched and merged by raw score, because nanomem's entity boosts (group_hoist, revision_lead, group_cos_delta) are per-vault statistics. A confidence shard is not a free index split, and neither is any other sharding scheme here."
+  },
+  {
+   "mechanism": "arena_cache_vectors='offsets' (no fp32 upcast) and the fp16 sidecar, as the DEFAULT",
+   "source": "scratch/refound/sidecar_size_results.json",
+   "outcome": "'offsets' is the best disk AND memory arm (153.05 MiB, 57.1 MB phys) and FAILS the p50 gate at 2.0857 ms against 1.2643. The fp16 sidecar clears the disk gate by 0.31 MiB -- a 0.12% margin a slightly different corpus would erase -- and costs x2.26 in the SHIPPED screen='off' configuration.",
+   "verdict": "Both remain selectable; neither is the default."
+  }
+ ],
+ "measured_by_this_integration": {
+  "how": "Two scripts written for this integration, run on the final 0.5.0 tree on a quiet box. confirm_engine.py opens the shared benchmark vaults (bench_reopen.py's, rng(0) insertion order, metadata {'idx': row}) and re-derives disk, reopen, p50 and evidence recall itself; confirm_write_gate.py re-runs the write-policy study's own harness with the SHIPPED classifier at its new default. Neither tunes anything and neither registers a bar -- they exist to check that what shipped is what was measured.",
+  "quarantine": "Non-access by construction. confirm_engine.py opens four paths (two vaults, queries.npy, gold.json) and nothing else; confirm_write_gate.py runs inside write_policy.py, whose first import installs quarantine_guard's read barrier over builtins.open / io.open / os.open / numpy.load. No quarantined filename is named in any file this integration wrote. No atime was read.",
+  "engine_n71433": {
+   "corpus": "71,433 HotpotQA paragraphs, 500 questions",
+   "arms": {
+    "shipped_default/screen=pca": {
+     "arm": "shipped_default",
+     "screen": "pca",
+     "vault_mib": 148.6649,
+     "sidecar_mib": 4.3828,
+     "total_mib": 153.0477,
+     "reopen_s": 0.000219,
+     "p50_ms": 1.192,
+     "p95_ms": 1.8695,
+     "evidence_recall_at4_pct": 60.6,
+     "evidence_recall_at10_pct": 71.2,
+     "rows": -1
+    },
+    "arena_cache_off/screen=pca": {
+     "arm": "arena_cache_off",
+     "screen": "pca",
+     "vault_mib": 148.6649,
+     "sidecar_mib": 0.0,
+     "total_mib": 148.6649,
+     "reopen_s": 0.158811,
+     "p50_ms": 1.1761,
+     "p95_ms": 1.8194,
+     "evidence_recall_at4_pct": 60.6,
+     "evidence_recall_at10_pct": 71.2,
+     "rows": -1
+    },
+    "shipped_default/screen=off": {
+     "arm": "shipped_default",
+     "screen": "off",
+     "vault_mib": 148.6649,
+     "sidecar_mib": 4.3828,
+     "total_mib": 153.0477,
+     "reopen_s": 0.000239,
+     "p50_ms": 1.8032,
+     "p95_ms": 2.0425,
+     "evidence_recall_at4_pct": 60.6,
+     "evidence_recall_at10_pct": 71.2,
+     "rows": -1
+    },
+    "arena_cache_off/screen=off": {
+     "arm": "arena_cache_off",
+     "screen": "off",
+     "vault_mib": 148.6649,
+     "sidecar_mib": 0.0,
+     "total_mib": 148.6649,
+     "reopen_s": 0.159902,
+     "p50_ms": 1.866,
+     "p95_ms": 2.1332,
+     "evidence_recall_at4_pct": 60.6,
+     "evidence_recall_at10_pct": 71.2,
+     "rows": -1
+    }
+   },
+   "top10_lists_differing_from_the_exact_scan": {
+    "shipped_default/screen=pca": 0,
+    "arena_cache_off/screen=pca": 0,
+    "shipped_default/screen=off": 0,
+    "arena_cache_off/screen=off": 0
+   },
+   "reading": "Disk 153.05 MiB at the shipped default against 148.66 with no sidecar and 406.15 under 0.4.0's layout; below sqlite-vec's 258.0. Reopen 0.000219-0.000246 s against ~0.160 s with the cache off. Evidence recall@4 60.6% / @10 71.2%, IDENTICAL to the exact scan, 0 of 500 top-10 lists differing in any of the four cells -- the control for a change that moved where vectors are read from."
+  },
+  "engine_n10000": {
+   "corpus": "10,000 HotpotQA paragraphs, 500 questions",
+   "arms": {
+    "shipped_default/screen=pca": {
+     "arm": "shipped_default",
+     "screen": "pca",
+     "vault_mib": 20.9603,
+     "sidecar_mib": 0.6406,
+     "total_mib": 21.6009,
+     "reopen_s": 0.000206,
+     "p50_ms": 0.404,
+     "p95_ms": 0.5248,
+     "evidence_recall_at4_pct": 70.4,
+     "evidence_recall_at10_pct": 84.4,
+     "rows": -1
+    },
+    "arena_cache_off/screen=pca": {
+     "arm": "arena_cache_off",
+     "screen": "pca",
+     "vault_mib": 20.9603,
+     "sidecar_mib": 0.0,
+     "total_mib": 20.9603,
+     "reopen_s": 0.02173,
+     "p50_ms": 0.376,
+     "p95_ms": 0.4081,
+     "evidence_recall_at4_pct": 70.4,
+     "evidence_recall_at10_pct": 84.4,
+     "rows": -1
+    },
+    "shipped_default/screen=off": {
+     "arm": "shipped_default",
+     "screen": "off",
+     "vault_mib": 20.9603,
+     "sidecar_mib": 0.6406,
+     "total_mib": 21.6009,
+     "reopen_s": 0.0002,
+     "p50_ms": 0.3915,
+     "p95_ms": 0.4323,
+     "evidence_recall_at4_pct": 70.4,
+     "evidence_recall_at10_pct": 84.4,
+     "rows": -1
+    },
+    "arena_cache_off/screen=off": {
+     "arm": "arena_cache_off",
+     "screen": "off",
+     "vault_mib": 20.9603,
+     "sidecar_mib": 0.0,
+     "total_mib": 20.9603,
+     "reopen_s": 0.021239,
+     "p50_ms": 0.3861,
+     "p95_ms": 0.421,
+     "evidence_recall_at4_pct": 70.4,
+     "evidence_recall_at10_pct": 84.4,
+     "rows": -1
+    }
+   },
+   "top10_lists_differing_from_the_exact_scan": {
+    "shipped_default/screen=pca": 0,
+    "arena_cache_off/screen=pca": 0,
+    "shipped_default/screen=off": 0,
+    "arena_cache_off/screen=off": 0
+   }
+  },
+  "engine_replicate_note": "n71433 was run twice (the second run is the one recorded here). The two runs read reopen 0.000228/0.000219 s (screen pca) and 0.000246/0.000239 s (off), p50 1.1923/1.1920 ms (pca) and 1.8306/1.8032 ms (off), identical disk and identical recall. Absolutes are single-machine, warm-page-cache, no CI.",
+  "write_gate_end_to_end": {
+   "what_it_checks": "that the shipped classifier at its new default reproduces the pre-registered frozen arm (c) at threshold 0.05 -- not approximately, but decision by decision.",
+   "splits": {
+    "test": {
+     "n_questions": 300,
+     "top1_pct": 49.0,
+     "ci95": [
+      43.4,
+      54.6
+     ],
+     "docs": 425,
+     "bytes": 800599,
+     "p50_ms": 0.2956,
+     "gate_recall_pct": 94.0,
+     "gate_precision_pct": 92.9,
+     "identical_to_frozen_arm_c_at_0_05": {
+      "docs": true,
+      "per_turn_decisions": true,
+      "rank1_hits": true,
+      "top1_pct": true,
+      "bytes": true
+     }
+    },
+    "all420": {
+     "n_questions": 420,
+     "top1_pct": 51.0,
+     "ci95": [
+      46.2,
+      55.7
+     ],
+     "docs": 595,
+     "bytes": 1120754,
+     "p50_ms": 0.2193,
+     "gate_recall_pct": 94.0,
+     "gate_precision_pct": 92.9,
+     "identical_to_frozen_arm_c_at_0_05": {
+      "docs": true,
+      "per_turn_decisions": true,
+      "rank1_hits": true,
+      "top1_pct": true,
+      "bytes": true
+     }
+    }
+   },
+   "reading": "On the 300-question test split the shipped gate now scores 49.0% end-to-end top-1 with 425 documents and 800,599 bytes, gate recall 94.0% / precision 92.9% -- every figure identical to write_policy_results.json's frozen arm, and the per-turn store decisions, document count, vault bytes and rank-1 hits are identical to it as well. Over all 420 questions the gate takes the handed-down L0 deployment number from 38.1% to 51.0%.",
+   "shipped_threshold": 0.05,
+   "trained_threshold_still_reported": 0.6000000238418579,
+   "deployment_constant": 0.05
+  }
+ },
+ "cited_not_re_measured_by_this_integration": {
+  "sidecar_size_results.json": [
+   "p50 gate re-measurement (baseline 1.2055 ms, shipped arm 1.2142 ms, c_offsets 2.0857 ms), phys_footprint 43.5 / 270.5 / 57.1 MB, ru_maxrss, first-query cost, the 36-of-36 exactness digests, and the VaultShrankError guard cost of 0.486 us/call."
+  ],
+  "write_policy_results.json": [
+   "the dev sweep, the paired and persona-clustered CIs, the recovery decomposition, the rule-layer loss (~3.4 pt) and the post-freeze threshold curve."
+  ],
+  "hybrid_results.json": [
+   "every BM25 and fusion number."
+  ],
+  "selection_results.json": [
+   "every selection number."
+  ],
+  "turn_latency_results.json": [
+   "the whole turn decomposition, the personal-vault shape (_resolve_revisions 4.649 ms, screen engaged 0 of 256), the cold embedder 24.7x, and the dead embedding cache."
+  ],
+  "competitors_standard_results.json": [
+   "every competitor figure -- FAISS, sqlite-vec and Chroma were NOT re-run for 0.5.0. Only the nanomem side of each axis was."
+  ]
+ },
+ "known_gaps": [
+  "The p50 gate that chose the sidecar default was first answered with a substituted criterion after failing as written, then repaired by one re-measurement under a rule fixed in advance. A reviewer who holds that any re-measure after a failed bar is disqualifying should read the registered fallback branch: no arm eligible, default reverted. Reaching the same answer does not retro-justify the substitution.",
+  "The write-gate result rests on ONE synthetic 14-persona fixture, and its confirmation is forbidden here: the classifier's own held-out generalisation set is quarantined, so what threshold 0.05 does to its published 90.5% held-out accuracy is unmeasured. Whoever publishes should run train_write_classifier.py --heldout at the new threshold.",
+  "0.05 is a region, not a constant: dev and test are both flat from 0.10 to 0.02.",
+  "The new threshold does not recover everything and lowering it further will not either: gate recall is 94.0% at 0.05, and a spot check taken while writing the docs found durable third-person statements scoring p = 0.006 under the head -- below any usable threshold, dropped identically at 0.60 and 0.05. The residual 6.0% is head capacity, not the decision point, and it is an anecdote plus a rate, not a study.",
+  "The write-gate bytes and p50 are per-persona vaults of 73-1,180 rows (1,902 bytes/doc against 2,183 at 71,433). nanomem's scan is linear, so the sub-linear latency growth measured there must not be read as a claim about 71k rows.",
+  "phys_footprint 43.5 -> 270.5 MB is the new default's real cost and was not in the decision rule that chose it.",
+  "No cold-page-cache number exists anywhere (purge needs root). Every reopen, p50 and footprint figure is warm. The offset layout makes this gap larger, not smaller: it faults from the VAULT rather than from a sidecar.",
+  "The VaultShrankError guard has a window: a truncation landing between the fstat and the page touch still faults. Truncating the .arena file itself under a live engine is untested and is a pre-existing exposure.",
+  "Landmark tables (m > 0) are exercised by a unit test only; no benchmark corpus produces one. residency='int8' and 'float16_mmap' still get no cache; encrypted vaults still get no sidecar and no mapping.",
+  "No confidence interval exists on any latency, disk or RSS figure in this file -- single machine, single insertion order, single embedding model. CIs are reported only on recall and top-1.",
+  "Nothing here measures end-to-end answer quality with an LLM in the loop, encryption on, or multi-tenant filtering at scale."
+ ]
+}

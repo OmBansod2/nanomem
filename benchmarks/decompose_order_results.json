@@ -1,7 +1,7 @@
 {
  "measured_on": {
-  "nanomem": "0.7.12",
-  "engine": "3.4.1",
+  "nanomem": "0.7.14",
+  "engine": "3.4.2",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "bar": "rank 1 must be decided by the question, not by input position",

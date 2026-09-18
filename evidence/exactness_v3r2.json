@@ -1,0 +1,40 @@
+{
+ "corpus": "scratch/hotpotqa_scaled_1k.json + scratch/refound/embeds_val.npz",
+ "docs": 1190,
+ "note": "engine top-4 vs exhaustive fp32 cosine, REAL question strings, re-opened vault",
+ "shipped": {
+  "arm": "shipped gates, engine 3.0.3",
+  "questions": 120,
+  "top4_order_differs": 0,
+  "rank1_differs": 0,
+  "top4_order_differs_pct": 0.0,
+  "rank1_differs_pct": 0.0
+ },
+ "round1_query_gate_only": {
+  "arm": "round-1 query gate, revisability kept",
+  "questions": 120,
+  "top4_order_differs": 0,
+  "rank1_differs": 0,
+  "top4_order_differs_pct": 0.0,
+  "rank1_differs_pct": 0.0
+ },
+ "round1_behaviour_reconstructed": {
+  "arm": "round-1 gates, no revisability rule",
+  "questions": 120,
+  "top4_order_differs": 18,
+  "rank1_differs": 18,
+  "top4_order_differs_pct": 15.0,
+  "rank1_differs_pct": 15.0
+ },
+ "blank_query_text": {
+  "top4_order_differs": 0
+ },
+ "metadata_filter": {
+  "questions": 120,
+  "differs_from_brute_force_filtered_scan": 0,
+  "unfiltered_p50_ms": 0.057,
+  "filter_half_match_p50_ms": 0.094,
+  "filter_no_match_p50_ms": 3.693,
+  "note": "a filter that matches nothing must scan everything to prove it"
+ }
+}

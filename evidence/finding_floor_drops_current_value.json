@@ -1,0 +1,54 @@
+{
+ "finding": "the relevance floor can drop the CURRENT value from a revision group, and search then answers with a superseded one",
+ "date": "2026-09-17",
+ "severity": "major",
+ "introduced_by_this_change": false,
+ "reproduced_on": "HEAD 9677619 (0.5.0 / engine 3.2.0), identical output",
+ "found_by": "building the history/as_of CLI demo on a real nomic-embed-text vault",
+ "repro": {
+  "vault": "5 chat records, 3 tagged `employer`, written 2025-11-03 / 2026-02-14 / 2026-08-01",
+  "question": "where do I work",
+  "cosines": {
+   "I work at Acme Corp.": 0.5926,
+   "I moved jobs, I now work at Initech.": 0.6348,
+   "I switched again, I work at Globex now.": 0.5317
+  },
+  "revisions": {
+   "Acme": 1,
+   "Initech": 2,
+   "Globex": 3
+  },
+  "shipped_answer_top1": "I moved jobs, I now work at Initech.",
+  "shipped_rank_of_the_current_value": 3,
+  "correct_answer": "I switched again, I work at Globex now."
+ },
+ "mechanism": {
+  "where": "engine._apply_group_floor -> entities.group_relevance_floor",
+  "why": "GROUP_COS_DELTA = 0.06. The group's best member is Initech at 0.6348; the CURRENT value, Globex, sits at 0.5317, a gap of 0.1031. The floor removes the newest revision from the group BEFORE apply_revision_lead runs, so the lead goes to the most recent SURVIVING member. The newest value was never a candidate for the lead.",
+  "trigger": "the newest restatement is phrased further from the question than an older one. 'I switched again, I work at Globex now.' carries two narrative clauses before the value; 'I moved jobs, I now work at Initech.' sits closer to 'where do I work'."
+ },
+ "already_known_in_kind": {
+  "note": "_apply_group_floor's own docstring records the mirror-image case for HISTORICAL values ('I live at <a>.' 0.18 below the newest phrasing, measured 0/10 on historical_value/home_address). The same floor fails the same way on CURRENT values, which the docstring does not record.",
+  "existing_knob": "group_floor_sim, default 0.0 (off)",
+  "knob_effect_measured_here": {
+   "0.00": "Initech (wrong)",
+   "0.60": "Globex (right)",
+   "0.70": "Globex (right)",
+   "0.80": "Initech (wrong)"
+  }
+ },
+ "why_the_default_was_not_changed": "The engine's comments state that three separate fixes for the floor were measured and all three cost more on the 3-persona chat set than they gained, so they ship off as knobs. That is a decision made with evidence. Flipping it on the strength of ONE hand-built repro is exactly the move this project's method rules forbid, and it would break gate G1 (search output bitwise unchanged) for this change. It needs its own pre-registered measurement on the 326-question temporal benchmark plus the chat sets.",
+ "benchmark_coverage_gap": "ranking_r5_temporal_layer.json reports 100.0% on `current` questions, yet this is a `current` question the shipped engine gets wrong. The benchmark's current arm appears not to include a case where the NEWEST restatement is phrased further from the question than an older one. Worth adding BEFORE the floor is retuned, or the retune is scored against a set that cannot see the bug.",
+ "what_ships_instead": "history() does not apply this floor and returns the complete chain with Globex correctly marked current. The audit surface gives the right answer on the case the ranker gets wrong, which is the argument for having it.",
+ "resolved": {
+  "fixed_in": "0.6.5 / engine 3.3.2",
+  "how": "the relevance floor may not drop the newest revision of a group whose entity the CALLER declared; a group the lexical tagger inferred keeps the old floor",
+  "spec": "design/floor_current_value_spec.md (pre-registered, 2 amendments)",
+  "evidence": "floor_current_value_results.json",
+  "benchmark_coverage_gap_closed": "this file asked for a case where the NEWEST restatement is phrased further from the question than an older one, BEFORE any retune. Arm A is that case (100 questions, drifting phrasing, declared tags); the shipped engine scored 52.0 on it. Amendment 1 added the two arms that were still missing -- historical_value and previous_value, 156 questions whose answer is explicitly NOT the newest revision, which every earlier floor experiment left unscored.",
+  "rejected_first": {
+   "F1 unconditional exemption": "-19.4 on the 3-persona chat set",
+   "F3 resemblance-gated exemption": "no threshold in 0.40-0.80 helped arm A without costing arm D the same"
+  }
+ }
+}

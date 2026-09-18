@@ -7,7 +7,7 @@ nanomem is an embedded memory engine: one `.dat` file per vault, no daemon,
 ship with it. Neither authenticates; both bind to loopback by default.
 
 Every performance figure in this document names the results JSON in
-`scratch/refound/` it comes from.
+`evidence/` it comes from.
 
 ---
 
@@ -49,7 +49,7 @@ persistent store.
 * **A vault is a plaintext file by default.** Pass a passphrase to turn on the
   optional password mode, and read §6 for exactly what it protects.
 * No Docker, no database server, no cloud account.
-* Resident memory is **8–9 KB per document** (`scratch/refound/rss_v3r4.json`) —
+* Resident memory is **8–9 KB per document** (`evidence/rss_v3r4.json`) —
   fine for a personal or team corpus on ordinary hardware, not a fixed ceiling.
   The "160 KB RAM" figure in earlier revisions of this document was a constant
   printed by `stats()`, not a measurement.
@@ -146,7 +146,7 @@ Thresholds calibrated against the 0.1.x scale must be re-tuned — 0.25 → 0.42
 `nanomem.engine.legacy_score_to_cosine()`.
 
 **Latency.** In-process search is an exact linear scan, so it depends on corpus
-size (`scratch/refound/scale_results_v3r4.json`, re-opened vault, 500 questions):
+size (`evidence/scale_results_v3r4.json`, re-opened vault, 500 questions):
 p50 0.052 ms at 1,190 documents, 0.345 ms at 10,000, 1.762 ms at 71,433. Over
 HTTP, add the embedding call (roughly 9–16 ms to a local `nomic-embed-text`) plus
 HTTP overhead. There is no sub-millisecond end-to-end guarantee.
@@ -232,7 +232,7 @@ model's context.
 Whether a turn is stored is decided by a trained write gate. Out-of-sample, on
 two personas it had never seen (231 turns, 88 storable), it scores **90.5 %
 accuracy / 87.2 F1**, against 76.2 % / 69.6 for the 0.1.x gate
-(`scratch/refound/write_classifier_v2_results.json`). With no embedding daemon
+(`evidence/write_classifier_v2_results.json`). With no embedding daemon
 reachable it falls back to a surface-feature head at 87.0 % / 82.8.
 
 ### `GET /v1/models`
@@ -261,7 +261,7 @@ the server's vault root exactly as the proxy does.
 
 `/load` reports the load time it actually measured rather than asserting a
 budget. For reference, re-opening a vault takes 24.8 ms at 10,000 documents and
-172.1 ms at 71,433 (`scratch/refound/scale_results_v3r4.json`).
+172.1 ms at 71,433 (`evidence/scale_results_v3r4.json`).
 
 The service name in `/health` is "NanoMem Continuous Memory Engine". Earlier
 revisions called it the "4D Latent Continuous Memory Engine"; there is no 4D
@@ -337,7 +337,7 @@ Does not protect against:
   a whole block can be excised cleanly. The default `"raise"` refuses the file.
 * **Size and count disclosure.** The keystream is length-preserving: an encrypted
   vault is byte-for-byte the same size as a plaintext one (measured at 1,190 /
-  5,000 / 40,000 records, `scratch/refound/crypto_overhead_v3r3.json`), and every
+  5,000 / 40,000 records, `evidence/crypto_overhead_v3r3.json`), and every
   block header states its record count, section lengths and write time in the
   clear. The leak is exact, not approximate.
 * **File swapping.** A block tag binds the vault uuid, not the path, so two of
@@ -347,7 +347,7 @@ Does not protect against:
 * **A weak passphrase**, beyond one scrypt guess: 95.67 ms, about 10.5 offline
   guesses per second per core.
 
-Measured cost (`scratch/refound/crypto_overhead_v3r3.json`): +99.67 ms to open at
+Measured cost (`evidence/crypto_overhead_v3r3.json`): +99.67 ms to open at
 1,190 documents, +104.88 ms at 5,000, +165.36 ms at 40,000 — it grows, because
 every block's MAC is verified — against −0.0003 / +0.002 / −0.0043 ms per search,
 which is noise. The scrypt cost is paid once per open, never per query.
@@ -375,11 +375,11 @@ statement; the above is a summary of it.
 
 Measured storage cost per record: 2,209 bytes per document at 1,190 docs, 2,307
 at 10,000, 2,289 at 71,433 — 0.609× the raw text plus fp32 vectors it replaces
-(`scratch/refound/headtohead_v3.json`, `scale_results_v3r4.json`).
+(`evidence/headtohead_v3.json`, `scale_results_v3r4.json`).
 
 Measured rewrite cost: `delete`, `update` and `prune` are full atomic rewrites —
 7.5 ms at 1,000 records, 70.5 ms at 10,000
-(`scratch/refound/rewrite_cost_v3r4.json`), roughly a second at 71k — and they
+(`evidence/rewrite_cost_v3r4.json`), roughly a second at 71k — and they
 hold the exclusive lock throughout, so appenders block. Tombstones are planned
 for 3.1.
 
@@ -410,17 +410,17 @@ implements them.
 
 | Claim | File |
 | :--- | :--- |
-| recall, p50/p95, index size at 10k and 71,433 docs | `scratch/refound/scale_results_v3r4.json` |
-| 0.1.x engine baseline on the same corpora | `scratch/refound/scale_results_current_engine.json` |
-| 1,190 and 4,760 docs vs exhaustive and FAISS; write path; index bytes/doc | `scratch/refound/headtohead_v3.json` |
-| ordering identical to exhaustive fp32; filter exactness | `scratch/refound/exactness_v3r2.json` |
-| resident memory per document | `scratch/refound/rss_v3r4.json` |
-| delete / rewrite cost | `scratch/refound/rewrite_cost_v3r4.json` |
-| password-mode overhead and the exact size leak | `scratch/refound/crypto_overhead_v3r3.json` |
-| router recall gate and in-engine latency | `scratch/refound/router_gate_v3r3.json` |
-| write-gate accuracy, in and out of sample | `scratch/refound/write_classifier_v2_results.json` |
-| chat ranking, before and after | `scratch/refound/clean_chat_results_current_engine.json`, `clean_chat_results_heldout_baseline.json`, `clean_chat_results_v3r4_engine*.json` |
-| multi-hop | `scratch/refound/multihop_texthop_v3r2_1190.json`, `experiment_4d_bridge_results.json` |
+| recall, p50/p95, index size at 10k and 71,433 docs | `evidence/scale_results_v3r4.json` |
+| 0.1.x engine baseline on the same corpora | `evidence/scale_results_current_engine.json` |
+| 1,190 and 4,760 docs vs exhaustive and FAISS; write path; index bytes/doc | `evidence/headtohead_v3.json` |
+| ordering identical to exhaustive fp32; filter exactness | `evidence/exactness_v3r2.json` |
+| resident memory per document | `evidence/rss_v3r4.json` |
+| delete / rewrite cost | `evidence/rewrite_cost_v3r4.json` |
+| password-mode overhead and the exact size leak | `evidence/crypto_overhead_v3r3.json` |
+| router recall gate and in-engine latency | `evidence/router_gate_v3r3.json` |
+| write-gate accuracy, in and out of sample | `evidence/write_classifier_v2_results.json` |
+| chat ranking, before and after | `evidence/clean_chat_results_current_engine.json`, `clean_chat_results_heldout_baseline.json`, `clean_chat_results_v3r4_engine*.json` |
+| multi-hop | `evidence/multihop_texthop_v3r2_1190.json`, `experiment_4d_bridge_results.json` |
 
 ---
 

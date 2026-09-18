@@ -1,0 +1,93 @@
+{
+ "what": "router=\"auto\" on a 2,000-doc vault with n_exhaustive=500",
+ "successive_opens": [
+  {
+   "open": 0,
+   "ino_before": 55844987,
+   "ino_after": 55844989,
+   "rewritten": true,
+   "reclustered_flag": true,
+   "uuid": "2cb4f522585e",
+   "open_ms": 45.2,
+   "count": 2000
+  },
+  {
+   "open": 1,
+   "ino_before": 55844989,
+   "ino_after": 55844989,
+   "rewritten": false,
+   "reclustered_flag": true,
+   "uuid": "2cb4f522585e",
+   "open_ms": 16.6,
+   "count": 2000
+  },
+  {
+   "open": 2,
+   "ino_before": 55844989,
+   "ino_after": 55844989,
+   "rewritten": false,
+   "reclustered_flag": true,
+   "uuid": "2cb4f522585e",
+   "open_ms": 16.9,
+   "count": 2000
+  }
+ ],
+ "concurrent_first_opens": [
+  [
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ]
+  ],
+  [
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ]
+  ],
+  [
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ],
+   [
+    "OK",
+    2000
+   ]
+  ]
+ ],
+ "note": "3.0.2 kept 'already reclustered' in a Python attribute initialised to False: every open rewrote the file (a new inode and a new vault_uuid each time) and 9 of 12 concurrent opens raised ContainerReplacedError out of the constructor. 3.0.3 records it in the file header and tolerates losing the one-time rewrite.",
+ "engine_version": "3.0.3"
+}

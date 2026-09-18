@@ -60,7 +60,7 @@ When something is stored you see a one-line confirmation.
 ### How good is the gate
 
 Measured on two personas the gate had never seen — 231 turns, 88 of which should
-be stored (`scratch/refound/write_classifier_v2_results.json`):
+be stored (`evidence/write_classifier_v2_results.json`):
 
 | | accuracy | F1 |
 | :--- | ---: | ---: |
@@ -89,7 +89,7 @@ facts stored, the expected answer is the top hit:
 | 3 personas the engine was developed against (n=36) | 50.0 % | **91.7 %** |
 | 2 personas held out (n=24) | 33.3 % | **75.0 %** |
 
-`scratch/refound/clean_chat_results_current_engine.json`,
+`evidence/clean_chat_results_current_engine.json`,
 `clean_chat_results_heldout_baseline.json`,
 `clean_chat_results_v3r4_engine.json`,
 `clean_chat_results_v3r4_engine_heldout.json`.
@@ -103,7 +103,7 @@ assistant may occasionally answer with a near-miss fact.
 
 Speed: the search itself is well under a millisecond for a personal vault of a
 few thousand memories (0.052 ms at 1,190 documents,
-`scratch/refound/headtohead_v3.json`). What you actually wait for is your local
+`evidence/headtohead_v3.json`). What you actually wait for is your local
 model generating the reply.
 
 ### Facts that change
@@ -113,7 +113,7 @@ both and marks the newer one as the current revision. Asking "what is my phone
 number" gets the current one; asking about the old one can still reach the
 historical record. On the release's own revision probes the current revision is
 ranked first in 14 of 16 cases, against 3 of 16 for plain similarity
-(`scratch/refound/ranking_dev_r4_shipped.json`).
+(`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)).
 
 Statements about other people are kept separate from statements about you. "His
 number is …" does not overwrite yours.
@@ -153,7 +153,7 @@ The model is never allowed to delete anything on its own; you type `y`.
 
 One thing to know: there are no tombstones in this release, so erasing one
 memory rewrites the whole vault file. That takes about 7.5 ms for 1,000 memories
-and 70 ms for 10,000 (`scratch/refound/rewrite_cost_v3r4.json`) — fast enough
+and 70 ms for 10,000 (`evidence/rewrite_cost_v3r4.json`) — fast enough
 that you will not notice it at personal scale, but it is a rewrite, not a flag.
 
 ---
@@ -255,7 +255,7 @@ What a passphrase does not get you:
 
 * It does not hide how much you have stored. An encrypted vault is byte-for-byte
   the same size as a plaintext one (measured at 1,190 / 5,000 / 40,000 records,
-  `scratch/refound/crypto_overhead_v3r3.json`), and each block states its record
+  `evidence/crypto_overhead_v3r3.json`), and each block states its record
   count and write time in the clear.
 * It does not stop someone who can write to the file from truncating it or
   rolling it back to an older copy. Both open silently.
@@ -271,7 +271,7 @@ measurable per search (`crypto_overhead_v3r3.json`).
 
 An earlier version of this manual said nanomem uses 160 KB of RAM. It does not.
 Measured in a process that only opens a vault
-(`scratch/refound/rss_v3r4.json`): 81.6 MB for 10,000 memories and 612.2 MB for
+(`evidence/rss_v3r4.json`): 81.6 MB for 10,000 memories and 612.2 MB for
 71,433 — about **8–9 KB per memory**. A personal vault of a few thousand
 memories costs tens of megabytes, which is fine on a laptop; a 100,000-document
 corpus is not a laptop-background-process workload.

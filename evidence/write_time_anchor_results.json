@@ -1,0 +1,99 @@
+{
+ "experiment": "write-time anaphora: change marker + value shape + recency",
+ "spec": "design/grouping_signal_spec.md addendum (pre-registered)",
+ "date": "2026-09-17",
+ "bar": {
+  "attach_rate_pct": 70.0,
+  "max_wrong_rate_pct": 10.0,
+  "both_required": true,
+  "rationale": "wrong attachment corrupts a history chain; worse than none"
+ },
+ "n_narrative_restatements": 180,
+ "attached": 75,
+ "attach_rate_pct": 41.7,
+ "correct": 59,
+ "correct_rate_pct": 32.8,
+ "wrong": 16,
+ "wrong_rate_pct": 8.9,
+ "precision_when_attached_pct": 78.7,
+ "unattached_reasons": {
+  "no_marker": 0,
+  "no_shape": 105,
+  "no_referent": 0
+ },
+ "per_attribute": {
+  "coffee_order": {
+   "n": 19,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 19
+  },
+  "gym": {
+   "n": 17,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 17
+  },
+  "badge_id": {
+   "n": 18,
+   "correct": 18,
+   "wrong": 0,
+   "unattached": 0
+  },
+  "home_address": {
+   "n": 21,
+   "correct": 15,
+   "wrong": 6,
+   "unattached": 0
+  },
+  "allergy": {
+   "n": 17,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 17
+  },
+  "employer": {
+   "n": 17,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 17
+  },
+  "vehicle": {
+   "n": 17,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 17
+  },
+  "mobile_phone": {
+   "n": 15,
+   "correct": 12,
+   "wrong": 3,
+   "unattached": 0
+  },
+  "primary_email": {
+   "n": 21,
+   "correct": 14,
+   "wrong": 7,
+   "unattached": 0
+  },
+  "bank": {
+   "n": 18,
+   "correct": 0,
+   "wrong": 0,
+   "unattached": 18
+  }
+ },
+ "confusions": {
+  "home_address -> office_address": 6,
+  "primary_email -> backup_email": 7,
+  "mobile_phone -> work_phone": 3
+ },
+ "baseline": "shipped tagger: 55.0% untagged, 0/100 chains consistent",
+ "run1_defect": {
+  "what": "the generic `proper` shape class was allowed to constitute a match",
+  "effect": "attach 100.0%, correct 6.7%, wrong 93.3% -- it simply took the preceding record",
+  "why_rerun_is_legitimate": "this fixes an implementation defect that made the shape condition vacuous; the pre-registered bar is unchanged and run 1 is reported here rather than discarded"
+ },
+ "passed": false,
+ "scope": "prototype measurement only; no library default changed"
+}

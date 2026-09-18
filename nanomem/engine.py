@@ -13,7 +13,7 @@ What this actually is, stated without decoration:
   hold them as fp16, as a memory-mapped fp16 sidecar, or as int8 with an exact
   fp32 re-rank -- see :mod:`nanomem.arena`), so a search is one dense matmul. Measured on a RE-OPENED vault -- the shape a caller runs --
   with 768-d vectors and top_k=4: 0.344 ms p50 at 10,000 docs and 1.809 ms at
-  71,433 (``scratch/refound/scale_results_v3r3.json``, 500 questions), against a
+  71,433 (``evidence/scale_results_v3r3.json``, 500 questions), against a
   raw numpy matmul floor of 0.272 / 1.464 ms on the same run, and 0.053 ms at
   1,190 docs (``headtohead_v3.json``). Those are one machine on one afternoon and
   they move by ~15% between runs; the shape is what matters -- roughly 1.25x an
@@ -24,8 +24,8 @@ What this actually is, stated without decoration:
 * Above ``n_exhaustive`` (default 50,000) an OPT-IN IVF-style cell router
   (``router="auto"``) narrows the scan to a fraction of the corpus. It ships
   OFF, and the DECISIONS #3 sweep that settled that has now been run
-  (``scratch/refound/sweep_router_gate.py`` ->
-  ``scratch/refound/router_gate_results.json``; 71,433 reclustered paragraphs,
+  (``evidence/sweep_router_gate.py`` ->
+  ``evidence/router_gate_results.json``; 71,433 reclustered paragraphs,
   1,000 questions, 30 budgets, paired bootstrap). The router PASSES the recall
   gate -- 13 of 30 budgets land within 1.0 pt of the exact scan, and the shipped
   budget (``cell_target=25``, ``beam_frac=0.25``) scores 77.05% recall@4 against
@@ -56,7 +56,7 @@ What this actually is, stated without decoration:
   can hold the identical float32 cosine and ``argpartition`` resolved that tie
   differently depending on how many rows it was handed. Before the fix, 9 of
   3,000 differed -- all of them ties, none of them a miss.
-  ``scratch/refound/pca_screen_results.json``. See the ``screen`` argument.
+  ``evidence/pca_screen_results.json``. See the ``screen`` argument.
 * Encryption is opt-in and off by default, exactly like SQLite. With a password:
   scrypt-derived keys, a SHAKE256 keystream and an HMAC-SHA256 tag per block
   (encrypt-then-MAC). See :mod:`nanomem.crypto`; it is not AES and not a NIST
@@ -73,7 +73,7 @@ What this actually is, stated without decoration:
   group's scores instead of adding, so a record could hold another record's
   score -- measured +0.6402 above its own cosine against a published cap of 0.50,
   and other records BELOW their own cosine
-  (``scratch/refound/adjacent_attributes_v3r3.json``).
+  (``evidence/adjacent_attributes_v3r3.json``).
 * Two records are only treated as statements of one fact when the question
   cannot tell them apart AND the tagger has not said they are different
   attributes. 3.0.1 used the cosine window alone, so "who is my dentist?"
@@ -85,7 +85,7 @@ What this actually is, stated without decoration:
 * An ordinary document query gets no boost and no re-ordering at all, and returns
   exactly what an exhaustive cosine scan returns (measured: 0 of 120 questions
   differ on the 1,190-paragraph validation corpus,
-  ``scratch/refound/exactness_v3r2.json``).
+  ``evidence/exactness_v3r2.json``).
 
 v2 files are migrated transparently on open, with the original preserved at
 ``<path>.v2.bak``.
@@ -118,19 +118,19 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: Engine build. 3.0.4 is 3.0.3 plus three MEASURED behaviour changes: the
 #: temporal direction is read off the question's own wording (so a default
 #: `search()` returns a different record for a historically-worded question --
-#: scratch/refound/ranking_r5_temporal_layer.json), the arena is pre-sized from
-#: the container's header row count (scratch/refound/memory_results.json), and
+#: evidence/ranking_r5_temporal_layer.json), the arena is pre-sized from
+#: the container's header row count (evidence/memory_results.json), and
 #: the router gate was re-run and the default confirmed OFF
-#: (scratch/refound/router_gate_results.json). `stats()["engine_version"]` is
+#: (evidence/router_gate_results.json). `stats()["engine_version"]` is
 #: the only way a caller can tell those changes apart from 3.0.3.
 #:
 #: 3.0.5 is 3.0.4 with the RESIDENT ARENA REBUILT (see :mod:`nanomem.arena`).
 #: Nothing about an answer changes -- the score vectors are bitwise identical
 #: and all 500 top-10 lists at both corpus sizes are unchanged
-#: (scratch/refound/ingest_ram_results.json, `exactness`) -- but three things a
+#: (evidence/ingest_ram_results.json, `exactness`) -- but three things a
 #: caller can observe do. Peak ru_maxrss over a 71,433-document build-then-serve
 #: falls from 818.6-819.1 MB to 286.4-286.9 MB, the same harness on the same
-#: machine (scratch/refound/memory_results.json, `arms.n71433.fp32_reserved`,
+#: machine (evidence/memory_results.json, `arms.n71433.fp32_reserved`,
 #: against the committed 3.0.4 checkout); `stats()["arena_bytes"]` is now the
 #: rows that exist rather than up to 1.83x them; and `arena_reservation_bytes`,
 #: `arena_reservation_is_mapped` and `arena_growth_copies` are new keys.
@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.4.1"
+ENGINE_VERSION = "3.4.2"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -283,7 +283,7 @@ def _select_top_k(final, rows, k):
     (``VaultEngine(screen="pca")``) hands it only the survivors. Two documents
     holding the *same* float32 cosine -- 0.075% of rows in the measured corpus
     have an exact duplicate elsewhere in it,
-    ``scratch/refound/pca_screen_results.json :: measurement.duplicate_census``
+    ``evidence/pca_screen_results.json :: measurement.duplicate_census``
     -- could therefore come back in a different ORDER, or a different one of the
     two could come back at all, purely because a performance flag was on. The
     scores were bitwise identical either way, but that is not what "identical
@@ -441,7 +441,7 @@ class VaultEngine:
         HotpotQA paragraphs, 200 questions x 5 paired interleaved cycles, one
         engine with the flag toggled per query so both arms see the identical
         arena and the identical machine weather
-        (``scratch/refound/pca_screen_results.json :: phaseC_latency_full``,
+        (``evidence/pca_screen_results.json :: phaseC_latency_full``,
         re-run against this build):
 
             arm            p50        p95      mean
@@ -557,7 +557,7 @@ class VaultEngine:
         A ``<vault>.arena`` sidecar holds that arena in its resident layout, so
         an open becomes a bind plus an ``mmap``.
 
-        WHAT IT BUYS, MEASURED (``scratch/refound/reopen_results.json ::
+        WHAT IT BUYS, MEASURED (``evidence/reopen_results.json ::
         headline``, regenerated against this build; in-process median of 25
         opens in a warm interpreter, which is the protocol that produced the
         competitors' reopen column, so the comparison is like for like):
@@ -643,7 +643,7 @@ class VaultEngine:
                                    ``residency="float16"``, whose arena already
                                    IS fp16.
 
-        MEASURED, all of it, by ``scratch/refound/bench_sidecar_size.py`` ->
+        MEASURED, all of it, by ``evidence/bench_sidecar_size.py`` ->
         ``sidecar_size_results.json``: 71,433 rows, every arm in its own process
         against a byte-identical copy of the same vault, the sidecar written by
         a THIRD process so its build cannot land on the server's peak RSS, two
@@ -749,7 +749,7 @@ class VaultEngine:
         # measured against the five round-4 ranking sets (40 adjacent-attribute
         # probes, 16 revision probes, the 3-persona selection chat set, the
         # 3-persona round-4 dev chat set, the migrated golden chat vault) and
-        # only kept if it paid. Grid: scratch/refound/ranking_dev_r4_u*.json.
+        # only kept if it paid. Grid: `ranking_dev_r4_u*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
         #
         #   marker_skips_sim   let an explicit revision marker bypass
         #                      `window_sim`      -> 3-persona chat 33 -> 32.
@@ -776,7 +776,7 @@ class VaultEngine:
         #                      (59/65 with and without) while costing 5 of 36 on
         #                      the 3-persona chat set (35 -> 30). The floor is
         #                      doing real work on real chat; see
-        #                      scratch/refound/ranking_dev_r5_floorskip.json vs
+        #                      `ranking_dev_r5_floorskip.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) vs
         #                      ranking_dev_r5_stage4.json.
         #   group_floor_sim    let a tagged group member survive the relevance
         #                      floor by RESEMBLING the group's best member
@@ -791,7 +791,7 @@ class VaultEngine:
         #                      it is a no-op on every set. There is no value that
         #                      pays on both, and the chat set is the realistic
         #                      one, so it ships OFF (0.0) and the ablation stays
-        #                      reproducible: scratch/refound/ranking_dev_r5_gfs*.json.
+        #                      reproducible: `ranking_dev_r5_gfs*.json.` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)
         self.marker_skips_sim = bool(marker_skips_sim)
         self.floor_skips_single_valued = bool(floor_skips_single_valued)
         self.group_floor_sim = float(group_floor_sim)
@@ -813,7 +813,7 @@ class VaultEngine:
         # fp16 values that are on disk and accumulate in fp32, so "float16" and
         # "float16_mmap" return bit-identical scores and only cost time, while
         # "int8" is approximate below its re-rank pool. Every mode's RSS, p50 and
-        # recall at 10,000 and 71,433 documents: scratch/refound/memory_results.json.
+        # recall at 10,000 and 71,433 documents: evidence/memory_results.json.
         if str(residency).lower() not in _arena.RESIDENCY_MODES:
             raise ValueError(f"residency must be one of {_arena.RESIDENCY_MODES!r}, "
                              f"got {residency!r}")
@@ -833,7 +833,7 @@ class VaultEngine:
         self.arena_cache = str(arena_cache).lower()
         # WHAT THE SIDECAR DUPLICATES, which is the axis `arena_cache` never
         # covered. See nanomem.arena.ARENA_VECTOR_SOURCES / ARENA_RECORD_SOURCES
-        # and scratch/refound/sidecar_size_results.json for the measurement that
+        # and evidence/sidecar_size_results.json for the measurement that
         # picked these defaults.
         self.arena_cache_vectors = str(arena_cache_vectors or "cache").lower()
         if self.arena_cache_vectors not in _arena.ARENA_VECTOR_SOURCES:
@@ -961,7 +961,7 @@ class VaultEngine:
         reserved arena underneath (see :mod:`nanomem.arena`) the unhinted path
         already measures 298.4 MB and this hint takes it to 289.5 -- 3%, inside
         the 7% the same arm moves between runs
-        (scratch/refound/ingest_ram_results.json, ``summary`` and ``replicate``).
+        (evidence/ingest_ram_results.json, ``summary`` and ``replicate``).
         The one thing it still buys outright is the allocation count: the arena
         is sized once, ``stats()["arena_growth_copies"]`` stays 0, and no
         reservation is ever larger than the rows.
@@ -1455,7 +1455,7 @@ class VaultEngine:
                         # 2, where it won rank 1 for "what is my phone number?" on
                         # the lower cosine. `inherit_entity` takes ownership from
                         # the follow-up when it states one.
-                        # Measured: scratch/refound/third_party_v3r4.json.
+                        # Measured: evidence/third_party_v3r4.json.
                         ent = _ent.inherit_entity(self._last_entity[uid], text)
                         if ent:
                             meta["anaphora_resolved"] = True  # metadata only; vector untouched
@@ -1662,7 +1662,7 @@ class VaultEngine:
         THE RE-CLUSTER IS NOT THE EXPENSIVE PART. The k-means fit below is, and
         it is paid on every open, not once per file, because the container header
         has nowhere to store centroids. Measured at 71,433 documents
-        (``scratch/refound/router_gate_results.json``, quiet machine): opening a
+        (``evidence/router_gate_results.json``, quiet machine): opening a
         ``router="off"`` vault takes 0.193 s; the same vault with
         ``router="auto"`` at the shipped budget takes 13.982 s, and at the
         cheapest gate-passing budget (``cell_target=12``) 25.796 s, because a
@@ -1679,7 +1679,7 @@ class VaultEngine:
         and changed the inode: three successive opens produced three inodes, and
         4 concurrent ``router="auto"`` opens of one existing vault failed 9 times
         out of 12 with ``ContainerReplacedError`` raised from inside the
-        constructor (measured: scratch/refound/router_persist_v3r4.json).
+        constructor (measured: evidence/router_persist_v3r4.json).
         """
         if self.router_mode != "auto" or self.read_only or self._engaging:
             return
@@ -1698,7 +1698,7 @@ class VaultEngine:
                     # VECTORS, not blocks, so it still works on an un-reclustered
                     # layout -- 77.10 recall@4 on the RANDOM layout against 77.05
                     # on the reclustered one, same budget, same 71k corpus:
-                    # scratch/refound/router_gate_results.json,
+                    # evidence/router_gate_results.json,
                     # phase_A_random_layout_control -- which is why this degrades
                     # instead of raising out of a constructor, as 3.0.2 did for 9
                     # of 12 concurrent opens.)
@@ -2043,7 +2043,7 @@ class VaultEngine:
         CURRENT value for a question that explicitly asked for an earlier one.
         Measured on the 326-question temporal benchmark: 9.0% top-1 on historical
         questions, against 22.0% for a plain cosine scan with no temporal logic
-        at all (``scratch/refound/temporal_bench_results.json``). Inference
+        at all (``evidence/temporal_bench_results.json``). Inference
         happens behind the same gates as the rest of the layer, so a document
         corpus is still ranked on pure cosine however a question is worded.
 
@@ -2260,15 +2260,15 @@ class VaultEngine:
           current 100.0% (was 91.0), historical 75.0% (was 9.0), previous 98.2%
           (was 1.8), adjacent 90.0% (was 57.5), third-party 96.7% (was 66.7).
           A plain exhaustive cosine scan over the same vectors scores 47.9%.
-          ``scratch/refound/ranking_r5_temporal_layer.json``
+          ``evidence/ranking_r5_temporal_layer.json``
         * 3-persona SELECTION chat set, n=36 -- 97.2% (top-3 100.0%), from 91.7%.
-          End-to-end 97.2%. ``scratch/refound/clean_chat_results_r5_3p.json``
+          End-to-end 97.2%. ``evidence/clean_chat_results_r5_3p.json``
         * round-4 DEV chat set, 3 new personas, n=24 -- 95.8% (top-3 100.0%),
-          unchanged. ``scratch/refound/ranking_dev_r5_final.json``
+          unchanged. ``ranking_dev_r5_final.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)`
         * 40 generic adjacent-attribute probes 40/40 (exactly plain cosine);
           16 generic revision probes 14/16 current (plain cosine 3/16) and
           16/16 historical; migrated golden chat vault 12/12 -- all unchanged
-          from round 4. ``scratch/refound/ranking_dev_r5_final.json``
+          from round 4. ``ranking_dev_r5_final.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)`
 
         WHAT IS STILL WRONG. On the temporal benchmark the layer is 36/40 on
         adjacent attributes where a plain cosine scan is 40/40, so it is still
@@ -2309,7 +2309,7 @@ class VaultEngine:
             # here, and `_is_revisable` per record), which is what keeps a
             # document corpus exact however a question is worded; measured 0/120
             # top-4 differences either way on the 1,190-paragraph validation
-            # corpus (scratch/refound/exactness_v3r2.json).
+            # corpus (evidence/exactness_v3r2.json).
             return final
         if self.gate_on_corpus_only and not personal and not explicit:
             return final
@@ -2326,7 +2326,7 @@ class VaultEngine:
         # question explicitly excludes. That is why the layer scored BELOW a plain
         # cosine scan overall (44.2% vs 47.9%) and less than half of it on
         # historical questions (9.0% vs 22.0%) on the temporal benchmark
-        # (scratch/refound/temporal_bench_results.json -> arms.nanomem_default).
+        # (evidence/temporal_bench_results.json -> arms.nanomem_default).
         #
         # `hist_mode` is per query for the same reason: "my ORIGINAL number" and
         # "the one just BEFORE this one" are both past, but they name different
@@ -2398,7 +2398,7 @@ class VaultEngine:
         # with revision 1 was ranked "older" than a record tagged `phone_number`
         # with revision 2 that was written a second EARLIER, and asking for the
         # first of something promoted the wrong one
-        # (scratch/refound/ranking_dev_r5_*.json; the case that exposed it is a
+        # (`ranking_dev_r5_*.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings); the case that exposed it is a
         # dev-persona chat log whose group members carried two different tags).
         # When the revisions are not comparable the timestamp is the only order
         # there is, so the revision key is dropped rather than trusted.
@@ -2520,7 +2520,7 @@ class VaultEngine:
 
         ``group_floor_sim`` remains a knob and remains 0.0. It is a different
         question -- it tests EVERY member, not the one the revision counter
-        already calls current. ``scratch/refound/floor_retune_results.json``,
+        already calls current. ``evidence/floor_retune_results.json``,
         ``floor_chatcheck_results.json``.
         """
         group = np.asarray(group, dtype=np.int64)
@@ -2626,7 +2626,7 @@ class VaultEngine:
         already accepted for the relevance floor in :meth:`_apply_group_floor`.
 
         Measured before this exemption, with the entity pinned and only the
-        QUESTION's wording differing (`scratch/refound/usecases_findings.json`):
+        QUESTION's wording differing (`evidence/usecases_findings.json`):
         third-person `as_of` accuracy was 54.5% on config drift, 53.3% on policy
         versions and 64.0% on 1,000-entity fleet state, against 100.0% for the
         same probes with the word "current" in them. An application with an
@@ -2755,7 +2755,7 @@ class VaultEngine:
           email" were all declared restatements of one another and the later,
           unrelated record was promoted: 30/40 generic adjacent-attribute probes
           against 40/40 for a plain cosine scan
-          (``scratch/refound/adjacent_attributes_v3r3.json``).
+          (``evidence/adjacent_attributes_v3r3.json``).
         * ``window_sim`` requires them to look like each other (measured: without
           it, an unrelated but later record displaced a correctly tagged answer on
           the golden chat vault).
@@ -2808,7 +2808,7 @@ class VaultEngine:
                 # superseded address won. Measured: the 16 generic revision
                 # probes score 14 with this rule and 13 without, and the
                 # adjacent probes, both chat sets and the golden vault are
-                # unchanged (scratch/refound/ranking_dev_r4_shipped.json vs
+                # unchanged (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings) vs
                 # ranking_dev_B_no_tagsim.json).
                 k = k | self._tag_matches_leader(ent, order)
             order, marked = order[k], marked[k]
@@ -2820,7 +2820,7 @@ class VaultEngine:
         ``entities.has_revision_marker`` over at most ``window_max`` record
         decodes. Measured on the generic probes: 15 of 16 real revisions carry a
         marker on the newer statement and 0 of 40 adjacent-attribute pairs carry
-        one at all (``scratch/refound/marker_separation_v3r4.json``), which is
+        one at all (``evidence/marker_separation_v3r4.json``), which is
         what makes it safe to let a marker override the tag check below.
         """
         out = np.zeros(int(np.asarray(order).size), dtype=bool)
@@ -2858,11 +2858,11 @@ class VaultEngine:
         4 of the 5 remaining failures on the 16 generic revision probes. The
         exemption is safe because the two families separate almost perfectly on
         this signal -- 15 of 16 revisions carry a marker, 0 of 40
-        adjacent-attribute pairs do (``scratch/refound/marker_separation_v3r4.json``)
+        adjacent-attribute pairs do (``evidence/marker_separation_v3r4.json``)
         -- and the rule is measured both ways: with it the 16 generic revision
         probes score 14, without it 13, and the adjacent probes, the 3-persona
         chat set, the round-4 dev chat set and the golden vault are all unchanged
-        (``scratch/refound/ranking_dev_r4_shipped.json`` vs
+        (``ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings)` vs
         ``ranking_dev_A_no_marker_tag.json``).
         """
         names = self.arena.entity_names
@@ -3068,7 +3068,28 @@ class VaultEngine:
             # text and timestamp for the caller to judge, and nothing is hidden.
             # The cosine WINDOW below keeps its bound either way, because
             # similarity is the only evidence an untagged candidate has.
-            group = self._tagged_group(ent, mask, top_entity, rows, cos,
+            # ...AND `min_score` MUST NOT DELETE MEMBERS OF THE CHAIN EITHER.
+            # `mask` is `cosine >= min_score`, default 0.0, so a revision worded
+            # unlike the question -- which is the ordinary case for an old value,
+            # and the whole reason this method exists -- was dropped before the
+            # group was formed. Measured on this chain with the offline encoder,
+            # "Moved down to the annexe at Larkfield." scores -0.0298 against
+            # "where is my desk" and vanished, leaving a 2-entry history of a
+            # 3-entry chain. It is the same failure as the intent bug above and
+            # it survived that fix.
+            #
+            # `min_score` still decides WHETHER there is a fact here and which
+            # one: `top_entity` is resolved from the masked scores, untouched.
+            # What it no longer does is delete records the tagger has already
+            # said are statements of that same fact. The cosine WINDOW keeps the
+            # original mask, because similarity is the only evidence an untagged
+            # candidate has.
+            group_mask = mask
+            if top_entity:
+                tagged_ids = _ent.matching_ids(top_entity, self.arena.entity_names)
+                if tagged_ids.size:
+                    group_mask = mask | np.isin(ent, tagged_ids)
+            group = self._tagged_group(ent, group_mask, top_entity, rows, cos,
                                        apply_floor=False)
             group = self._widen_group(group, cos, mask, rows, ent)
             if group.size == 0:
@@ -3243,7 +3264,7 @@ class VaultEngine:
         ``p_superseded`` IS None UNLESS ``assume_memoryless=True``. That is not
         caution for its own sake -- it is the pre-registered consequence of a
         gate this model did not clear
-        (``scratch/refound/staleness_calibration.json``,
+        (``evidence/staleness_calibration.json``,
         ``design/staleness_spec.md``). Measured, held-out last interval:
 
         ============================  =====  =====  ==================
@@ -3287,7 +3308,7 @@ class VaultEngine:
         The per-fact rate is shrunk toward the pooled rate of every fact sharing
         the same ``entity`` name, with weight ``shrink`` (1.0 = one pseudo-
         observation of the pool). Calibration is measured, not asserted:
-        ``scratch/refound/staleness_calibration.json``.
+        ``evidence/staleness_calibration.json``.
         """
         rows = self.volatility(min_revisions=min_revisions, now=now)
         if not rows:
@@ -3553,10 +3574,10 @@ class VaultEngine:
                     "read stats once: 1.10x at 71,433 docs (288.9 MB of RSS "
                     "growth against 262.0 MB reported) and 1.38x at 10,000 "
                     "(50.7 MB against 36.8 MB) -- "
-                    "scratch/refound/stats_rss_gap_v3r5.json. Both sides of that "
+                    "evidence/stats_rss_gap_v3r5.json. Both sides of that "
                     "gap moved when Arena.reserve became the default: the older "
                     "figure (1.52x, 612.3 MB against 401.6 MB, "
-                    "scratch/refound/rss_v3r4.json) was measured on an arena "
+                    "evidence/rss_v3r4.json) was measured on an arena "
                     "that grew by doubling. Use 'process_rss_kb' for the process "
                     "figure. A CACHED OPEN (`arena_source == 'cache'`) holds "
                     "almost none of this in the heap at all: the vectors, the "

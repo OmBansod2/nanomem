@@ -12,8 +12,8 @@ A small **trained linear (logistic) head** over
 plus four small, documented rule layers (empty input, explicit "forget that",
 explicit "remember this", and a short self-declarative fact).  Nothing else.  The
 weights live in ``assets/write_classifier.npz`` and are produced by
-``scratch/refound/train_write_classifier.py``, which also writes
-``scratch/refound/write_classifier_v2_results.json`` with the provenance and every
+``evidence/train_write_classifier.py``, which also writes
+``evidence/write_classifier_v2_results.json`` with the provenance and every
 number quoted below.
 
 Measured (write_classifier_v2_results.json, 2026-09-16)
@@ -40,7 +40,7 @@ recall** over a 14-persona, 1,652-turn conversational benchmark: it admitted
 zero of the 1,064 noise turns and refused 208 of the 588 real facts, which made
 **135 of 420 questions (32.1%) unanswerable before retrieval ever ran.**
 
-``scratch/refound/write_policy_results.json`` measured the sweep under a
+``evidence/write_policy_results.json`` measured the sweep under a
 pre-registered, hash-verified protocol: every point chosen on a 120-question dev
 split, the frozen choice scored once on a disjoint 300-question test split.
 Moving only this constant, with the rule layers untouched:
@@ -131,7 +131,7 @@ __all__ = [
 #: here a dropped fact is unrecoverable and a kept noise turn costs ~1.9 kB.
 #: Measured end to end, +13.3 pt of top-1 [CI +8.7, +18.3] against the trained
 #: 0.60 -- see this module's docstring and
-#: ``scratch/refound/write_policy_results.json``.  The asset's own threshold is
+#: ``evidence/write_policy_results.json``.  The asset's own threshold is
 #: still loaded and reported (``model_info["threshold_trained_full"]``); pass
 #: ``WriteClassifier(threshold=...)`` to override either one.
 DEPLOYMENT_THRESHOLD_FULL = 0.05
@@ -367,7 +367,7 @@ def extract_surface_features(text: str) -> np.ndarray:
 # ---------------------------------------------------------------------------
 # Compiled surface-only fallback head.
 #
-# Emitted by scratch/refound/train_write_classifier.py --emit-fallback so the
+# Emitted by evidence/train_write_classifier.py --emit-fallback so the
 # gate keeps its measured behaviour even if assets/write_classifier.npz is not
 # installed.  Raw feature space (standardisation already folded in).
 # ---------------------------------------------------------------------------

@@ -100,7 +100,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.13 · engine 3.4.1 · container format 3 · arena cache format 3.
+Package 0.7.14 · engine 3.4.2 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +131,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-598 tests, no network needed.
+602 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -231,13 +231,13 @@ No model and no query: differenced timestamps off two resident columns, off the
 search path. `staleness()` will turn that into a probability, but it returns
 `None` unless you pass `assume_memoryless=True` — the per-fact rate only beat a
 single corpus-wide rate on data generated to match its own assumption, so it is
-not on by default (`scratch/refound/staleness_calibration.json`).
+not on by default (`evidence/staleness_calibration.json`).
 
 **What bounds this.** Two records are only treated as one fact when nanomem can
 tell they are the same attribute, and that needs either a vocabulary or the
 query — five vocabulary-free signals were measured and all are at chance against
 sibling attributes like home-vs-office address
-(`scratch/refound/grouping_signal_results.json`). With canonical phrasing the
+(`evidence/grouping_signal_results.json`). With canonical phrasing the
 tagger groups 70 of 100 chains; with narrative phrasing ("ported the line over
 the weekend, reach me on …") it groups 0 of 100. **If your application knows its
 own attributes, declare them** — pass `metadata={"entity": "employer"}` on write
@@ -258,7 +258,7 @@ further from the question than an older one. Exempting the newest member of an
 inferred group was measured and rejected — it costs **-19.4 points** on the
 3-persona chat set, and a sweep from 0.40 to 0.80 found no threshold that bought
 the one without paying the other
-(`scratch/refound/floor_current_value_results.json`). So this is a deliberate
+(`evidence/floor_current_value_results.json`). So this is a deliberate
 trade, not an oversight.
 
 **0.7.12 said here that `history` is authoritative and should be believed over
@@ -334,7 +334,7 @@ python3 -m nanomem.cli rekey --vault company.dat --new-password-stdin
 
 Search is an **exact linear scan**. It returns what an exhaustive fp32 cosine
 scan returns — 0 of 120 top-4 order differences on a 1,190-document corpus
-(`scratch/refound/exactness_v3r2.json`) — and its latency therefore grows with
+(`evidence/exactness_v3r2.json`) — and its latency therefore grows with
 the corpus.
 
 | Corpus | p50 | recall@4 | same as exhaustive numpy? | same as FAISS flat? | index | RSS per doc |
@@ -343,17 +343,17 @@ the corpus.
 | 10,000 | 0.345 ms | 70.4 % | yes | yes | 22.0 MB | 8.4 KB |
 | 71,433 | 1.762 ms | 60.6 % | yes | yes | 155.9 MB | 8.8 KB |
 
-`scratch/refound/scale_results_v3r4.json`, `headtohead_v3.json`,
+`evidence/scale_results_v3r4.json`, `headtohead_v3.json`,
 `rss_v3r4.json`. Measured on Apple M4 Pro / Python 3.12, `nomic-embed-text`
 768-d, random insertion order, 500 held-out questions, ingest → close → re-open
-→ search. (Every `scratch/refound/…` path in these documents is relative to the
+→ search. (Every `evidence/…` path in these documents is relative to the
 repository root, not to this folder; the JSONs and the scripts that wrote them
 live there.)
 
 The "same as exhaustive" columns are recall. Ordering is identical too at 1,190
 documents (0 of 120 top-4 order differences); at 10,000 and 71,433 a few
 tie-breaks differ — 2 of 500 and 5 of 500 questions, largest cosine gap 2.2e-05 —
-because the on-disk vectors are fp16 (`scratch/refound/verify_round3_v3r3.json`).
+because the on-disk vectors are fp16 (`evidence/verify_round3_v3r3.json`).
 
 The **scores** are exact in the same sense and not a bit further: two float32
 matmuls of different shapes reduce in different orders, so the score attached to
@@ -362,7 +362,7 @@ a hit can differ in its last bit or two between one BLAS and another — measure
 answer does not move with it. Over 4,000 documents at 128 and 768 dimensions the
 worst |fp32 − fp64| error is 2.01e-07 while the smallest gap between rank 4 and
 rank 5 is 4.46e-06 — twenty times larger — and 0 of 150 queries were undecided
-at k = 1, 4 or 10 (`scratch/refound/screen_exactness_results.json`). So "returns
+at k = 1, 4 or 10 (`evidence/screen_exactness_results.json`). So "returns
 what an exhaustive scan returns" is a claim about which documents come back and
 in what order — except among documents the ranking genuinely cannot separate,
 where the corpus contains no tie-break to be faithful to. It is not a claim
@@ -374,10 +374,10 @@ by `stats()`, not measurements, and they are gone.
 
 Writes are flat as the vault grows: 19.81 µs mean over the first 500 of 4,000
 adds, 19.32 µs over the last 500, excluding embedding
-(`scratch/refound/headtohead_v3.json`).
+(`evidence/headtohead_v3.json`).
 
 Deleting one record is a **full atomic rewrite** — 7.5 ms at 1,000 records, 70.5
-ms at 10,000 (`scratch/refound/rewrite_cost_v3r4.json`). There are no tombstones
+ms at 10,000 (`evidence/rewrite_cost_v3r4.json`). There are no tombstones
 in 3.0.
 
 ---

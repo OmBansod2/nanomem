@@ -1,0 +1,1184 @@
+{
+ "preregistration": {
+  "what": "Ship the PCA-256 + Cauchy-Schwarz upper-bound screen as an OPT-IN, DEFAULT-OFF, exactness-preserving performance flag on nanomem's search path. This block was written BEFORE any measurement of the shipped implementation. No implementation existed at the time it was written.",
+  "written_utc": "2026-09-16T16:47:08.215668+00:00",
+  "git_commit_at_preregistration": "e617ba3",
+  "git_branch": "nanomem-v3-refound",
+  "owner_files": [
+   "nanomem_standalone/nanomem/screen.py",
+   "nanomem_standalone/nanomem/engine.py (search path only, behind a flag defaulting to OFF)",
+   "nanomem_standalone/tests/test_screen.py",
+   "scratch/refound/bench_screen.py",
+   "scratch/refound/pca_screen_results.json"
+  ],
+  "not_owned_not_touched": [
+   "nanomem_standalone/nanomem/arena.py",
+   "nanomem_standalone/nanomem/container.py",
+   "the vault open path (another agent owns it)"
+  ],
+  "what_this_is_NOT": {
+   "statement": "This is NOT a re-litigation of exotic_routing_results.json and it makes NO claim that the mechanism cleared a RECALL bar. It did not and it cannot: an exactness-preserving screen has a recall delta of identically 0, so the 'CI lower bound > 0' rule that exotic_routing_results.json pre-registered is unreachable BY CONSTRUCTION, not merely unmet. That file already recorded this correctly (amendment_2026_09_16_verifier: ZERO WINS UNDER THE RULE AS WRITTEN).",
+   "lesson_4_compliance": "The pre-registration below states the criterion an EXACTNESS-PRESERVING mechanism must meet, written before the mechanism was implemented or measured, precisely because the earlier rule's metric could not express this mechanism's benefit. Saying so is the point of writing it here first."
+  },
+  "prior_measurement_being_built_on": {
+   "source": "scratch/refound/exotic_routing_results.json",
+   "arena_level_p50_speedup_at_71433": 1.5286192642602543,
+   "bound_violations": 0,
+   "document_checks": 14286600,
+   "queries_with_a_different_top4_SCORE_vector": 0,
+   "caveat_carried_forward_verbatim": "The 1.4700 ms 'exact' arm in phaseC_latency is the ARENA-LEVEL fp32 matvec A @ q at 71,433 x 768, not the engine-level p50. Any end-to-end claim has to be re-measured inside VaultEngine. This study re-measures it end to end.",
+   "why_it_is_not_sufficient": "It is an arena-level microbenchmark of a research script, not the shipped engine, and it took no position on the engine's ranking layer, on appends, or on where a basis is stored."
+  },
+  "the_criterion_BINDING": {
+   "note": "An exactness-preserving mechanism is judged on EXACTNESS and COST, never on recall. All three conditions must hold. Any one failing means the flag is reported as NOT meeting its bar, with the measured value printed.",
+   "C1_exactness": {
+    "statement": "On EVERY query of the measurement set, the flag-ON result must agree with the flag-OFF full exact scan on (a) the returned id list at every k tested, and (b) the reported float32 scores, BITWISE.",
+    "operationalised": [
+     "identical_id_lists: 100.0% of queries, k in {1, 4, 10}",
+     "bitwise_identical_scores: 100.0% of queries (np.array_equal on the float32 score vectors of the returned hits, i.e. 0 ULP, not 'close')",
+     "bound_admissibility_audit: 0 documents anywhere in the run with true_cosine > upper_bound, counted over ALL (query, document) pairs of a dedicated audit, not sampled"
+    ],
+    "why_bitwise_is_reachable": "survivors are exact-scored through the arena's own scan kernel, and a gathered-subset fp32 matvec was verified bitwise equal to the full matvec on this machine before this block was written (probe, numpy 2.5.3, 71,433 x 768, gathered subsets of 300 and 20,000 rows, max abs diff 0.0). If a residency mode turns out NOT to be bitwise reproducible, the measured value is reported and that mode is excluded from the flag, not excused."
+   },
+   "C2_speed": {
+    "statement": "Measured END-TO-END p50 speedup >= 1.25x at 71,433 documents, through VaultEngine.search (not an arena microbenchmark), on a quiet machine, over >= 5 PAIRED interleaved cycles.",
+    "operationalised": [
+     "n_docs = 71433",
+     "arms interleaved query by query within each cycle so both arms pay the same machine weather",
+     "cycles >= 5, each cycle a full pass over the query set",
+     "quiet: 1-minute load average recorded at start and end; reported, not assumed",
+     "statistic: p50 of per-query wall time over all cycles x all queries, flag-OFF p50 / flag-ON p50",
+     "also reported: p95, mean, the per-cycle speedups, and a paired bootstrap CI of the p50 ratio"
+    ]
+   },
+   "C3_no_regression_below_10k": {
+    "statement": "Turning the flag ON must not make search SLOWER at small corpora. Measured at n = 1,000 and n = 10,000 with the same paired protocol: p50(flag ON) <= 1.03 x p50(flag OFF).",
+    "note": "The implementation is expected to satisfy this with an engagement floor (the screen does not engage below a row count), so the flag is inert there. The floor's DEFAULT VALUE is not pre-registered as a constant: it is chosen from the measured size sweep and reported. What is pre-registered is that C3 must hold at the shipped default."
+   }
+  },
+  "additional_requirements_binding": {
+   "R1_basis_location": "The report must say where the basis lives and what that costs.",
+   "R2_appends": "Appends must not silently invalidate correctness, and the report must PROVE they cannot rather than measure that they did not.",
+   "R3_documented_flag": "The flag's semantics, its measured speedup and its measured memory cost are in the docstring a user reads.",
+   "R4_automatic_fallback": "A missing / unbuildable / stale basis must fall back to the full exact scan automatically, with no user action and no wrong answer.",
+   "R5_adversarial_test": "The test suite must contain a test that FAILS if the bound is wrong -- i.e. one that would catch an inadmissible bound, not merely one that passes when everything is fine."
+  },
+  "leakage_audit_lesson_1": {
+   "applies": "This study injects no oracle, no ground truth and no ablation label. Its metric is agreement between two code paths over the SAME queries and the SAME corpus; there is no held-out label to leak.",
+   "mechanical_audit_shipped_anyway": "bench_screen.py counts, per arm, the number of queries whose flag-ON result was compared against anything other than the flag-OFF result computed in the same process from the same vault, and RAISES if that count is non-zero. It also RAISES if the two arms were not given bitwise-identical query vectors."
+  },
+  "quarantine_declaration_lesson_2_and_3": {
+   "never_opened_by_construction": [
+    "scratch/refound/clean_chat_benchmark_persona4.json",
+    "scratch/refound/clean_chat_benchmark_heldout.json"
+   ],
+   "how_that_is_proven": "By CONSTRUCTION, not by atime: the string 'persona4' and the string 'heldout' appear nowhere in nanomem/screen.py, the engine changes, tests/test_screen.py or scratch/refound/bench_screen.py, and none of those files opens any chat corpus at all. Every vector in this study is either a seeded numpy array or the HotpotQA paragraph embedding matrix scratch/refound/hotpot_train_8k_embeds.npz. atime is NOT cited: measured on this filesystem, reads do not bump atime, so atime is not evidence of non-access.",
+   "honest_exception_lesson_3": "Running nanomem's own pytest suite DOES open scratch/refound/clean_chat_benchmark_heldout.json -- tests/test_entities.py reads the chat fixtures to derive its forbidden-proper-noun set. This study runs pytest. That read is therefore real, it is the pre-existing fixture-contamination guard doing its job, it reads the file's VOCABULARY and not its labels, and no number in this file comes from it. persona4 is not read by pytest or by anything here."
+  },
+  "env": {
+   "python": "3.12.12",
+   "numpy": "2.5.3",
+   "platform": "macOS-26.5-arm64-arm-64bit",
+   "cpu": "Apple M4 Pro",
+   "runtime_deps": "numpy only. screen.py imports numpy and nothing else. No scipy, no faiss, no chromadb, no sqlite-vec anywhere under nanomem/."
+  },
+  "status": "PRE-REGISTERED. No measurement of the shipped mechanism has been taken at the time this block was written. screen.py does not exist yet."
+ },
+ "amendment_1_deterministic_ties": {
+  "status": "AMENDMENT. The pre-registered criterion in `preregistration` is UNCHANGED and was not weakened. What changed is the CODE, after the first measurement missed one clause of it.",
+  "what_the_first_measurement_found": "C1 required 'identical top-k'. The first run measured 2991 of 3000 searches identical: 9 returned a different ORDERED id list, 1 of those 9 a different id SET. Every one of the 9 carried a BITWISE IDENTICAL score sequence and none was a real miss -- two documents held the same float32 cosine, so the exhaustive top-k was not unique and np.argpartition chose among the tied rows differently depending on how long the array it was handed was. The screen hands it a shorter array. (The first run's own verdict block said '2990 of 3000' by adding the 1 set difference to the 9 order differences; the set difference is one OF the 9, and the raw per-k counters in phaseA are what both this and before_deterministic_ties report.) That measurement is preserved under before_deterministic_ties and verdict.C1_exactness_BEFORE_the_fix.",
+  "what_was_changed": "engine._select_top_k: the top-k selection now breaks ties on the ROW ID (ascending) instead of on the array position argpartition happened to leave the element in. The answer becomes a function of the SET of rows scored and nothing else. The screen's survivor set provably contains every row tied at the cut -- a tied row has bound >= cosine = tau, so PCAScreen.survivors admits it -- so both paths see the same tied rows and choose the same one.",
+  "this_was_a_fix_made_AFTER_seeing_the_miss_and_is_labelled_as_one": "Stated plainly because it matters: the deterministic tie-break was written in response to a failed clause, not before it. What was NOT done is redefine the clause as 'identical up to ties' and declare it passed. The bar stayed where it was pre-registered and the code was moved to meet it.",
+  "how_it_was_measured": "Two full bench runs, BEFORE and AFTER, back to back on the same machine, against two package snapshots that are byte-identical except for engine.py's selection block (arena.py, container.py and screen.py have the same sha256 in both). Both are recorded below with their own sha256 set.",
+  "before_after_sha256": {
+   "before_engine_py": "f94b93b39462b7a6578fcf2934e29b436fde5f8c56cb17a03f6dceddc149ff4e",
+   "after_engine_py": "ade184c175e4889fe13e1e80ebb7fdf8189509a387e4dc8f5380df9c9229efe4",
+   "arena_py_identical_in_both": true,
+   "container_py_identical_in_both": true,
+   "screen_py_identical_in_both": true
+  },
+  "note_on_comparability_with_the_FIRST_run": "arena.py changed in the working tree between the first run (sha 2115eee8...) and this pair (sha 382edb34...) -- another agent owns that file and is refactoring it. Absolute milliseconds therefore are NOT comparable across those runs. The BEFORE/AFTER pair here shares one arena.py snapshot, so the pair is comparable with itself.",
+  "cost_of_determinism_paired_in_process": {
+   "exhaustive_arm_71433": {
+    "n": 71433,
+    "top_k": 4,
+    "paired_samples": 400,
+    "positional_p50_us": 306.062,
+    "deterministic_p50_us": 322.521,
+    "delta_us": 16.459
+   },
+   "screen_arm_289_survivors": {
+    "n": 289,
+    "top_k": 4,
+    "paired_samples": 400,
+    "positional_p50_us": 2.416,
+    "deterministic_p50_us": 3.625,
+    "delta_us": 1.209
+   }
+  },
+  "cost_read_in_context": "+16.1 us on the exhaustive arm, which is 0.8% of that arm's 1.96 ms p50, and +1.2 us on the screen arm, 0.1% of its 1.15 ms. The default path (flag OFF) is the one that pays the 16 us. It buys a result that no longer depends on np.argpartition's unspecified order among equal elements, which is also a reproducibility property across numpy versions."
+ },
+ "measurement": {
+  "machine_at_start": {
+   "cpu": "Apple M4 Pro",
+   "os": "macOS-26.5-arm64-arm-64bit",
+   "python": "3.12.12",
+   "numpy": "2.5.3",
+   "loadavg": [
+    1.26220703125,
+    1.85009765625,
+    2.02685546875
+   ],
+   "git_commit": "e617ba3",
+   "utc": "2026-09-16T18:13:39.187240+00:00"
+  },
+  "corpus": "hotpot_train_8k_embeds.npz",
+  "n_docs": 71433,
+  "queries": 1000,
+  "screen_dims": 256,
+  "engagement_floor_used_in_phases_A_to_C": 20000,
+  "shipped_engagement_floor_default": 20000,
+  "tmpdir": "/var/folders/sx/8wxmn_5x5tv6mr486zsxvh_h0000gn/T/nanomem-screen-cd4smbcm",
+  "package_path": "<repo>/nanomem_standalone",
+  "package_sha256": {
+   "engine.py": "f2e49fc554b04b51b82c1ed6c17c631a622d0bfc44a0c4d249c0b00f1a93e268",
+   "arena.py": "1be8c7adc0cab440ed20bd2b032538d06e28f52f51ad05d33c11af337f8d6e47",
+   "container.py": "b8b24ba5fa525978498487469249235ee78c63c01ba6b9fcfcede4a4922c8b51",
+   "screen.py": "fbb7641b29ae37d5f94eba09cb5d2fca56b458c22ede8230f04994af055d323d"
+  },
+  "package_provenance": "working tree",
+  "quick": false,
+  "ingest_seconds": 0.9703183330002503,
+  "vault_bytes": 118589909,
+  "duplicate_census": {
+   "sampled_rows": 4000,
+   "rows_with_an_exact_duplicate": 3,
+   "pct": 0.075
+  },
+  "machine_at_end": {
+   "cpu": "Apple M4 Pro",
+   "os": "macOS-26.5-arm64-arm-64bit",
+   "python": "3.12.12",
+   "numpy": "2.5.3",
+   "loadavg": [
+    1.31396484375,
+    1.81298828125,
+    2.0068359375
+   ],
+   "git_commit": "e617ba3",
+   "utc": "2026-09-16T18:14:05.508765+00:00"
+  }
+ },
+ "phaseA_exactness_engine": {
+  "rows": [
+   {
+    "queries_with_a_different_id_SET": 0,
+    "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+    "queries_with_a_REAL_MISS": 0,
+    "top_k": 1,
+    "n_queries": 1000,
+    "screen_engaged_queries": 1000,
+    "screen_fell_back_queries": 0,
+    "queries_with_a_different_id_list": 0,
+    "queries_with_a_non_bitwise_identical_score_list": 0,
+    "pct_exact": 100.0
+   },
+   {
+    "queries_with_a_different_id_SET": 0,
+    "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+    "queries_with_a_REAL_MISS": 0,
+    "top_k": 4,
+    "n_queries": 1000,
+    "screen_engaged_queries": 2000,
+    "screen_fell_back_queries": 0,
+    "queries_with_a_different_id_list": 0,
+    "queries_with_a_non_bitwise_identical_score_list": 0,
+    "pct_exact": 100.0
+   },
+   {
+    "queries_with_a_different_id_SET": 0,
+    "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+    "queries_with_a_REAL_MISS": 0,
+    "top_k": 10,
+    "n_queries": 1000,
+    "screen_engaged_queries": 3000,
+    "screen_fell_back_queries": 0,
+    "queries_with_a_different_id_list": 0,
+    "queries_with_a_non_bitwise_identical_score_list": 0,
+    "pct_exact": 100.0
+   }
+  ],
+  "screen": {
+   "built": true,
+   "mode": "pca",
+   "d_out": 256,
+   "orthonormality_defect": 4.1632028006824075e-08,
+   "rows": 71433,
+   "fit_rows": 71433,
+   "fit_seconds": 0.1284231669997098,
+   "captured_energy": 0.9334893039021194,
+   "resident_bytes": 75029576,
+   "used_bytes": 75029576,
+   "bytes_per_row": 1032,
+   "seed_pool": 128
+  },
+  "screen_info": {
+   "mode": "pca",
+   "min_rows": 20000,
+   "max_frac": 0.35,
+   "built": true,
+   "calls": 3000,
+   "engaged": 3000,
+   "fell_back": 0,
+   "mean_survivors": 296.74033333333335,
+   "gather_pad": 16,
+   "gather_bitwise_exact": true,
+   "d_out": 256,
+   "orthonormality_defect": 4.1632028006824075e-08,
+   "rows": 71433,
+   "fit_rows": 71433,
+   "fit_seconds": 0.1284231669997098,
+   "captured_energy": 0.9334893039021194,
+   "resident_bytes": 75029576,
+   "used_bytes": 75029576,
+   "bytes_per_row": 1032,
+   "seed_pool": 128
+  },
+  "leakage_audit": {
+   "queries_compared": 3000,
+   "query_vector_not_bitwise_identical": 0,
+   "compared_against_a_foreign_reference": 0,
+   "arms_on_different_vault_files": 0,
+   "leakage_total": 0,
+   "verdict": "CLEAN"
+  }
+ },
+ "phaseB_bound_admissibility": {
+  "n_docs": 71433,
+  "n_queries": 1000,
+  "document_checks": 71433000,
+  "bound_violations": 0,
+  "worst_true_minus_bound": -0.011272132396697998,
+  "verdict": "ADMISSIBLE",
+  "seconds": 1.5385095840001668
+ },
+ "phaseC_latency_full": {
+  "n_docs": 71433,
+  "n_queries": 200,
+  "cycles": 5,
+  "top_k": 4,
+  "samples_per_arm": 1000,
+  "screen_built": {
+   "built": true,
+   "mode": "pca",
+   "d_out": 256,
+   "orthonormality_defect": 4.1632028006824075e-08,
+   "rows": 71433,
+   "fit_rows": 71433,
+   "fit_seconds": 0.1325216250002086,
+   "captured_energy": 0.9334893039021194,
+   "resident_bytes": 75029576,
+   "used_bytes": 75029576,
+   "bytes_per_row": 1032,
+   "seed_pool": 128
+  },
+  "off_p50_ms": 1.9495409999308322,
+  "on_p50_ms": 1.1349794999659935,
+  "off_p95_ms": 2.08976424987668,
+  "on_p95_ms": 1.731751750071453,
+  "off_mean_ms": 1.9327590780130777,
+  "on_mean_ms": 1.182943816005718,
+  "p50_speedup": 1.7176882930389887,
+  "p95_speedup": 1.206734308072999,
+  "p50_speedup_ci95": [
+   1.6948689959810272,
+   1.7359305951561625
+  ],
+  "per_cycle": [
+   {
+    "cycle": 0,
+    "on_p50_ms": 1.151916499793515,
+    "off_p50_ms": 1.9727915002931695,
+    "speedup": 1.7126167570711934
+   },
+   {
+    "cycle": 1,
+    "on_p50_ms": 1.1290630002349644,
+    "off_p50_ms": 1.9457704997876135,
+    "speedup": 1.7233498036714405
+   },
+   {
+    "cycle": 2,
+    "on_p50_ms": 1.1306879998755903,
+    "off_p50_ms": 1.945583499946224,
+    "speedup": 1.7207076577803042
+   },
+   {
+    "cycle": 3,
+    "on_p50_ms": 1.1242085001867963,
+    "off_p50_ms": 1.9457294999938313,
+    "speedup": 1.7307550153468263
+   },
+   {
+    "cycle": 4,
+    "on_p50_ms": 1.1386454998500994,
+    "off_p50_ms": 1.9463125001948356,
+    "speedup": 1.7093226122186966
+   }
+  ],
+  "screen_info": {
+   "mode": "pca",
+   "min_rows": 20000,
+   "max_frac": 0.35,
+   "built": true,
+   "calls": 1016,
+   "engaged": 1016,
+   "fell_back": 0,
+   "mean_survivors": 290.126968503937,
+   "gather_pad": 16,
+   "gather_bitwise_exact": true,
+   "d_out": 256,
+   "orthonormality_defect": 4.1632028006824075e-08,
+   "rows": 71433,
+   "fit_rows": 71433,
+   "fit_seconds": 0.1325216250002086,
+   "captured_energy": 0.9334893039021194,
+   "resident_bytes": 75029576,
+   "used_bytes": 75029576,
+   "bytes_per_row": 1032,
+   "seed_pool": 128
+  },
+  "loadavg": [
+   1.27685546875,
+   1.82421875,
+   2.013671875
+  ]
+ },
+ "phaseD_size_sweep": [
+  {
+   "n_docs": 1000,
+   "forced_on_p50_ms": 0.1036869998642942,
+   "forced_off_p50_ms": 0.04956249995302642,
+   "forced_p50_speedup": 0.47800109963538284,
+   "forced_engaged": 511,
+   "forced_mean_survivors": 80.67906066536203,
+   "shipped_default_on_p50_ms": 0.0471875000584987,
+   "shipped_default_off_p50_ms": 0.04716600005849614,
+   "shipped_default_p50_ratio_on_over_off": 1.000455836831105,
+   "shipped_default_engaged": 0,
+   "exactness_when_forced": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 200,
+     "screen_engaged_queries": 199,
+     "screen_fell_back_queries": 1,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    }
+   ]
+  },
+  {
+   "n_docs": 5000,
+   "forced_on_p50_ms": 0.17643750015849946,
+   "forced_off_p50_ms": 0.1621664998765482,
+   "forced_p50_speedup": 0.9191158326935533,
+   "forced_engaged": 516,
+   "forced_mean_survivors": 188.12209302325581,
+   "shipped_default_on_p50_ms": 0.139312499868538,
+   "shipped_default_off_p50_ms": 0.13929149986324774,
+   "shipped_default_p50_ratio_on_over_off": 1.0001507630064352,
+   "shipped_default_engaged": 0,
+   "exactness_when_forced": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 200,
+     "screen_engaged_queries": 200,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    }
+   ]
+  },
+  {
+   "n_docs": 10000,
+   "forced_on_p50_ms": 0.2935830000296846,
+   "forced_off_p50_ms": 0.28679199976977543,
+   "forced_p50_speedup": 0.9768685507702335,
+   "forced_engaged": 516,
+   "forced_mean_survivors": 242.74418604651163,
+   "shipped_default_on_p50_ms": 0.24947950009845954,
+   "shipped_default_off_p50_ms": 0.25074950008274755,
+   "shipped_default_p50_ratio_on_over_off": 0.9949351843817479,
+   "shipped_default_engaged": 0,
+   "exactness_when_forced": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 200,
+     "screen_engaged_queries": 200,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    }
+   ]
+  },
+  {
+   "n_docs": 20000,
+   "forced_on_p50_ms": 0.42743750009321957,
+   "forced_off_p50_ms": 0.5854999999428401,
+   "forced_p50_speedup": 1.3697909046706214,
+   "forced_engaged": 516,
+   "forced_mean_survivors": 303.15503875968994,
+   "shipped_default_on_p50_ms": 0.42472900008760917,
+   "shipped_default_off_p50_ms": 0.5892499998481071,
+   "shipped_default_p50_ratio_on_over_off": 0.7207959273603614,
+   "shipped_default_engaged": 516,
+   "exactness_when_forced": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 200,
+     "screen_engaged_queries": 200,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    }
+   ]
+  },
+  {
+   "n_docs": 40000,
+   "forced_on_p50_ms": 0.7156459998896025,
+   "forced_off_p50_ms": 1.0506045000511222,
+   "forced_p50_speedup": 1.4680505448408727,
+   "forced_engaged": 516,
+   "forced_mean_survivors": 348.77713178294573,
+   "shipped_default_on_p50_ms": 0.7136454998999398,
+   "shipped_default_off_p50_ms": 1.0509999999612774,
+   "shipped_default_p50_ratio_on_over_off": 0.6790156992637802,
+   "shipped_default_engaged": 516,
+   "exactness_when_forced": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 200,
+     "screen_engaged_queries": 200,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    }
+   ]
+  }
+ ],
+ "phaseE_stale_basis_appends": {
+  "rows_basis_was_fitted_from": 6000,
+  "rows_after_append": 30000,
+  "basis_refitted_on_append": false,
+  "rows_appended_after_the_fit": 24000,
+  "n_queries": 200,
+  "queries_with_a_different_id_list": 0,
+  "queries_with_a_non_bitwise_identical_score_list": 0,
+  "bound_violations_on_rows_appended_after_the_fit": 0,
+  "document_checks_on_appended_rows": 2400000,
+  "screen_info": {
+   "mode": "pca",
+   "min_rows": 100,
+   "max_frac": 0.35,
+   "built": true,
+   "calls": 200,
+   "engaged": 200,
+   "fell_back": 0,
+   "mean_survivors": 701.27,
+   "gather_pad": 16,
+   "gather_bitwise_exact": true,
+   "d_out": 256,
+   "orthonormality_defect": 4.144918059822165e-08,
+   "rows": 30000,
+   "fit_rows": 6000,
+   "fit_seconds": 0.041862250000122,
+   "captured_energy": 0.9399814955620407,
+   "resident_bytes": 37017920,
+   "used_bytes": 32270720,
+   "bytes_per_row": 1032,
+   "seed_pool": 128
+  }
+ },
+ "phaseF_fallback": {
+  "below_floor": {
+   "built": false,
+   "engaged": 0
+  },
+  "int8_residency": {
+   "built": false,
+   "engaged": 0
+  },
+  "metadata_filter": {
+   "engaged": 0
+  },
+  "explicit_historical": {
+   "engaged": 0
+  },
+  "personal_corpus": {
+   "engaged": 0,
+   "has_personal_records": true
+  },
+  "broken_basis": {
+   "raised": false,
+   "result_identical_to_exact_scan": true
+  }
+ },
+ "phaseG_build_cost": {
+  "repeats": 3,
+  "rows": [
+   {
+    "build_seconds": 0.19522166700016896,
+    "fit_seconds": 0.13287020799998572,
+    "encode_seconds": 0.06235145900018324,
+    "screen_used_bytes": 75029576,
+    "screen_resident_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "rows": 71433,
+    "arena_resident_mb": 209.276,
+    "screen_mb": 71.55377960205078,
+    "screen_over_arena_pct": 34.19110629123778,
+    "arena_stats_keys": {
+     "resident_arena_mb": 0.0,
+     "resident_arena_used_mb": 209.276,
+     "resident_arena_mapped_mb": 209.276
+    },
+    "captured_energy": 0.9334893039021194,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "first_search_seconds_screen_off": 0.009643582999615319,
+    "peak_rss_mb_before": 2038.40625,
+    "peak_rss_mb_after_open": 2131.8125,
+    "peak_rss_mb_after_build": 2410.296875
+   },
+   {
+    "build_seconds": 0.1912331250000534,
+    "fit_seconds": 0.1312150419998943,
+    "encode_seconds": 0.060018083000159095,
+    "screen_used_bytes": 75029576,
+    "screen_resident_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "rows": 71433,
+    "arena_resident_mb": 209.276,
+    "screen_mb": 71.55377960205078,
+    "screen_over_arena_pct": 34.19110629123778,
+    "arena_stats_keys": {
+     "resident_arena_mb": 0.0,
+     "resident_arena_used_mb": 209.276,
+     "resident_arena_mapped_mb": 209.276
+    },
+    "captured_energy": 0.9334893039021194,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "first_search_seconds_screen_off": 0.011166249999860156,
+    "peak_rss_mb_before": 2410.359375,
+    "peak_rss_mb_after_open": 2620.984375,
+    "peak_rss_mb_after_build": 2621.03125
+   },
+   {
+    "build_seconds": 0.19434599999976854,
+    "fit_seconds": 0.13137279099964871,
+    "encode_seconds": 0.06297320900011982,
+    "screen_used_bytes": 75029576,
+    "screen_resident_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "rows": 71433,
+    "arena_resident_mb": 209.276,
+    "screen_mb": 71.55377960205078,
+    "screen_over_arena_pct": 34.19110629123778,
+    "arena_stats_keys": {
+     "resident_arena_mb": 0.0,
+     "resident_arena_used_mb": 209.276,
+     "resident_arena_mapped_mb": 209.276
+    },
+    "captured_energy": 0.9334893039021194,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "first_search_seconds_screen_off": 0.011015708000286395,
+    "peak_rss_mb_before": 2621.03125,
+    "peak_rss_mb_after_open": 2831.765625,
+    "peak_rss_mb_after_build": 3089.125
+   }
+  ],
+  "fastest": {
+   "build_seconds": 0.1912331250000534,
+   "fit_seconds": 0.1312150419998943,
+   "encode_seconds": 0.060018083000159095,
+   "screen_used_bytes": 75029576,
+   "screen_resident_bytes": 75029576,
+   "bytes_per_row": 1032,
+   "rows": 71433,
+   "arena_resident_mb": 209.276,
+   "screen_mb": 71.55377960205078,
+   "screen_over_arena_pct": 34.19110629123778,
+   "arena_stats_keys": {
+    "resident_arena_mb": 0.0,
+    "resident_arena_used_mb": 209.276,
+    "resident_arena_mapped_mb": 209.276
+   },
+   "captured_energy": 0.9334893039021194,
+   "orthonormality_defect": 4.1632028006824075e-08,
+   "first_search_seconds_screen_off": 0.011166249999860156,
+   "peak_rss_mb_before": 2410.359375,
+   "peak_rss_mb_after_open": 2620.984375,
+   "peak_rss_mb_after_build": 2621.03125
+  },
+  "median_build_seconds": 0.19434599999976854
+ },
+ "before_deterministic_ties": {
+  "what_this_is": "The identical bench, same corpus, same queries, same cycles, run minutes earlier against an engine.py whose only difference is the positional top-k selection. Kept so the amendment above can be checked rather than believed.",
+  "measurement": {
+   "machine_at_start": {
+    "cpu": "Apple M4 Pro",
+    "os": "macOS-26.5-arm64-arm-64bit",
+    "python": "3.12.12",
+    "numpy": "2.5.3",
+    "loadavg": [
+     5.2783203125,
+     7.5029296875,
+     4.85009765625
+    ],
+    "git_commit": "e617ba3",
+    "utc": "2026-09-16T17:25:34.603830+00:00"
+   },
+   "corpus": "hotpot_train_8k_embeds.npz",
+   "n_docs": 71433,
+   "queries": 1000,
+   "screen_dims": 256,
+   "engagement_floor_used_in_phases_A_to_C": 20000,
+   "shipped_engagement_floor_default": 20000,
+   "tmpdir": "/var/folders/sx/8wxmn_5x5tv6mr486zsxvh_h0000gn/T/nanomem-screen-r_wxqvps",
+   "package_path": "/private/tmp/claude-501/-Users-om-Desktop-Om--4D-llm/7dcdd445-bc6a-41e5-8566-b87ad8aff67b/scratchpad/pin_before/nanomem_standalone",
+   "package_sha256": {
+    "engine.py": "f94b93b39462b7a6578fcf2934e29b436fde5f8c56cb17a03f6dceddc149ff4e",
+    "arena.py": "382edb34856799c8ca32d4ddfbb209b6d98988c0520ee08cd4f12aa060169af7",
+    "container.py": "663f3dfb63736a862d0e589e5f336f9cbeae1b88edf2dbd159803806d3f8741f",
+    "screen.py": "fbb7641b29ae37d5f94eba09cb5d2fca56b458c22ede8230f04994af055d323d"
+   },
+   "package_provenance": "BEFORE arm: working-tree snapshot with engine.py's top-k selection reverted to the positional argpartition rule; arena.py/container.py/screen.py byte-identical to the AFTER arm",
+   "quick": false,
+   "ingest_seconds": 0.9804082499999822,
+   "vault_bytes": 118589909,
+   "duplicate_census": {
+    "sampled_rows": 4000,
+    "rows_with_an_exact_duplicate": 3,
+    "pct": 0.075
+   },
+   "machine_at_end": {
+    "cpu": "Apple M4 Pro",
+    "os": "macOS-26.5-arm64-arm-64bit",
+    "python": "3.12.12",
+    "numpy": "2.5.3",
+    "loadavg": [
+     4.8447265625,
+     7.1337890625,
+     4.82080078125
+    ],
+    "git_commit": "e617ba3",
+    "utc": "2026-09-16T17:26:05.131216+00:00"
+   }
+  },
+  "phaseA_exactness_engine": {
+   "rows": [
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 1,
+     "n_queries": 1000,
+     "screen_engaged_queries": 1000,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 0,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 100.0
+    },
+    {
+     "queries_with_a_different_id_SET": 1,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 3,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 4,
+     "n_queries": 1000,
+     "screen_engaged_queries": 2000,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 3,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 99.7
+    },
+    {
+     "queries_with_a_different_id_SET": 0,
+     "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 6,
+     "queries_with_a_REAL_MISS": 0,
+     "top_k": 10,
+     "n_queries": 1000,
+     "screen_engaged_queries": 3000,
+     "screen_fell_back_queries": 0,
+     "queries_with_a_different_id_list": 6,
+     "queries_with_a_non_bitwise_identical_score_list": 0,
+     "pct_exact": 99.4
+    }
+   ],
+   "screen": {
+    "built": true,
+    "mode": "pca",
+    "d_out": 256,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "rows": 71433,
+    "fit_rows": 71433,
+    "fit_seconds": 0.12876399999998966,
+    "captured_energy": 0.9334893039021194,
+    "resident_bytes": 75029576,
+    "used_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "seed_pool": 128
+   },
+   "screen_info": {
+    "mode": "pca",
+    "min_rows": 20000,
+    "max_frac": 0.35,
+    "built": true,
+    "calls": 3000,
+    "engaged": 3000,
+    "fell_back": 0,
+    "mean_survivors": 296.74033333333335,
+    "gather_pad": 16,
+    "gather_bitwise_exact": true,
+    "d_out": 256,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "rows": 71433,
+    "fit_rows": 71433,
+    "fit_seconds": 0.12876399999998966,
+    "captured_energy": 0.9334893039021194,
+    "resident_bytes": 75029576,
+    "used_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "seed_pool": 128
+   },
+   "leakage_audit": {
+    "queries_compared": 3000,
+    "query_vector_not_bitwise_identical": 0,
+    "compared_against_a_foreign_reference": 0,
+    "arms_on_different_vault_files": 0,
+    "leakage_total": 0,
+    "verdict": "CLEAN"
+   }
+  },
+  "phaseC_latency_full": {
+   "n_docs": 71433,
+   "n_queries": 200,
+   "cycles": 6,
+   "top_k": 4,
+   "samples_per_arm": 1200,
+   "screen_built": {
+    "built": true,
+    "mode": "pca",
+    "d_out": 256,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "rows": 71433,
+    "fit_rows": 71433,
+    "fit_seconds": 0.13264212500001804,
+    "captured_energy": 0.9334893039021194,
+    "resident_bytes": 75029576,
+    "used_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "seed_pool": 128
+   },
+   "off_p50_ms": 1.9775420000200938,
+   "on_p50_ms": 1.2162504999935209,
+   "off_p95_ms": 4.229708000011101,
+   "on_p95_ms": 2.8415964499828297,
+   "off_mean_ms": 2.2437415725014396,
+   "on_mean_ms": 1.4434977224997663,
+   "p50_speedup": 1.6259331445542087,
+   "p95_speedup": 1.4884970735505596,
+   "p50_speedup_ci95": [
+    1.6059416595618765,
+    1.6425430628553597
+   ],
+   "screen_info": {
+    "mode": "off",
+    "min_rows": 20000,
+    "max_frac": 0.35,
+    "built": true,
+    "calls": 1216,
+    "engaged": 1216,
+    "fell_back": 0,
+    "mean_survivors": 289.2080592105263,
+    "gather_pad": 16,
+    "gather_bitwise_exact": true,
+    "d_out": 256,
+    "orthonormality_defect": 4.1632028006824075e-08,
+    "rows": 71433,
+    "fit_rows": 71433,
+    "fit_seconds": 0.13264212500001804,
+    "captured_energy": 0.9334893039021194,
+    "resident_bytes": 75029576,
+    "used_bytes": 75029576,
+    "bytes_per_row": 1032,
+    "seed_pool": 128
+   },
+   "loadavg": [
+    4.58642578125,
+    7.1953125,
+    4.80078125
+   ]
+  },
+  "phaseD_size_sweep": [
+   {
+    "n_docs": 1000,
+    "shipped_default_p50_ratio_on_over_off": 0.9963172149430501,
+    "forced_p50_speedup": 0.482683903834664
+   },
+   {
+    "n_docs": 5000,
+    "shipped_default_p50_ratio_on_over_off": 0.9927032662144262,
+    "forced_p50_speedup": 0.9001663892308482
+   },
+   {
+    "n_docs": 10000,
+    "shipped_default_p50_ratio_on_over_off": 1.00235257962163,
+    "forced_p50_speedup": 0.9405904722557088
+   },
+   {
+    "n_docs": 20000,
+    "shipped_default_p50_ratio_on_over_off": 0.7447919619440795,
+    "forced_p50_speedup": 1.3666877264917614
+   },
+   {
+    "n_docs": 40000,
+    "shipped_default_p50_ratio_on_over_off": 0.6760580265961205,
+    "forced_p50_speedup": 1.490312047296049
+   }
+  ],
+  "phaseE_stale_basis_appends": {
+   "rows_basis_was_fitted_from": 6000,
+   "rows_after_append": 30000,
+   "basis_refitted_on_append": false,
+   "rows_appended_after_the_fit": 24000,
+   "n_queries": 200,
+   "queries_with_a_different_id_list": 1,
+   "queries_with_a_non_bitwise_identical_score_list": 0,
+   "bound_violations_on_rows_appended_after_the_fit": 0,
+   "document_checks_on_appended_rows": 2400000,
+   "screen_info": {
+    "mode": "pca",
+    "min_rows": 100,
+    "max_frac": 0.35,
+    "built": true,
+    "calls": 200,
+    "engaged": 200,
+    "fell_back": 0,
+    "mean_survivors": 701.27,
+    "gather_pad": 16,
+    "gather_bitwise_exact": true,
+    "d_out": 256,
+    "orthonormality_defect": 4.144918059822165e-08,
+    "rows": 30000,
+    "fit_rows": 6000,
+    "fit_seconds": 0.04244691700000658,
+    "captured_energy": 0.9399814955620407,
+    "resident_bytes": 37017920,
+    "used_bytes": 32270720,
+    "bytes_per_row": 1032,
+    "seed_pool": 128
+   }
+  }
+ },
+ "verdict": {
+  "read_this_first": "This mechanism is EXACTNESS-PRESERVING. Its recall delta is identically 0, so it clears no recall bar and NONE IS CLAIMED. It ships as a user-selectable LATENCY option, default OFF, whose correctness is a proof and whose benefit is measured wall time. The criterion below was written into this file before nanomem/screen.py existed (see preregistration.status).",
+  "C1_exactness": {
+   "criterion": "identical top-k ids AND bitwise-identical float32 scores on every query, plus 0 bound violations over every (query, document) pair",
+   "searches_compared": 3000,
+   "top_k_values": [
+    1,
+    4,
+    10
+   ],
+   "queries_with_a_different_id_list": 0,
+   "queries_with_a_different_id_SET": 0,
+   "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 0,
+   "queries_with_a_non_bitwise_identical_score_list": 0,
+   "queries_with_a_REAL_MISS": 0,
+   "screen_engaged_queries": 3000,
+   "screen_fell_back_queries": 0,
+   "bound_violations": 0,
+   "document_checks": 71433000,
+   "worst_true_minus_bound": -0.011272132396697998,
+   "appended_rows_against_a_STALE_basis": {
+    "rows_appended_after_the_fit": 24000,
+    "basis_refitted_on_append": false,
+    "queries_with_a_different_id_list": 0,
+    "queries_with_a_non_bitwise_identical_score_list": 0,
+    "bound_violations_on_rows_appended_after_the_fit": 0,
+    "document_checks_on_appended_rows": 2400000
+   },
+   "PASS": true,
+   "how_this_clause_was_reached": "It did not pass on the first run. It passes here because the CODE was changed to break ties on the row id, not because the clause was rewritten. The failing measurement is kept in full at verdict.C1_exactness_BEFORE_the_fix and before_deterministic_ties. See amendment_1_deterministic_ties.",
+   "cost_of_determinism": {
+    "exhaustive_arm_71433": {
+     "n": 71433,
+     "top_k": 4,
+     "paired_samples": 400,
+     "positional_p50_us": 306.062,
+     "deterministic_p50_us": 322.521,
+     "delta_us": 16.459
+    },
+    "screen_arm_289_survivors": {
+     "n": 289,
+     "top_k": 4,
+     "paired_samples": 400,
+     "positional_p50_us": 2.416,
+     "deterministic_p50_us": 3.625,
+     "delta_us": 1.209
+    }
+   }
+  },
+  "C1_exactness_BEFORE_the_fix": {
+   "what_this_is": "The same clause measured against the positional top-k selection, minutes earlier, same corpus and queries, same arena.py. Preserved so the fix can be checked rather than believed.",
+   "searches_compared": 3000,
+   "queries_with_a_different_id_list": 9,
+   "queries_with_a_different_id_SET": 1,
+   "queries_whose_only_difference_is_the_ORDER_of_equal_scores": 9,
+   "queries_with_a_non_bitwise_identical_score_list": 0,
+   "queries_with_a_REAL_MISS": 0,
+   "stale_basis_queries_with_a_different_id_list": 1,
+   "PASS": false,
+   "cause": "Exact float32 ties. 0.075% of sampled rows have an exact duplicate elsewhere in the corpus (measurement.duplicate_census), the exhaustive top-k is then not unique, and np.argpartition's order among equal elements depends on the length of the array -- which the screen changes.",
+   "not_a_bound_failure": "0 bound violations and 0 non-bitwise score lists in this arm too. The bound was never the problem; the selection rule downstream of it was.",
+   "also_reproduces_the_FIRST_run": "The first run measured 9 different ordered id lists over 3000 searches, 1 of them a different id SET, 0 non-bitwise score lists, 0 real misses. This BEFORE arm measured 9, 1, 0, 0. The defect was stable, not a fluke.",
+   "searches_identical": 2991
+  },
+  "C2_speed": {
+   "criterion": "end-to-end p50 speedup >= 1.25x at 71,433 docs, >= 5 paired cycles",
+   "n_docs": 71433,
+   "cycles": 6,
+   "queries_per_cycle": 200,
+   "samples_per_arm": 1200,
+   "top_k": 4,
+   "off_p50_ms": 1.9596459999888793,
+   "on_p50_ms": 1.1493960000166226,
+   "p50_speedup": 1.7049354617212336,
+   "p50_speedup_ci95": [
+    1.6890514812799549,
+    1.7249675194480154
+   ],
+   "off_p95_ms": 2.111579150013654,
+   "on_p95_ms": 1.723740200003476,
+   "p95_speedup": 1.2249984945581682,
+   "per_cycle_p50_speedups": [
+    1.708137035063721,
+    1.7144330109596624,
+    1.7102397771075752,
+    1.7216129675685177,
+    1.7015801774815904,
+    1.7102491412910672
+   ],
+   "mean_survivors_of_71433": 289.2080592105263,
+   "PASS": true,
+   "protocol_deviation_reported_not_excused": {
+    "pre_registered": "on a quiet machine",
+    "measured_1min_loadavg_at_start_and_end": [
+     4.53662109375,
+     5.373046875
+    ],
+    "was_quiet": false,
+    "what_was_done_instead": "The box is shared with other agents and was NOT quiet -- 1-minute loadavg 4.54 at the start and 5.37 at the end, higher than the 3.40 of the first run. The two arms are therefore interleaved query by query inside ONE engine with the flag toggled, so both pay the same machine weather, the same arena object and the same page cache. The six per-cycle p50 ratios span 0.043. The absolute millisecond figures are worth less than the ratio and should be read as such."
+   }
+  },
+  "C3_no_regression_below_10k": {
+   "criterion": "p50(flag ON) <= 1.03 x p50(flag OFF) at n <= 10,000, at the shipped default",
+   "shipped_engagement_floor": 20000,
+   "rows": [
+    {
+     "n_docs": 1000,
+     "p50_ratio_on_over_off": 1.0000000012073025,
+     "engaged": 0
+    },
+    {
+     "n_docs": 5000,
+     "p50_ratio_on_over_off": 1.0024590422685704,
+     "engaged": 0
+    },
+    {
+     "n_docs": 10000,
+     "p50_ratio_on_over_off": 1.0050136592760595,
+     "engaged": 0
+    }
+   ],
+   "PASS": true,
+   "why_it_passes_and_what_that_is_worth": "Below the floor the screen is never BUILT, so the ON arm is the OFF arm plus one integer comparison per search, and the ratios are 1.000 to 1.005 -- noise. This clause is a check that the FLOOR works, not that the mechanism is fast; the mechanism genuinely loses below the floor, which is why the floor is there.",
+   "how_the_floor_was_chosen": [
+    {
+     "n_docs": 1000,
+     "p50_speedup_if_FORCED_on": 0.4851578711041305,
+     "mean_survivors": 80.69508196721311
+    },
+    {
+     "n_docs": 5000,
+     "p50_speedup_if_FORCED_on": 0.8783745207377159,
+     "mean_survivors": 188.07954545454547
+    },
+    {
+     "n_docs": 10000,
+     "p50_speedup_if_FORCED_on": 0.9661299015910003,
+     "mean_survivors": 242.7159090909091
+    },
+    {
+     "n_docs": 20000,
+     "p50_speedup_if_FORCED_on": 1.366900319571322,
+     "mean_survivors": 302.89935064935065
+    },
+    {
+     "n_docs": 40000,
+     "p50_speedup_if_FORCED_on": 1.4509970636409315,
+     "mean_survivors": 348.22402597402595
+    }
+   ]
+  },
+  "OVERALL": {
+   "C1_exactness": true,
+   "C2_speed": true,
+   "C3_no_regression_below_10k": true,
+   "all_three": true,
+   "statement": "All three pre-registered clauses hold. This is NOT a recall result and no recall bar is claimed to have been cleared. C1 required a code change to reach, and that is recorded in amendment_1_deterministic_ties rather than smoothed over."
+  }
+ },
+ "quarantine_audit_lessons_2_and_3": {
+  "method": "MECHANICAL, not asserted: builtins.open, io.open and os.open were wrapped for an entire `python3 -m pytest tests/` run and every path touched under the repository's scratch/ tree was recorded and read back. atime is NOT cited -- measured on this filesystem, reads do not reliably bump it.",
+  "what_it_found": "The suite DID open both quarantined chat fixtures, on every run. tests/test_round5_temporal.py::test_no_fixture_proper_noun_appears_anywhere_in_the_library_source globbed scratch/refound for *chat_benchmark*.json and *personas*.json and read the text of every match -- which includes clean_chat_benchmark_persona4.json, the scored-once file, and clean_chat_benchmark_heldout.json. tests/test_entities.py had already been migrated off the live read onto the committed digest table tests/data/fixture_vocab.txt; this sibling was missed, and tests/data/fixture_vocab_source.py's own docstring says the table already bakes in THIS test's harvest too. This is broader than the briefing, which named only the held-out file.",
+  "paths_the_suite_opened_under_scratch_BEFORE": [
+   "clean_chat_benchmark.json",
+   "clean_chat_benchmark_heldout.json",
+   "clean_chat_benchmark_persona4.json",
+   "clean_chat_benchmark_raw.json",
+   "dev_personas_v3r4.json",
+   "golden/book_v2.dat",
+   "golden/book_v2_golden.json",
+   "golden/chat_v2.dat",
+   "golden/chat_v2_golden.json",
+   "memory_results.json",
+   "router_gate_results.json",
+   "temporal_bench.json"
+  ],
+  "paths_the_suite_opens_under_scratch_AFTER": [
+   "golden/book_v2.dat",
+   "golden/book_v2_golden.json",
+   "golden/chat_v2.dat",
+   "golden/chat_v2_golden.json",
+   "memory_results.json",
+   "router_gate_results.json"
+  ],
+  "fix": "test_round5_temporal.py now looks tokens up in tests/data/fixture_vocab.txt and names no path under scratch/ at all. A new suite-wide mechanical guard, tests/test_screen.py::test_no_test_module_names_a_quarantined_fixture, parses EVERY test module and fails on an executable string constant naming a fixture -- test_entities.py only audited itself, which is how this was missed.",
+  "honest_accounting_for_THIS_session": "pytest was run several times during this work before the breach was found, so clean_chat_benchmark_persona4.json WAS read by this session's test runs. Stating otherwise would be false. What that read did: a regex harvest of capitalised tokens and slug components, to grep library source for them. It read vocabulary, never a question, never an answer, never a label, and no number anywhere in this file came from it. No code in this study -- nanomem/screen.py, the engine changes, tests/test_screen.py, scratch/refound/bench_screen.py -- names any chat corpus; that is proof by construction and it is enforced by tests/test_screen.py::test_this_study_names_no_corpus_path_at_all. SESSION 2 (the deterministic-tie amendment): pytest was run repeatedly again. The census above was taken on the CURRENT suite and lists every scratch/ path it opens; none is quarantined. The earlier breach was already fixed before this session started, so this session's pytest runs did not read clean_chat_benchmark_persona4.json or clean_chat_benchmark_heldout.json. No code written in this session -- the _select_top_k change, the new test, the NANOMEM_SCREEN_RESULTS override -- names any chat or persona corpus, which tests/test_screen.py::test_this_study_names_no_corpus_path_at_all enforces mechanically.",
+  "corpus_this_study_did_use": "scratch/refound/hotpot_train_8k_embeds.npz (71,433 HotpotQA paragraph embeddings, 8,000 question embeddings) and seeded numpy. Nothing else.",
+  "re_audited_after_this_session_s_changes": {
+   "method": "builtins.open, io.open and os.open wrapped for an entire `python3 -m pytest tests/` run; every path opened under the repository's scratch/ tree recorded. atime is NOT cited -- measured on this filesystem, reads do not reliably bump it. Script: scratch-local, scratchpad/open_audit.py.",
+   "paths_opened_under_scratch": [
+    "refound/golden/book_v2.dat",
+    "refound/golden/book_v2_golden.json",
+    "refound/golden/chat_v2.dat",
+    "refound/golden/chat_v2_golden.json",
+    "refound/memory_results.json",
+    "refound/router_gate_results.json"
+   ],
+   "quarantined_paths_opened": [],
+   "count": 0,
+   "verdict": "CLEAN",
+   "note_on_the_instrumented_run": "Run 1 of the instrumented suite had 1 failure (test_round4_regressions.py::test_concurrent_router_opens_do_not_raise_from_the_constructor); wrapping os.open changes the timing of a concurrency test. It passes standalone in 0.32 s, in the full un-instrumented suite, and in instrumented run 2, which exited 0 with all tests passing. Both runs produced the identical path census. Reported rather than dropped.",
+   "what_this_session_added": "tests/test_screen.py gained test_ties_are_broken_by_row_id_not_by_array_position (pure numpy, opens nothing) and test_two_engines_can_disagree_and_it_is_NOT_the_screen (tmp_path only). Neither names any path under scratch/.",
+   "runs": 2,
+   "final_census_taken_on": "the 402-test suite as shipped, after every change in this session"
+  }
+ },
+ "shipped": {
+  "flag": "VaultEngine(screen=\"pca\"), default \"off\"",
+  "new_module": "nanomem_standalone/nanomem/screen.py",
+  "engine_changes": "search path only: _candidates() gained a screen branch on the exhaustive path, search() computes the stand-down predicate and now selects its top-k through the module-level _select_top_k (ties broken on the ROW ID, so the answer does not depend on how long the array handed to argpartition was), plus _screen_ready / _screen_candidates / _calibrate_gather / _ranking_is_inert / build_screen / screen_info and six stats() keys. The open path, arena.py and container.py were not touched (owned elsewhere).",
+  "new_knobs": {
+   "screen": "\"off\" | \"pca\"",
+   "screen_dims": 256,
+   "screen_min_rows": 20000,
+   "screen_max_frac": 0.35,
+   "screen_seed_pool": 128
+  },
+  "tests": "nanomem_standalone/tests/test_screen.py, 39 tests collected in 0.03s; whole suite 402 tests collected in 0.06s, all passing",
+  "suite": "397 tests collected in 0.05s",
+  "bench": "scratch/refound/bench_screen.py (NANOMEM_PKG pins the package measured; NANOMEM_SCREEN_RESULTS redirects the report, used for the BEFORE arm)",
+  "not_exposed_on_Vault": "Vault.__init__ has a fixed signature and does not pass engine tuning knobs through -- `router` and `residency` are not on it either. The flag is a VaultEngine argument. Exposing it on Vault means editing vault.py, which this agent does not own.",
+  "gather_calibration": "Measured on this machine at build time, not hard-coded: a gathered sub-scan of 1-8 rows differs from the full scan in the last bit (5.96e-08) while 16 rows and up is bitwise identical (Apple Accelerate, numpy 2.5.3, 768 dims, at 12,000 and 71,433 rows, every trial). The engine finds the smallest ladder size that reproduces the full scan and pads every survivor gather up to it with the next-best rows BY BOUND -- free, and still a superset. If no size works, the screen declines to engage. Without this the first measurement showed 17 of 100 searches with a non-bitwise-identical score at k=1, and calling that 'exact' would have been the easy lie.",
+  "deterministic_tie_break": "engine._select_top_k. Ties on the final score resolve to the LOWEST row id, on both the exhaustive and the screened path. This is what makes 'turning the flag on cannot change an answer' literally true on a corpus containing duplicates rather than true-up-to-ties; before it, 10 of 3000 searches differed. Measured cost +16.1 us at 71,433 rows (0.8% of that arm's p50) and +1.2 us on the screened arm. It also removes a dependence on np.argpartition's unspecified order among equal elements, so results are stable across numpy versions.",
+  "memory_cost_measured": {
+   "bytes_per_row": 1032,
+   "formula": "screen_dims * 4 + 8",
+   "screen_bytes_at_71433_rows": 75029576,
+   "screen_mb_at_71433_rows": 71.55377960205078,
+   "arena_resident_mb": 209.276,
+   "screen_over_arena_pct": 34.19110629123778,
+   "basis_bytes": 786432,
+   "build_seconds_at_71433": 0.19561629200001107,
+   "captured_energy": 0.9334893039021194
+  },
+  "basis_location": "RESIDENT ONLY, and recomputed on demand. The basis is not written to the container, not written to a sidecar, and nothing about the on-disk format changes when the flag is used -- a vault written with screen='pca' is byte-identical to one written with screen='off'. It is fitted on the first search that engages the screen, or eagerly by VaultEngine.build_screen(); measured 0.196 s for 71,433 rows x 768 dims, of which 0.135 s is the eigendecomposition. The cost of NOT persisting it is that cost again on each process start; the benefit is that there is no format change, no version skew, and no stale artefact on disk that could disagree with the vault."
+ },
+ "post_measurement_verification": {
+  "what_this_is": "Checks run against the WORKING TREE after the measured build, to confirm the shipped flag behaves as its docstring says. Seeded numpy only -- no corpus on disk, no fixture, no persona. Scripts: scratchpad/smoke3.py, gather_freq.py, isolate.py.",
+  "flag_semantics": {
+   "default_is_off": true,
+   "ordered_id_and_score_identity_over_300_queries_6400_docs": "0 mismatches",
+   "screen_engaged": "300 of 300 calls, mean 32.0 survivors of 6,400",
+   "basis_that_cannot_be_built_falls_back": "PCAScreen.fit forced to raise: search did not raise, screen_info()['built'] is False, and the result was identical to the exact scan",
+   "after_2000_appends_against_the_pre_append_basis": "0 mismatches over 100 queries, screen rows 8400 = arena rows 8400, basis not refitted"
+  },
+  "a_hazard_found_here_that_is_NOT_the_screen": {
+   "symptom": "88 of 100 queries 'mismatched' after appends, in the first version of this check.",
+   "cause": "The check compared TWO ENGINES: a writer that had appended and flushed but not reopened, against a fresh reader of the same file. nanomem stores vectors fp16 on disk and keeps them fp32 while resident, so the writer still held the fp32 originals and the reader got the fp16 round trip. Measured max vector difference 1.2e-04 and max cosine difference 5.9e-05 BETWEEN THE TWO ARENAS, before any search.",
+   "proof_it_was_not_the_screen": "Against its OWN arena the screened scores were bitwise identical to the full scan (max diff 0.0 over the survivor set). The disagreement reproduces with the flag OFF on both sides.",
+   "what_was_done": "The check was rewritten to toggle the flag inside ONE engine -- the protocol every test and the bench's phase E already used -- and it then showed 0 mismatches. A regression test pins the hazard so it is not misdiagnosed later: tests/test_screen.py::test_two_engines_can_disagree_and_it_is_NOT_the_screen, which asserts the disagreement is present with the flag off and FAILS if the fp16 round trip ever stops losing anything.",
+   "reported_because": "It was a false alarm, but a false alarm that looked exactly like an exactness failure, and the reasoning that cleared it is the evidence for the claim."
+  },
+  "gather_calibration_resampled": {
+   "why": "The engine calibrates the survivor-gather size from 3 probes x 2 subsets. That is a sample, so it was resampled much harder to check the calibration is not merely lucky.",
+   "method": "40 queries x 10 random row subsets per (dims, rows, pad) = 400 trials per cell, comparing Arena.scores_rows(rows, q) against Arena.scores(q)[rows] bitwise.",
+   "result": {
+    "dims_128": {
+     "pad_16": "400/400 trials differ, max 1.19e-07",
+     "pad_32": "0/400",
+     "pad_64": "0/400",
+     "pad_128": "0/400",
+     "at_row_counts": [
+      6400,
+      8400,
+      20000
+     ]
+    },
+    "dims_768": {
+     "pad_16": "0/400",
+     "pad_32": "0/400",
+     "pad_64": "0/400",
+     "pad_128": "0/400",
+     "at_row_counts": [
+      6400,
+      8400,
+      20000
+     ]
+    }
+   },
+   "reading": "The calibration is load-bearing, not decorative: at 128 dims a 16-row gather differs from the full scan in EVERY trial, and the engine's ladder correctly rejects 16 and selects 32 there. At 768 dims -- the shipped embedding width and the one the headline numbers were measured at -- 16 already suffices. The pad the engine picked was bitwise-exact in 400/400 resampled trials at every row count tried."
+  }
+ }
+}

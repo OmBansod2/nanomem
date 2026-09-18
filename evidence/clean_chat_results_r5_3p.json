@@ -1,0 +1,80 @@
+{
+ "label": "r5_3p",
+ "fixture": "clean_chat_benchmark.json",
+ "group_hoist": null,
+ "personas": [
+  "nurse-lagos",
+  "retired-osaka",
+  "gradstudent-saopaulo"
+ ],
+ "classifier": {
+  "tp": 130,
+  "fp": 1,
+  "fn": 0,
+  "tn": 218,
+  "accuracy": 99.7,
+  "f1": 99.6,
+  "p50_ms": 21.37,
+  "note": "classifier.py is not part of the engine work; recorded only"
+ },
+ "in_session": {
+  "gold_stores": {
+   "top1": 35,
+   "top3": 36,
+   "n": 36,
+   "top1_pct": 97.2,
+   "top3_pct": 100.0
+  },
+  "end_to_end": {
+   "top1": 35,
+   "top3": 36,
+   "n": 36,
+   "top1_pct": 97.2,
+   "top3_pct": 100.0
+  },
+  "gold_per_persona": {
+   "nurse-lagos": {
+    "top1": 12,
+    "n": 12
+   },
+   "retired-osaka": {
+    "top1": 12,
+    "n": 12
+   },
+   "gradstudent-saopaulo": {
+    "top1": 11,
+    "n": 12
+   }
+  }
+ },
+ "reopened": {
+  "gold_stores": {
+   "top1": 35,
+   "top3": 36,
+   "n": 36,
+   "top1_pct": 97.2,
+   "top3_pct": 100.0
+  },
+  "end_to_end": {
+   "top1": 35,
+   "top3": 36,
+   "n": 36,
+   "top1_pct": 97.2,
+   "top3_pct": 100.0
+  },
+  "gold_per_persona": {
+   "nurse-lagos": {
+    "top1": 12,
+    "n": 12
+   },
+   "retired-osaka": {
+    "top1": 12,
+    "n": 12
+   },
+   "gradstudent-saopaulo": {
+    "top1": 11,
+    "n": 12
+   }
+  }
+ }
+}

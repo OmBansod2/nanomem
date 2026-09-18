@@ -1506,3 +1506,75 @@ def test_a_composite_question_still_answers_every_part(tmp_path, offline_embedde
     assert "4417" in texts and "B12" in texts, \
         f"a composite question lost one of its parts: {texts!r}"
     v.close()
+
+
+# --- history must not report a truncated chain as "never changed" ------------
+
+_OFFICE = ["Desk was on the third floor of Kestrel House.",
+           "Moved down to the annexe at Larkfield.",
+           "Now parked in the Maple Wharf building."]
+
+
+def _office_vault(tmp_path, name="hist.dat"):
+    v = Vault(str(tmp_path / name))
+    now = 1_700_000_000.0
+    for i, t in enumerate(_OFFICE):
+        v.add(t, metadata={"entity": "office"}, timestamp=now - (2 - i) * 150 * DAY)
+    v.flush()
+    return v
+
+
+def test_history_returns_the_whole_declared_chain(tmp_path, offline_embedder):
+    """`history` returned ONE entry flagged superseded=False on a three-revision
+    declared chain — which this library defines as "this fact never changed" —
+    while `changes()` and `get_all_records()` saw all three in the same vault.
+
+    Not the relevance floor, which `history` already skips. `resolve_top_entity`
+    returned the question's inferred intent even when that intent named no
+    entity the vault holds, so the tagged group was EMPTY and the cosine window
+    returned a single record.
+    """
+    v = _office_vault(tmp_path)
+    h = v.history("where is my desk")
+    assert len(h) == len(_OFFICE), f"chain truncated to {len(h)} of {len(_OFFICE)}"
+    assert [e["text"] for e in h] == _OFFICE, "chain is not in oldest-first order"
+    assert sum(not e["superseded"] for e in h) == 1, "exactly one entry is current"
+    assert h[-1]["text"] == _OFFICE[-1], "the newest revision must be the current one"
+    v.close()
+
+
+def test_history_agrees_with_changes_about_how_many_revisions_exist(
+        tmp_path, offline_embedder):
+    """The tell that this was a view bug and not data loss: three unfiltered
+    accessors saw the whole chain while history saw one entry."""
+    v = _office_vault(tmp_path, "agree.dat")
+    assert len(v.get_all_records()) == len(_OFFICE)
+    assert len(v.changes(since=0)) == len(_OFFICE)
+    assert len(v.history("where is my desk")) == len(_OFFICE)
+    v.close()
+
+
+def test_an_intent_naming_nothing_falls_back_to_the_best_hit(
+        tmp_path, offline_embedder):
+    """The rule, stated directly: an intent that matches no entity in this vault
+    is not evidence about it. An intent that DOES match keeps priority."""
+    from nanomem import entities as _ent
+    import numpy as _np
+    names = ["office"]
+    scored = _np.array([0.9, 0.2], dtype=_np.float64)
+    ent_col = _np.array([0, 0], dtype=_np.int32)
+    assert _ent.resolve_top_entity(scored, ent_col, names, intent="desk") == "office"
+    assert _ent.resolve_top_entity(scored, ent_col, names, intent="office") == "office"
+    assert _ent.resolve_top_entity(scored, ent_col, names, intent=None) == "office"
+
+
+def test_a_genuinely_unchanged_fact_still_has_a_one_element_history(
+        tmp_path, offline_embedder):
+    """A one-element history is a real answer. The fix must not make every chain
+    look long — it must only stop SHORT chains being reported as complete."""
+    v = Vault(str(tmp_path / "single.dat"))
+    v.add("My blood group is B negative.", metadata={"entity": "blood_group"})
+    v.flush()
+    h = v.history("what is my blood group")
+    assert len(h) == 1 and h[0]["superseded"] is False
+    v.close()

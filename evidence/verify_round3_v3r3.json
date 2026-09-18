@@ -1,0 +1,250 @@
+{
+ "generated_by": "scratch/refound/verify_round3_v3r3.py",
+ "pkg_dir": "<repo>/nanomem_standalone",
+ "engine_version": "3.0.2",
+ "nanomem_version": "0.3.0",
+ "gold_resolution": {
+  "rule": "full supporting-fact text must be a substring of the corpus paragraph",
+  "agrees_with_80_char_rule": "120/120",
+  "unresolved_questions": 0
+ },
+ "A_val_1190_reopened": {
+  "n_docs": 1190,
+  "questions": 120,
+  "insertion_order": "random, rng=default_rng(1234)",
+  "shape": "ingest -> flush -> close -> re-open -> search",
+  "default_config": {
+   "router": "off",
+   "routing_mode": "exhaustive",
+   "n_exhaustive": 50000,
+   "vector_dtype_on_disk": "float16",
+   "encrypted_at_rest": false
+  },
+  "modified_on_reopen": "same",
+  "valid_end_minus_file_size": 0,
+  "engine_recall_queryvec_pct": 68.3,
+  "engine_recall_querytext_pct": 68.3,
+  "exhaustive_fp32_recall_pct": 68.3,
+  "faiss_flatip_recall_pct": 68.3,
+  "engine_p50_ms": 0.061,
+  "engine_querytext_p50_ms": 0.054,
+  "discordant_top4_engine_vs_exhaustive": 0,
+  "discordant_top4_enginetext_vs_exhaustive": 0,
+  "discordant_top4_faiss_vs_exhaustive": 0,
+  "rank1_differences_vs_exhaustive": 0
+ },
+ "B_score_contract_val_1190": {
+  "max_boost": 0.7,
+  "violations_above_cap": 0,
+  "violations_below_cosine": 0,
+  "max_score_minus_cosine": 0.0,
+  "min_score_minus_cosine": 0.0,
+  "max_abs_err_cosine_key_vs_true_fp32_cosine": 4.315e-05,
+  "caveat": "wiki source, no entity/temporal metadata -> the boosts never engage here; the chat-shaped contract test is adjacent_attributes_v3r3.json"
+ },
+ "D_write_path": {
+  "n_adds": 4000,
+  "metadata": "entity=attr_00..attr_49 (generic), source=chat_session",
+  "first_500_mean_us": 20.73,
+  "last_500_mean_us": 20.22,
+  "ratio_last_over_first": 0.976,
+  "per_500_mean_us": [
+   20.73,
+   19.97,
+   19.74,
+   19.58,
+   20.07,
+   19.51,
+   19.5,
+   20.22
+  ],
+  "p50_us": 10.92,
+  "p95_us": 13.09,
+  "max_us": 667.4,
+  "total_documents": 4000
+ },
+ "E_scale_reopened_text_vs_vector": {
+  "10000": {
+   "n_docs": 10000,
+   "questions": 500,
+   "routing_mode": "exhaustive",
+   "router": "off",
+   "n_exhaustive": 50000,
+   "recall_queryvec_pct": 70.4,
+   "recall_querytext_pct": 70.4,
+   "exhaustive_fp32_recall_pct": 70.4,
+   "p50_queryvec_ms": 0.378,
+   "p50_querytext_ms": 0.378,
+   "discordant_top4_vec_vs_exhaustive": 2,
+   "discordant_top4_text_vs_vec": 0,
+   "index_bytes": 21978441,
+   "bytes_per_doc": 2197.8,
+   "raw_text_bytes": 5443456,
+   "ratio_vs_text_plus_fp32": 0.608,
+   "ratio_vs_text_plus_fp16": 1.056,
+   "ratio_vs_text_only": 4.038
+  },
+  "71433": {
+   "n_docs": 71433,
+   "questions": 500,
+   "routing_mode": "exhaustive",
+   "router": "off",
+   "n_exhaustive": 50000,
+   "recall_queryvec_pct": 60.6,
+   "recall_querytext_pct": 60.6,
+   "exhaustive_fp32_recall_pct": 60.6,
+   "p50_queryvec_ms": 1.824,
+   "p50_querytext_ms": 1.794,
+   "discordant_top4_vec_vs_exhaustive": 5,
+   "discordant_top4_text_vs_vec": 0,
+   "index_bytes": 155886408,
+   "bytes_per_doc": 2182.3,
+   "raw_text_bytes": 37711496,
+   "ratio_vs_text_plus_fp32": 0.606,
+   "ratio_vs_text_plus_fp16": 1.057,
+   "ratio_vs_text_only": 4.134
+  }
+ },
+ "F_top4_differences_are_ties": {
+  "10000": {
+   "discordant": 2,
+   "cases": [
+    {
+     "question": 139,
+     "max_abs_cosine_gap": 2.134e-05
+    },
+    {
+     "question": 390,
+     "max_abs_cosine_gap": 2.182e-05
+    }
+   ]
+  },
+  "71433": {
+   "discordant": 5,
+   "cases": [
+    {
+     "question": 77,
+     "max_abs_cosine_gap": 0.0
+    },
+    {
+     "question": 107,
+     "max_abs_cosine_gap": 1.21e-05
+    },
+    {
+     "question": 390,
+     "max_abs_cosine_gap": 2.182e-05
+    },
+    {
+     "question": 431,
+     "max_abs_cosine_gap": 0.0
+    },
+    {
+     "question": 478,
+     "max_abs_cosine_gap": 1.49e-06
+    }
+   ]
+  }
+ },
+ "C_index_size": {
+  "1190": {
+   "index_bytes": 2628692,
+   "bytes_per_doc": 2209.0,
+   "raw_text_bytes": 661953,
+   "ratio_vs_text_plus_fp32": 0.609,
+   "ratio_vs_text_plus_fp16": 1.056,
+   "ratio_vs_text_only": 3.971
+  },
+  "10000": {
+   "index_bytes": 21978441,
+   "bytes_per_doc": 2197.8,
+   "raw_text_bytes": 5443456,
+   "ratio_vs_text_plus_fp32": 0.608,
+   "ratio_vs_text_plus_fp16": 1.056,
+   "ratio_vs_text_only": 4.038
+  },
+  "71433": {
+   "index_bytes": 155886408,
+   "bytes_per_doc": 2182.3,
+   "raw_text_bytes": 37711496,
+   "ratio_vs_text_plus_fp32": 0.606,
+   "ratio_vs_text_plus_fp16": 1.057,
+   "ratio_vs_text_only": 4.134
+  },
+  "target": "<= 1.3x raw text + fp32 vectors"
+ },
+ "G_password_mode": {
+  "1190": {
+   "plaintext": {
+    "open_ms_median": 2.97,
+    "search_p50_ms": 0.053,
+    "index_bytes": 2637535
+   },
+   "password": {
+    "open_ms_median": 102.58,
+    "search_p50_ms": 0.059,
+    "index_bytes": 2637535
+   },
+   "open_overhead_ms": 99.61,
+   "search_overhead_p50_ms": 0.006,
+   "size_delta_bytes": 0
+  },
+  "10000": {
+   "plaintext": {
+    "open_ms_median": 23.75,
+    "search_p50_ms": 0.374,
+    "index_bytes": 21978638
+   },
+   "password": {
+    "open_ms_median": 144.04,
+    "search_p50_ms": 0.376,
+    "index_bytes": 21978638
+   },
+   "open_overhead_ms": 120.29,
+   "search_overhead_p50_ms": 0.002,
+   "size_delta_bytes": 0
+  },
+  "40000": {
+   "plaintext": {
+    "open_ms_median": 95.65,
+    "search_p50_ms": 1.108,
+    "index_bytes": 87528793
+   },
+   "password": {
+    "open_ms_median": 290.86,
+    "search_p50_ms": 1.152,
+    "index_bytes": 87528793
+   },
+   "open_overhead_ms": 195.21,
+   "search_overhead_p50_ms": 0.044,
+   "size_delta_bytes": 0
+  }
+ },
+ "H_engine_only_rss_fresh_process": {
+  "10000": {
+   "file_MB": 22.0,
+   "docs": 10000,
+   "open_ms": 27.8,
+   "p50_ms": 0.368,
+   "p95_ms": 0.429,
+   "rss_MB_before_open": 63.5,
+   "rss_MB_after_200_searches": 142.6,
+   "engine_attributable_rss_MB": 79.1,
+   "stats_active_heap_ram_kb": 57051.7,
+   "stats_process_rss_kb": 137952,
+   "stats_resident_arena_mb": 48.0
+  },
+  "71433": {
+   "file_MB": 155.9,
+   "docs": 71433,
+   "open_ms": 233.2,
+   "p50_ms": 1.859,
+   "p95_ms": 2.186,
+   "rss_MB_before_open": 63.6,
+   "rss_MB_after_200_searches": 752.5,
+   "engine_attributable_rss_MB": 688.9,
+   "stats_active_heap_ram_kb": 449538.4,
+   "stats_process_rss_kb": 733632,
+   "stats_resident_arena_mb": 384.0
+  }
+ }
+}

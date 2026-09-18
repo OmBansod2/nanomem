@@ -1,0 +1,4360 @@
+{
+ "title": "nanomem reopen: rebuilding the arena vs mapping it",
+ "generated_at": "2026-09-16T23:40:40",
+ "script": "<repo>/evidence/bench_reopen.py",
+ "versions": {
+  "python": "3.12.12",
+  "numpy": "2.5.3",
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "machine": "arm64",
+  "baseline_commit": "e617ba3"
+ },
+ "protocol": {
+  "vaults": "one per corpus, built ONCE by the baseline package (rng(0) insertion order, source 'wiki', metadata {'idx': row}); every arm opens the same bytes",
+  "arena_cache": "created by a separate process before any cached arm runs, so no measured open also wrote the cache",
+  "reopen_in_process": "median of 25 opens in one warm interpreter -- the protocol competitors_standard_results.json used, and therefore the one compared against sqlite-vec 0.0014 s / Chroma 0.0017 s",
+  "reopen_fresh_process": "the first open of a brand-new interpreter, which additionally pays whatever the open imports lazily",
+  "page_cache": "WARM for every arm. `purge` requires root here and was refused, so a cold-cache reopen is NOT measured; the competitors' numbers were taken warm too.",
+  "latency": "500 queries (120 at val1190) after 20 warm-ups, p50/p95",
+  "exactness": "SHA-256 over the concatenated fp32 score vectors of every query against every row, plus the top-10 id matrix, both compared against the baseline arm",
+  "memory": "one subprocess per (arm, corpus, phase); ru_maxrss, live RSS and phys_footprint"
+ },
+ "pre_registered": {
+  "primary": "cache_map reopen_s_in_process_median at n71433 <= 0.0014 s (sqlite-vec's measured reopen) => nanomem wins reopen",
+  "secondary": "time to first answer = reopen + first query, reported for every arm at every size whether or not the primary passes",
+  "gate": "identical score digests and 0 changed top-10 lists at every size, or the arm is a failure regardless of its latency",
+  "gate_amended_after_it_failed": "STATED PLAINLY BECAUSE IT IS AN AMENDMENT MADE AFTER SEEING THE RESULT. The gate above compares against the committed package, and the working tree under test contains a SECOND, unrelated change -- engine._select_top_k, the PCA-screen workstream's ascending-row-id tie-break -- so the gate cannot attribute a changed list to the arena cache. It failed: 8 of 500 lists at n71433, 1 of 500 at n10000. Rather than redefine it, BOTH are now reported: the original gate (still failing, with every disagreement mechanically proved to be a bitwise tie by `tie_forensics`, which fails loudly if one is not) and an isolating control against the same build with the cache off, which is the only comparison in which the arena cache is the sole variable."
+ },
+ "corpora": {
+  "val1190": {
+   "corpus_file": "<repo>/corpora/hotpotqa_scaled_1k.json",
+   "embeddings_file": "<repo>/evidence/embeds_val.npz",
+   "gold_rule": "all supporting-fact paragraphs, located by the first 80 chars of the fact text (same rule as headtohead_v3.py)",
+   "questions_dropped_unresolvable_gold": 0,
+   "n_docs": 1190,
+   "n_queries": 120,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999999403953552,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 661953,
+   "vault_bytes": 2628355
+  },
+  "n10000": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 10000,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 5443456,
+   "vault_bytes": 21978441
+  },
+  "n71433": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 71433,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 37711496,
+   "vault_bytes": 155886408
+  }
+ },
+ "arms": {
+  "baseline_e617ba3": {
+   "val1190": {
+    "arm": "baseline_e617ba3",
+    "corpus": "val1190",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 1190,
+    "n_queries": 120,
+    "config": {
+     "package": "/tmp/nanomem_baseline_e617ba3/nanomem_standalone",
+     "arena_cache": null,
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "source": "scan"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.00321,
+     "reopen_s_in_process_median": 0.002657,
+     "reopen_s_in_process_min": 0.002616,
+     "reopen_s_in_process_p95": 0.002869,
+     "reopen_s_in_process_all": [
+      0.002872,
+      0.002639,
+      0.002663,
+      0.002666,
+      0.002657,
+      0.002679,
+      0.002749,
+      0.002804,
+      0.002648,
+      0.002696,
+      0.002679,
+      0.002684,
+      0.002858,
+      0.003375,
+      0.002654,
+      0.002626,
+      0.002633,
+      0.002635,
+      0.002695,
+      0.002622,
+      0.002616,
+      0.002646,
+      0.002627,
+      0.00263,
+      0.002649
+     ],
+     "first_query_after_reopen_s": 0.000358,
+     "first_query_after_reopen_s_median_of_5": 0.000105,
+     "time_to_first_answer_s": 0.002762,
+     "latency_ms": {
+      "p50": 0.0814,
+      "p95": 0.0889,
+      "p99": 0.093,
+      "mean": 0.0816,
+      "n_timed_queries": 120
+     },
+     "numpy_floor_ms": {
+      "p50": 0.0083,
+      "min": 0.0077
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 50888704,
+     "baseline_maxrss_bytes": 50888704,
+     "baseline_phys_footprint_bytes": 36700160,
+     "after_open_maxrss_delta_bytes": 4259840,
+     "after_open_rss_delta_bytes": 4276224,
+     "after_first_query_rss_delta_bytes": 4505600,
+     "after_first_query_phys_footprint_delta_bytes": 5242880,
+     "peak_maxrss_delta_bytes": 4653056,
+     "live_rss_delta_bytes": 4653056,
+     "phys_footprint_delta_bytes": 5242880,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 2628355,
+     "arena_cache_bytes": 4583424
+    },
+    "exactness": {
+     "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd"
+    },
+    "stats": {
+     "total_documents": 1190,
+     "active_heap_ram_kb": 4494.2,
+     "resident_arena_mb": 3.486,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": null,
+     "arena_cache": null,
+     "arena_cache_bytes": null,
+     "mapped_bytes": null,
+     "record_bytes": 796577,
+     "record_mapped_bytes": null,
+     "column_bytes": 47600,
+     "column_mapped_bytes": null,
+     "id_table_mapped_bytes": null,
+     "index_bytes_estimated": 102192,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 54352,
+     "process_peak_rss_kb": 54336,
+     "file_size_mb": 2.507
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n10000",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 10000,
+    "n_queries": 500,
+    "config": {
+     "package": "/tmp/nanomem_baseline_e617ba3/nanomem_standalone",
+     "arena_cache": null,
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "source": "scan"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.022989,
+     "reopen_s_in_process_median": 0.022559,
+     "reopen_s_in_process_min": 0.021905,
+     "reopen_s_in_process_p95": 0.023571,
+     "reopen_s_in_process_all": [
+      0.023032,
+      0.023106,
+      0.023728,
+      0.022478,
+      0.022534,
+      0.022336,
+      0.023135,
+      0.022175,
+      0.022107,
+      0.022844,
+      0.021905,
+      0.022559,
+      0.023458,
+      0.022398,
+      0.022415,
+      0.023328,
+      0.022973,
+      0.023043,
+      0.02249,
+      0.023599,
+      0.022253,
+      0.022079,
+      0.022413,
+      0.022638,
+      0.022922
+     ],
+     "first_query_after_reopen_s": 0.000822,
+     "first_query_after_reopen_s_median_of_5": 0.000548,
+     "time_to_first_answer_s": 0.023108,
+     "latency_ms": {
+      "p50": 0.3579,
+      "p95": 0.3973,
+      "p99": 0.4222,
+      "mean": 0.357,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.1836,
+      "min": 0.1685
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 97173504,
+     "baseline_maxrss_bytes": 97173504,
+     "baseline_phys_footprint_bytes": 83886080,
+     "after_open_maxrss_delta_bytes": 42139648,
+     "after_open_rss_delta_bytes": 42139648,
+     "after_first_query_rss_delta_bytes": 42532864,
+     "after_first_query_phys_footprint_delta_bytes": 41943040,
+     "peak_maxrss_delta_bytes": 43515904,
+     "live_rss_delta_bytes": 43515904,
+     "phys_footprint_delta_bytes": 42991616,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 21978441,
+     "arena_cache_bytes": 37982208
+    },
+    "exactness": {
+     "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "stats": {
+     "total_documents": 10000,
+     "active_heap_ram_kb": 37650.3,
+     "resident_arena_mb": 29.297,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": null,
+     "arena_cache": null,
+     "arena_cache_bytes": null,
+     "mapped_bytes": null,
+     "record_bytes": 6586287,
+     "record_mapped_bytes": null,
+     "column_bytes": 400000,
+     "column_mapped_bytes": null,
+     "id_table_mapped_bytes": null,
+     "index_bytes_estimated": 847616,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 137504,
+     "process_peak_rss_kb": 137504,
+     "file_size_mb": 20.96
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n71433",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 71433,
+    "n_queries": 500,
+    "config": {
+     "package": "/tmp/nanomem_baseline_e617ba3/nanomem_standalone",
+     "arena_cache": null,
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "source": "scan"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.16958,
+     "reopen_s_in_process_median": 0.163351,
+     "reopen_s_in_process_min": 0.158757,
+     "reopen_s_in_process_p95": 0.181261,
+     "reopen_s_in_process_all": [
+      0.164412,
+      0.16495,
+      0.166605,
+      0.163128,
+      0.16431,
+      0.18356,
+      0.160794,
+      0.16393,
+      0.164459,
+      0.162455,
+      0.163351,
+      0.179465,
+      0.158757,
+      0.161663,
+      0.162483,
+      0.160782,
+      0.165196,
+      0.181443,
+      0.161212,
+      0.16243,
+      0.163103,
+      0.163238,
+      0.163759,
+      0.180534,
+      0.160928
+     ],
+     "first_query_after_reopen_s": 0.00441,
+     "first_query_after_reopen_s_median_of_5": 0.005331,
+     "time_to_first_answer_s": 0.168681,
+     "latency_ms": {
+      "p50": 1.8127,
+      "p95": 2.0719,
+      "p99": 2.1662,
+      "mean": 1.8156,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.9742,
+      "min": 0.9448
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 409141248,
+     "baseline_maxrss_bytes": 409141248,
+     "baseline_phys_footprint_bytes": 395313152,
+     "after_open_maxrss_delta_bytes": 291307520,
+     "after_open_rss_delta_bytes": 291307520,
+     "after_first_query_rss_delta_bytes": 295976960,
+     "after_first_query_phys_footprint_delta_bytes": 296747008,
+     "peak_maxrss_delta_bytes": 301416448,
+     "live_rss_delta_bytes": 301416448,
+     "phys_footprint_delta_bytes": 301989888,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 155886408,
+     "arena_cache_bytes": 269991936
+    },
+    "exactness": {
+     "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "stats": {
+     "total_documents": 71433,
+     "active_heap_ram_kb": 268291.8,
+     "resident_arena_mb": 209.276,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": null,
+     "arena_cache": null,
+     "arena_cache_bytes": null,
+     "mapped_bytes": null,
+     "record_bytes": 45937108,
+     "record_mapped_bytes": null,
+     "column_bytes": 2857320,
+     "column_mapped_bytes": null,
+     "id_table_mapped_bytes": null,
+     "index_bytes_estimated": 6494192,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 694016,
+     "process_peak_rss_kb": 694016,
+     "file_size_mb": 148.665
+    },
+    "load_avg_start": [
+     2.05,
+     2.15,
+     2.14
+    ],
+    "load_avg_end": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   }
+  },
+  "cache_off": {
+   "val1190": {
+    "arm": "cache_off",
+    "corpus": "val1190",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 1190,
+    "n_queries": 120,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "off",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "off",
+     "source": "scan",
+     "reason": "mode=off",
+     "rows_from_cache": 0,
+     "rows_scanned": 1190,
+     "vault_changed_since_cache": null,
+     "attach_s": 2e-06,
+     "scan_s": 0.002856,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.003245,
+     "reopen_s_in_process_median": 0.002663,
+     "reopen_s_in_process_min": 0.002562,
+     "reopen_s_in_process_p95": 0.002932,
+     "reopen_s_in_process_all": [
+      0.002949,
+      0.00271,
+      0.002692,
+      0.002668,
+      0.002823,
+      0.002777,
+      0.002649,
+      0.002703,
+      0.002783,
+      0.00285,
+      0.002864,
+      0.002832,
+      0.003292,
+      0.002601,
+      0.002654,
+      0.002595,
+      0.002632,
+      0.002641,
+      0.002594,
+      0.002643,
+      0.002627,
+      0.002623,
+      0.002626,
+      0.002663,
+      0.002562
+     ],
+     "first_query_after_reopen_s": 0.000364,
+     "first_query_after_reopen_s_median_of_5": 0.000106,
+     "time_to_first_answer_s": 0.002769,
+     "latency_ms": {
+      "p50": 0.0849,
+      "p95": 0.0929,
+      "p99": 0.0987,
+      "mean": 0.0854,
+      "n_timed_queries": 120
+     },
+     "numpy_floor_ms": {
+      "p50": 0.0082,
+      "min": 0.0078
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 51085312,
+     "baseline_maxrss_bytes": 51085312,
+     "baseline_phys_footprint_bytes": 37748736,
+     "after_open_maxrss_delta_bytes": 4276224,
+     "after_open_rss_delta_bytes": 4276224,
+     "after_first_query_rss_delta_bytes": 4554752,
+     "after_first_query_phys_footprint_delta_bytes": 4194304,
+     "peak_maxrss_delta_bytes": 4767744,
+     "live_rss_delta_bytes": 4767744,
+     "phys_footprint_delta_bytes": 4194304,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 2628355,
+     "arena_cache_bytes": 4583424
+    },
+    "exactness": {
+     "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd"
+    },
+    "stats": {
+     "total_documents": 1190,
+     "active_heap_ram_kb": 4494.2,
+     "resident_arena_mb": 3.486,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "scan",
+     "arena_cache": "off",
+     "arena_cache_bytes": 4583424,
+     "mapped_bytes": 0,
+     "record_bytes": 796577,
+     "record_mapped_bytes": 0,
+     "column_bytes": 47600,
+     "column_mapped_bytes": 0,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 102192,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 54672,
+     "process_peak_rss_kb": 54672,
+     "file_size_mb": 2.507
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_off",
+    "corpus": "n10000",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 10000,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "off",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "off",
+     "source": "scan",
+     "reason": "mode=off",
+     "rows_from_cache": 0,
+     "rows_scanned": 10000,
+     "vault_changed_since_cache": null,
+     "attach_s": 2e-06,
+     "scan_s": 0.022359,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.022784,
+     "reopen_s_in_process_median": 0.02234,
+     "reopen_s_in_process_min": 0.02169,
+     "reopen_s_in_process_p95": 0.023105,
+     "reopen_s_in_process_all": [
+      0.02237,
+      0.02263,
+      0.023227,
+      0.022121,
+      0.021872,
+      0.022081,
+      0.022985,
+      0.022192,
+      0.022284,
+      0.022691,
+      0.02169,
+      0.022216,
+      0.022911,
+      0.021771,
+      0.022173,
+      0.023037,
+      0.022672,
+      0.022152,
+      0.023102,
+      0.022073,
+      0.021945,
+      0.022432,
+      0.023105,
+      0.02234,
+      0.02288
+     ],
+     "first_query_after_reopen_s": 0.000853,
+     "first_query_after_reopen_s_median_of_5": 0.000532,
+     "time_to_first_answer_s": 0.022872,
+     "latency_ms": {
+      "p50": 0.3819,
+      "p95": 0.437,
+      "p99": 0.4608,
+      "mean": 0.384,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.1838,
+      "min": 0.1697
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 97517568,
+     "baseline_maxrss_bytes": 97533952,
+     "baseline_phys_footprint_bytes": 83886080,
+     "after_open_maxrss_delta_bytes": 42188800,
+     "after_open_rss_delta_bytes": 42205184,
+     "after_first_query_rss_delta_bytes": 43122688,
+     "after_first_query_phys_footprint_delta_bytes": 42991616,
+     "peak_maxrss_delta_bytes": 43630592,
+     "live_rss_delta_bytes": 43646976,
+     "phys_footprint_delta_bytes": 42991616,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 21978441,
+     "arena_cache_bytes": 37982208
+    },
+    "exactness": {
+     "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "stats": {
+     "total_documents": 10000,
+     "active_heap_ram_kb": 37650.3,
+     "resident_arena_mb": 29.297,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "scan",
+     "arena_cache": "off",
+     "arena_cache_bytes": 37982208,
+     "mapped_bytes": 0,
+     "record_bytes": 6586287,
+     "record_mapped_bytes": 0,
+     "column_bytes": 400000,
+     "column_mapped_bytes": 0,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 847616,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 137904,
+     "process_peak_rss_kb": 137904,
+     "file_size_mb": 20.96
+    },
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_off",
+    "corpus": "n71433",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 71433,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "off",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "off",
+     "source": "scan",
+     "reason": "mode=off",
+     "rows_from_cache": 0,
+     "rows_scanned": 71433,
+     "vault_changed_since_cache": null,
+     "attach_s": 2e-06,
+     "scan_s": 0.163704,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.164147,
+     "reopen_s_in_process_median": 0.168968,
+     "reopen_s_in_process_min": 0.160408,
+     "reopen_s_in_process_p95": 0.183002,
+     "reopen_s_in_process_all": [
+      0.163123,
+      0.172545,
+      0.16677,
+      0.160408,
+      0.164202,
+      0.183133,
+      0.160926,
+      0.16045,
+      0.163061,
+      0.162373,
+      0.16942,
+      0.180688,
+      0.165836,
+      0.16905,
+      0.168968,
+      0.16833,
+      0.170566,
+      0.189853,
+      0.168904,
+      0.17008,
+      0.170241,
+      0.169116,
+      0.171569,
+      0.18248,
+      0.16513
+     ],
+     "first_query_after_reopen_s": 0.003014,
+     "first_query_after_reopen_s_median_of_5": 0.005021,
+     "time_to_first_answer_s": 0.173989,
+     "latency_ms": {
+      "p50": 1.8106,
+      "p95": 2.0451,
+      "p99": 2.1066,
+      "mean": 1.8166,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.9687,
+      "min": 0.9499
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 409223168,
+     "baseline_maxrss_bytes": 409223168,
+     "baseline_phys_footprint_bytes": 395313152,
+     "after_open_maxrss_delta_bytes": 291504128,
+     "after_open_rss_delta_bytes": 291504128,
+     "after_first_query_rss_delta_bytes": 296386560,
+     "after_first_query_phys_footprint_delta_bytes": 296747008,
+     "peak_maxrss_delta_bytes": 300793856,
+     "live_rss_delta_bytes": 300793856,
+     "phys_footprint_delta_bytes": 300941312,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 155886408,
+     "arena_cache_bytes": 269991936
+    },
+    "exactness": {
+     "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "stats": {
+     "total_documents": 71433,
+     "active_heap_ram_kb": 268291.8,
+     "resident_arena_mb": 209.276,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "scan",
+     "arena_cache": "off",
+     "arena_cache_bytes": 269991936,
+     "mapped_bytes": 0,
+     "record_bytes": 45937108,
+     "record_mapped_bytes": 0,
+     "column_bytes": 2857320,
+     "column_mapped_bytes": 0,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 6494192,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 693520,
+     "process_peak_rss_kb": 693520,
+     "file_size_mb": 148.665
+    },
+    "load_avg_start": [
+     2.05,
+     2.15,
+     2.14
+    ],
+    "load_avg_end": [
+     2.12,
+     2.16,
+     2.15
+    ]
+   }
+  },
+  "cache_map": {
+   "val1190": {
+    "arm": "cache_map",
+    "corpus": "val1190",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 1190,
+    "n_queries": 120,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "map",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "map",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 1190,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.007219,
+     "scan_s": 3.8e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.007643,
+     "reopen_s_in_process_median": 0.000186,
+     "reopen_s_in_process_min": 0.00016,
+     "reopen_s_in_process_p95": 0.000252,
+     "reopen_s_in_process_all": [
+      0.000384,
+      0.000209,
+      0.000193,
+      0.000245,
+      0.000191,
+      0.000183,
+      0.000181,
+      0.000182,
+      0.000179,
+      0.000244,
+      0.000192,
+      0.000196,
+      0.000174,
+      0.00018,
+      0.000241,
+      0.000193,
+      0.000183,
+      0.000165,
+      0.00016,
+      0.000235,
+      0.000175,
+      0.000182,
+      0.000186,
+      0.000178,
+      0.000254
+     ],
+     "first_query_after_reopen_s": 0.000588,
+     "first_query_after_reopen_s_median_of_5": 0.000253,
+     "time_to_first_answer_s": 0.000439,
+     "latency_ms": {
+      "p50": 0.0901,
+      "p95": 0.0989,
+      "p99": 0.1025,
+      "mean": 0.0905,
+      "n_timed_queries": 120
+     },
+     "numpy_floor_ms": {
+      "p50": 0.0083,
+      "min": 0.0078
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 51396608,
+     "baseline_maxrss_bytes": 51396608,
+     "baseline_phys_footprint_bytes": 37748736,
+     "after_open_maxrss_delta_bytes": 49152,
+     "after_open_rss_delta_bytes": 49152,
+     "after_first_query_rss_delta_bytes": 4308992,
+     "after_first_query_phys_footprint_delta_bytes": 0,
+     "peak_maxrss_delta_bytes": 5062656,
+     "live_rss_delta_bytes": 5062656,
+     "phys_footprint_delta_bytes": 0,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 2628355,
+     "arena_cache_bytes": 4583424
+    },
+    "exactness": {
+     "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd"
+    },
+    "stats": {
+     "total_documents": 1190,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 3.486,
+     "arena_source": "cache",
+     "arena_cache": "map",
+     "arena_cache_bytes": 4583424,
+     "mapped_bytes": 4516517,
+     "record_bytes": 0,
+     "record_mapped_bytes": 796577,
+     "column_bytes": 0,
+     "column_mapped_bytes": 47600,
+     "id_table_mapped_bytes": 16660,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 55248,
+     "process_peak_rss_kb": 55248,
+     "file_size_mb": 2.507
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_map",
+    "corpus": "n10000",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 10000,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "map",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "map",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 10000,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.004297,
+     "scan_s": 4.2e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.004749,
+     "reopen_s_in_process_median": 0.000206,
+     "reopen_s_in_process_min": 0.000181,
+     "reopen_s_in_process_p95": 0.004732,
+     "reopen_s_in_process_all": [
+      0.000426,
+      0.00022,
+      0.000212,
+      0.000269,
+      0.000193,
+      0.000182,
+      0.000186,
+      0.000198,
+      0.000206,
+      0.000306,
+      0.000198,
+      0.000186,
+      0.000191,
+      0.000181,
+      0.000293,
+      0.000187,
+      0.000186,
+      0.000208,
+      0.000203,
+      0.000286,
+      0.000206,
+      0.000199,
+      0.005888,
+      0.003768,
+      0.004973
+     ],
+     "first_query_after_reopen_s": 0.002575,
+     "first_query_after_reopen_s_median_of_5": 0.0016,
+     "time_to_first_answer_s": 0.001806,
+     "latency_ms": {
+      "p50": 0.3707,
+      "p95": 0.4082,
+      "p99": 0.4235,
+      "mean": 0.3701,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.1949,
+      "min": 0.1879
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 97648640,
+     "baseline_maxrss_bytes": 97648640,
+     "baseline_phys_footprint_bytes": 83886080,
+     "after_open_maxrss_delta_bytes": 81920,
+     "after_open_rss_delta_bytes": 114688,
+     "after_first_query_rss_delta_bytes": 32423936,
+     "after_first_query_phys_footprint_delta_bytes": 1048576,
+     "peak_maxrss_delta_bytes": 39419904,
+     "live_rss_delta_bytes": 39419904,
+     "phys_footprint_delta_bytes": 1048576,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 21978441,
+     "arena_cache_bytes": 37982208
+    },
+    "exactness": {
+     "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "stats": {
+     "total_documents": 10000,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 29.297,
+     "arena_source": "cache",
+     "arena_cache": "map",
+     "arena_cache_bytes": 37982208,
+     "mapped_bytes": 37846287,
+     "record_bytes": 0,
+     "record_mapped_bytes": 6586287,
+     "column_bytes": 0,
+     "column_mapped_bytes": 400000,
+     "id_table_mapped_bytes": 140000,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 133872,
+     "process_peak_rss_kb": 133872,
+     "file_size_mb": 20.96
+    },
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_map",
+    "corpus": "n71433",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 71433,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "map",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "map",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 71433,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.005918,
+     "scan_s": 3.7e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.006346,
+     "reopen_s_in_process_median": 0.000193,
+     "reopen_s_in_process_min": 0.000166,
+     "reopen_s_in_process_p95": 0.000322,
+     "reopen_s_in_process_all": [
+      0.000436,
+      0.000223,
+      0.0002,
+      0.000284,
+      0.000209,
+      0.00018,
+      0.000185,
+      0.000206,
+      0.00019,
+      0.000326,
+      0.000187,
+      0.000193,
+      0.000166,
+      0.000184,
+      0.000305,
+      0.000192,
+      0.000201,
+      0.000186,
+      0.000206,
+      0.000289,
+      0.000192,
+      0.000175,
+      0.00018,
+      0.000186,
+      0.000291
+     ],
+     "first_query_after_reopen_s": 0.015483,
+     "first_query_after_reopen_s_median_of_5": 0.010742,
+     "time_to_first_answer_s": 0.010935,
+     "latency_ms": {
+      "p50": 1.7806,
+      "p95": 2.0167,
+      "p99": 2.0506,
+      "mean": 1.7887,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.9981,
+      "min": 0.9637
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 409354240,
+     "baseline_maxrss_bytes": 409354240,
+     "baseline_phys_footprint_bytes": 395313152,
+     "after_open_maxrss_delta_bytes": 81920,
+     "after_open_rss_delta_bytes": 114688,
+     "after_first_query_rss_delta_bytes": 226410496,
+     "after_first_query_phys_footprint_delta_bytes": 5242880,
+     "peak_maxrss_delta_bytes": 270729216,
+     "live_rss_delta_bytes": 270729216,
+     "phys_footprint_delta_bytes": 9437184,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 155886408,
+     "arena_cache_bytes": 269991936
+    },
+    "exactness": {
+     "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "stats": {
+     "total_documents": 71433,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 209.276,
+     "arena_source": "cache",
+     "arena_cache": "map",
+     "arena_cache_bytes": 269991936,
+     "mapped_bytes": 269236666,
+     "record_bytes": 0,
+     "record_mapped_bytes": 45937108,
+     "column_bytes": 0,
+     "column_mapped_bytes": 2857320,
+     "id_table_mapped_bytes": 1000062,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 664304,
+     "process_peak_rss_kb": 664304,
+     "file_size_mb": 148.665
+    },
+    "load_avg_start": [
+     2.12,
+     2.16,
+     2.15
+    ],
+    "load_avg_end": [
+     2.12,
+     2.16,
+     2.15
+    ]
+   }
+  },
+  "cache_copy": {
+   "val1190": {
+    "arm": "cache_copy",
+    "corpus": "val1190",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 1190,
+    "n_queries": 120,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "copy",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "copy",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 1190,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.004997,
+     "scan_s": 4.2e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.005448,
+     "reopen_s_in_process_median": 0.000517,
+     "reopen_s_in_process_min": 0.000428,
+     "reopen_s_in_process_p95": 0.004963,
+     "reopen_s_in_process_all": [
+      0.004634,
+      0.005911,
+      0.005037,
+      0.000748,
+      0.000536,
+      0.000517,
+      0.000535,
+      0.000532,
+      0.000657,
+      0.000506,
+      0.000496,
+      0.000487,
+      0.000495,
+      0.004668,
+      0.000486,
+      0.000476,
+      0.000473,
+      0.004326,
+      0.004027,
+      0.000468,
+      0.000462,
+      0.000428,
+      0.000445,
+      0.000585,
+      0.000454
+     ],
+     "first_query_after_reopen_s": 0.000412,
+     "first_query_after_reopen_s_median_of_5": 0.000119,
+     "time_to_first_answer_s": 0.000637,
+     "latency_ms": {
+      "p50": 0.0887,
+      "p95": 0.0961,
+      "p99": 0.1003,
+      "mean": 0.0892,
+      "n_timed_queries": 120
+     },
+     "numpy_floor_ms": {
+      "p50": 0.0085,
+      "min": 0.0079
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 51183616,
+     "baseline_maxrss_bytes": 51183616,
+     "baseline_phys_footprint_bytes": 37748736,
+     "after_open_maxrss_delta_bytes": 7405568,
+     "after_open_rss_delta_bytes": 7405568,
+     "after_first_query_rss_delta_bytes": 8011776,
+     "after_first_query_phys_footprint_delta_bytes": 3145728,
+     "peak_maxrss_delta_bytes": 8830976,
+     "live_rss_delta_bytes": 8847360,
+     "phys_footprint_delta_bytes": 4194304,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 2628355,
+     "arena_cache_bytes": 4583424
+    },
+    "exactness": {
+     "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd"
+    },
+    "stats": {
+     "total_documents": 1190,
+     "active_heap_ram_kb": 3570.0,
+     "resident_arena_mb": 3.486,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "cache",
+     "arena_cache": "copy",
+     "arena_cache_bytes": 4583424,
+     "mapped_bytes": 860837,
+     "record_bytes": 0,
+     "record_mapped_bytes": 796577,
+     "column_bytes": 0,
+     "column_mapped_bytes": 47600,
+     "id_table_mapped_bytes": 16660,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 58704,
+     "process_peak_rss_kb": 58704,
+     "file_size_mb": 2.507
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_copy",
+    "corpus": "n10000",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 10000,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "copy",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "copy",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 10000,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.007955,
+     "scan_s": 4.7e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.008442,
+     "reopen_s_in_process_median": 0.002999,
+     "reopen_s_in_process_min": 0.002887,
+     "reopen_s_in_process_p95": 0.004005,
+     "reopen_s_in_process_all": [
+      0.003339,
+      0.003138,
+      0.003156,
+      0.003552,
+      0.002938,
+      0.002999,
+      0.00297,
+      0.003068,
+      0.00397,
+      0.003008,
+      0.002943,
+      0.002987,
+      0.003043,
+      0.004154,
+      0.002955,
+      0.002995,
+      0.002977,
+      0.002991,
+      0.003961,
+      0.002986,
+      0.002887,
+      0.003027,
+      0.002982,
+      0.004014,
+      0.002897
+     ],
+     "first_query_after_reopen_s": 0.000869,
+     "first_query_after_reopen_s_median_of_5": 0.000505,
+     "time_to_first_answer_s": 0.003504,
+     "latency_ms": {
+      "p50": 0.372,
+      "p95": 0.4288,
+      "p99": 0.4674,
+      "mean": 0.3737,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.1825,
+      "min": 0.1641
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 97484800,
+     "baseline_maxrss_bytes": 97484800,
+     "baseline_phys_footprint_bytes": 83886080,
+     "after_open_maxrss_delta_bytes": 61521920,
+     "after_open_rss_delta_bytes": 61538304,
+     "after_first_query_rss_delta_bytes": 63176704,
+     "after_first_query_phys_footprint_delta_bytes": 31457280,
+     "peak_maxrss_delta_bytes": 70696960,
+     "live_rss_delta_bytes": 70696960,
+     "phys_footprint_delta_bytes": 32505856,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 21978441,
+     "arena_cache_bytes": 37982208
+    },
+    "exactness": {
+     "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "stats": {
+     "total_documents": 10000,
+     "active_heap_ram_kb": 30000.0,
+     "resident_arena_mb": 29.297,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "cache",
+     "arena_cache": "copy",
+     "arena_cache_bytes": 37982208,
+     "mapped_bytes": 7126287,
+     "record_bytes": 0,
+     "record_mapped_bytes": 6586287,
+     "column_bytes": 0,
+     "column_mapped_bytes": 400000,
+     "id_table_mapped_bytes": 140000,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 164240,
+     "process_peak_rss_kb": 164240,
+     "file_size_mb": 20.96
+    },
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_copy",
+    "corpus": "n71433",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 71433,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "copy",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "copy",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 71433,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "attach_s": 0.024826,
+     "scan_s": 9.1e-05,
+     "vault_blocks_checked": "none"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.025313,
+     "reopen_s_in_process_median": 0.021744,
+     "reopen_s_in_process_min": 0.020834,
+     "reopen_s_in_process_p95": 0.030751,
+     "reopen_s_in_process_all": [
+      0.029044,
+      0.02247,
+      0.02217,
+      0.028113,
+      0.021792,
+      0.021185,
+      0.021682,
+      0.021533,
+      0.030278,
+      0.021572,
+      0.021418,
+      0.021922,
+      0.021464,
+      0.031347,
+      0.020834,
+      0.021744,
+      0.021334,
+      0.021588,
+      0.03083,
+      0.021044,
+      0.021296,
+      0.021917,
+      0.021881,
+      0.030438,
+      0.02128
+     ],
+     "first_query_after_reopen_s": 0.005844,
+     "first_query_after_reopen_s_median_of_5": 0.00417,
+     "time_to_first_answer_s": 0.025914,
+     "latency_ms": {
+      "p50": 1.8538,
+      "p95": 2.0912,
+      "p99": 2.1433,
+      "mean": 1.8636,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.9648,
+      "min": 0.9465
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 409141248,
+     "baseline_maxrss_bytes": 409141248,
+     "baseline_phys_footprint_bytes": 395313152,
+     "after_open_maxrss_delta_bytes": 438976512,
+     "after_open_rss_delta_bytes": 439025664,
+     "after_first_query_rss_delta_bytes": 445825024,
+     "after_first_query_phys_footprint_delta_bytes": 224395264,
+     "peak_maxrss_delta_bytes": 490176512,
+     "live_rss_delta_bytes": 490176512,
+     "phys_footprint_delta_bytes": 229638144,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 155886408,
+     "arena_cache_bytes": 269991936
+    },
+    "exactness": {
+     "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "stats": {
+     "total_documents": 71433,
+     "active_heap_ram_kb": 214299.0,
+     "resident_arena_mb": 209.276,
+     "resident_arena_mapped_mb": 0.0,
+     "arena_source": "cache",
+     "arena_cache": "copy",
+     "arena_cache_bytes": 269991936,
+     "mapped_bytes": 49794490,
+     "record_bytes": 0,
+     "record_mapped_bytes": 45937108,
+     "column_bytes": 0,
+     "column_mapped_bytes": 2857320,
+     "id_table_mapped_bytes": 1000062,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 878368,
+     "process_peak_rss_kb": 878368,
+     "file_size_mb": 148.665
+    },
+    "load_avg_start": [
+     2.12,
+     2.16,
+     2.15
+    ],
+    "load_avg_end": [
+     2.27,
+     2.19,
+     2.16
+    ]
+   }
+  },
+  "cache_verify": {
+   "val1190": {
+    "arm": "cache_verify",
+    "corpus": "val1190",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 1190,
+    "n_queries": 120,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "verify",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "verify",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 1190,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "verify_s": 0.002615,
+     "attach_s": 0.008158,
+     "scan_s": 3.5e-05,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.008615,
+     "reopen_s_in_process_median": 0.00279,
+     "reopen_s_in_process_min": 0.002727,
+     "reopen_s_in_process_p95": 0.003011,
+     "reopen_s_in_process_all": [
+      0.007065,
+      0.00291,
+      0.002896,
+      0.002837,
+      0.002778,
+      0.002783,
+      0.002871,
+      0.002883,
+      0.002824,
+      0.003016,
+      0.002991,
+      0.002742,
+      0.002729,
+      0.00279,
+      0.002886,
+      0.002738,
+      0.002759,
+      0.002739,
+      0.00275,
+      0.002845,
+      0.002754,
+      0.002727,
+      0.002746,
+      0.002733,
+      0.002914
+     ],
+     "first_query_after_reopen_s": 0.000454,
+     "first_query_after_reopen_s_median_of_5": 0.000104,
+     "time_to_first_answer_s": 0.002894,
+     "latency_ms": {
+      "p50": 0.0911,
+      "p95": 0.1002,
+      "p99": 0.105,
+      "mean": 0.0912,
+      "n_timed_queries": 120
+     },
+     "numpy_floor_ms": {
+      "p50": 0.0083,
+      "min": 0.0071
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 51232768,
+     "baseline_maxrss_bytes": 51232768,
+     "baseline_phys_footprint_bytes": 37748736,
+     "after_open_maxrss_delta_bytes": 4620288,
+     "after_open_rss_delta_bytes": 4620288,
+     "after_first_query_rss_delta_bytes": 4931584,
+     "after_first_query_phys_footprint_delta_bytes": 0,
+     "peak_maxrss_delta_bytes": 5128192,
+     "live_rss_delta_bytes": 5128192,
+     "phys_footprint_delta_bytes": 0,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 2628355,
+     "arena_cache_bytes": 4583424
+    },
+    "exactness": {
+     "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd"
+    },
+    "stats": {
+     "total_documents": 1190,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 3.486,
+     "arena_source": "cache",
+     "arena_cache": "verify",
+     "arena_cache_bytes": 4583424,
+     "mapped_bytes": 4516517,
+     "record_bytes": 0,
+     "record_mapped_bytes": 796577,
+     "column_bytes": 0,
+     "column_mapped_bytes": 47600,
+     "id_table_mapped_bytes": 16660,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 55120,
+     "process_peak_rss_kb": 55120,
+     "file_size_mb": 2.507
+    },
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_verify",
+    "corpus": "n10000",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 10000,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "verify",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "verify",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 10000,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "verify_s": 0.020865,
+     "attach_s": 0.025015,
+     "scan_s": 4.6e-05,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.025444,
+     "reopen_s_in_process_median": 0.020942,
+     "reopen_s_in_process_min": 0.020656,
+     "reopen_s_in_process_p95": 0.02531,
+     "reopen_s_in_process_all": [
+      0.021517,
+      0.020951,
+      0.020848,
+      0.021677,
+      0.02091,
+      0.020942,
+      0.020675,
+      0.020817,
+      0.025263,
+      0.021543,
+      0.020927,
+      0.020909,
+      0.025764,
+      0.020656,
+      0.02125,
+      0.020759,
+      0.020942,
+      0.020805,
+      0.020978,
+      0.021144,
+      0.020736,
+      0.025321,
+      0.020817,
+      0.020667,
+      0.021288
+     ],
+     "first_query_after_reopen_s": 0.000823,
+     "first_query_after_reopen_s_median_of_5": 0.000522,
+     "time_to_first_answer_s": 0.021464,
+     "latency_ms": {
+      "p50": 0.3936,
+      "p95": 0.4411,
+      "p99": 0.4654,
+      "mean": 0.3929,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.1824,
+      "min": 0.0923
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 97648640,
+     "baseline_maxrss_bytes": 97648640,
+     "baseline_phys_footprint_bytes": 83886080,
+     "after_open_maxrss_delta_bytes": 38436864,
+     "after_open_rss_delta_bytes": 38453248,
+     "after_first_query_rss_delta_bytes": 38977536,
+     "after_first_query_phys_footprint_delta_bytes": 1048576,
+     "peak_maxrss_delta_bytes": 40124416,
+     "live_rss_delta_bytes": 40124416,
+     "phys_footprint_delta_bytes": 2097152,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 21978441,
+     "arena_cache_bytes": 37982208
+    },
+    "exactness": {
+     "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "stats": {
+     "total_documents": 10000,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 29.297,
+     "arena_source": "cache",
+     "arena_cache": "verify",
+     "arena_cache_bytes": 37982208,
+     "mapped_bytes": 37846287,
+     "record_bytes": 0,
+     "record_mapped_bytes": 6586287,
+     "column_bytes": 0,
+     "column_mapped_bytes": 400000,
+     "id_table_mapped_bytes": 140000,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 134576,
+     "process_peak_rss_kb": 134576,
+     "file_size_mb": 20.96
+    },
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ],
+    "load_avg_end": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_verify",
+    "corpus": "n71433",
+    "phase": "serve",
+    "ok": true,
+    "n_docs": 71433,
+    "n_queries": 500,
+    "config": {
+     "package": "<repo>/nanomem_standalone",
+     "arena_cache": "verify",
+     "nanomem_version": "0.3.2",
+     "engine_version": "3.0.5",
+     "source": "wiki (not a PERSONAL_SOURCE, so the entity/temporal boost layer is inert)"
+    },
+    "arena_cache_info": {
+     "mode": "verify",
+     "source": "cache",
+     "reason": null,
+     "rows_from_cache": 71433,
+     "rows_scanned": 0,
+     "vault_changed_since_cache": "unchanged",
+     "verify_s": 0.146597,
+     "attach_s": 0.151222,
+     "scan_s": 8e-05,
+     "vault_blocks_checked": "all"
+    },
+    "timing": {
+     "reopen_s_fresh_process": 0.151757,
+     "reopen_s_in_process_median": 0.153498,
+     "reopen_s_in_process_min": 0.149496,
+     "reopen_s_in_process_p95": 0.167556,
+     "reopen_s_in_process_all": [
+      0.161194,
+      0.154269,
+      0.153293,
+      0.152421,
+      0.153498,
+      0.151021,
+      0.157061,
+      0.165925,
+      0.167844,
+      0.166403,
+      0.169299,
+      0.157492,
+      0.155186,
+      0.149496,
+      0.15581,
+      0.150903,
+      0.149959,
+      0.150077,
+      0.15352,
+      0.152909,
+      0.149909,
+      0.149547,
+      0.155049,
+      0.153341,
+      0.153332
+     ],
+     "first_query_after_reopen_s": 0.002945,
+     "first_query_after_reopen_s_median_of_5": 0.002476,
+     "time_to_first_answer_s": 0.155974,
+     "latency_ms": {
+      "p50": 1.8086,
+      "p95": 2.0429,
+      "p99": 2.1106,
+      "mean": 1.8156,
+      "n_timed_queries": 500
+     },
+     "numpy_floor_ms": {
+      "p50": 0.9766,
+      "min": 0.9477
+     }
+    },
+    "memory": {
+     "baseline_rss_bytes": 409010176,
+     "baseline_maxrss_bytes": 409010176,
+     "baseline_phys_footprint_bytes": 395313152,
+     "after_open_maxrss_delta_bytes": 270188544,
+     "after_open_rss_delta_bytes": 270237696,
+     "after_first_query_rss_delta_bytes": 274923520,
+     "after_first_query_phys_footprint_delta_bytes": 5242880,
+     "peak_maxrss_delta_bytes": 279396352,
+     "live_rss_delta_bytes": 279396352,
+     "phys_footprint_delta_bytes": 9437184,
+     "method": "ru_maxrss for the peak, `ps -o rss=` live, `footprint -p` for phys_footprint (which excludes clean file-backed pages). Baseline taken after the corpus arrays are loaded."
+    },
+    "disk": {
+     "vault_bytes": 155886408,
+     "arena_cache_bytes": 269991936
+    },
+    "exactness": {
+     "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "stats": {
+     "total_documents": 71433,
+     "active_heap_ram_kb": 0.0,
+     "resident_arena_mb": 0.0,
+     "resident_arena_mapped_mb": 209.276,
+     "arena_source": "cache",
+     "arena_cache": "verify",
+     "arena_cache_bytes": 269991936,
+     "mapped_bytes": 269236666,
+     "record_bytes": 0,
+     "record_mapped_bytes": 45937108,
+     "column_bytes": 0,
+     "column_mapped_bytes": 2857320,
+     "id_table_mapped_bytes": 1000062,
+     "index_bytes_estimated": 0,
+     "arena_growth_copies": 0,
+     "process_rss_kb": 672400,
+     "process_peak_rss_kb": 672400,
+     "file_size_mb": 148.665
+    },
+    "load_avg_start": [
+     2.27,
+     2.19,
+     2.16
+    ],
+    "load_avg_end": [
+     2.49,
+     2.24,
+     2.17
+    ]
+   }
+  }
+ },
+ "rebuild": {
+  "cache_map": {
+   "val1190": {
+    "arm": "cache_map",
+    "corpus": "val1190",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 1190,
+    "runs": [
+     {
+      "open_s": 0.006289,
+      "scan_s": 0.002963,
+      "write_s": 0.002709
+     },
+     {
+      "open_s": 0.006646,
+      "scan_s": 0.002606,
+      "write_s": 0.00354
+     },
+     {
+      "open_s": 0.005539,
+      "scan_s": 0.00262,
+      "write_s": 0.00246
+     }
+    ],
+    "rebuild_open_s": 0.006289,
+    "scan_s": 0.00262,
+    "attach_s": 4e-06,
+    "write": {
+     "bytes": 4583424,
+     "write_s": 0.00246,
+     "durable": false
+    },
+    "write_error": null,
+    "cache_bytes": 4583424,
+    "peak_maxrss_delta_bytes": 5193728,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_map",
+    "corpus": "n10000",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 10000,
+    "runs": [
+     {
+      "open_s": 0.042852,
+      "scan_s": 0.022776,
+      "write_s": 0.017328
+     },
+     {
+      "open_s": 0.041029,
+      "scan_s": 0.021501,
+      "write_s": 0.017035
+     },
+     {
+      "open_s": 0.041147,
+      "scan_s": 0.02178,
+      "write_s": 0.017014
+     }
+    ],
+    "rebuild_open_s": 0.041147,
+    "scan_s": 0.02178,
+    "attach_s": 6e-06,
+    "write": {
+     "bytes": 37982208,
+     "write_s": 0.017014,
+     "durable": false
+    },
+    "write_error": null,
+    "cache_bytes": 37982208,
+    "peak_maxrss_delta_bytes": 42614784,
+    "load_avg": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "n71433": {
+    "arm": "cache_map",
+    "corpus": "n71433",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 71433,
+    "runs": [
+     {
+      "open_s": 0.305056,
+      "scan_s": 0.166819,
+      "write_s": 0.121767
+     },
+     {
+      "open_s": 0.300217,
+      "scan_s": 0.162199,
+      "write_s": 0.121555
+     },
+     {
+      "open_s": 0.311908,
+      "scan_s": 0.163924,
+      "write_s": 0.131547
+     }
+    ],
+    "rebuild_open_s": 0.305056,
+    "scan_s": 0.163924,
+    "attach_s": 9e-06,
+    "write": {
+     "bytes": 269991936,
+     "write_s": 0.131547,
+     "durable": false
+    },
+    "write_error": null,
+    "cache_bytes": 269991936,
+    "peak_maxrss_delta_bytes": 296632320,
+    "load_avg": [
+     2.18,
+     2.18,
+     2.15
+    ]
+   }
+  },
+  "cache_off": {
+   "val1190": {
+    "arm": "cache_off",
+    "corpus": "val1190",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 1190,
+    "runs": [
+     {
+      "open_s": 0.003029,
+      "scan_s": 0.002823,
+      "write_s": null
+     },
+     {
+      "open_s": 0.002771,
+      "scan_s": 0.00264,
+      "write_s": null
+     },
+     {
+      "open_s": 0.002716,
+      "scan_s": 0.002608,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.002771,
+    "scan_s": 0.00264,
+    "attach_s": 0.0,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 4997120,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_off",
+    "corpus": "n10000",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 10000,
+    "runs": [
+     {
+      "open_s": 0.023029,
+      "scan_s": 0.022806,
+      "write_s": null
+     },
+     {
+      "open_s": 0.022226,
+      "scan_s": 0.022055,
+      "write_s": null
+     },
+     {
+      "open_s": 0.022508,
+      "scan_s": 0.022342,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.022508,
+    "scan_s": 0.022342,
+    "attach_s": 1e-06,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 41795584,
+    "load_avg": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "n71433": {
+    "arm": "cache_off",
+    "corpus": "n71433",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 71433,
+    "runs": [
+     {
+      "open_s": 0.166947,
+      "scan_s": 0.166658,
+      "write_s": null
+     },
+     {
+      "open_s": 0.165884,
+      "scan_s": 0.165639,
+      "write_s": null
+     },
+     {
+      "open_s": 0.161169,
+      "scan_s": 0.16094,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.165884,
+    "scan_s": 0.165639,
+    "attach_s": 1e-06,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 291258368,
+    "load_avg": [
+     2.18,
+     2.18,
+     2.15
+    ]
+   }
+  },
+  "baseline_e617ba3": {
+   "val1190": {
+    "arm": "baseline_e617ba3",
+    "corpus": "val1190",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 1190,
+    "runs": [
+     {
+      "open_s": 0.003154,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.002801,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.002779,
+      "scan_s": null,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.002801,
+    "scan_s": null,
+    "attach_s": null,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 4898816,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n10000",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 10000,
+    "runs": [
+     {
+      "open_s": 0.024039,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.022685,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.022909,
+      "scan_s": null,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.022909,
+    "scan_s": null,
+    "attach_s": null,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 41566208,
+    "load_avg": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "n71433": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n71433",
+    "phase": "rebuild",
+    "ok": true,
+    "n_docs": 71433,
+    "runs": [
+     {
+      "open_s": 0.167719,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.163401,
+      "scan_s": null,
+      "write_s": null
+     },
+     {
+      "open_s": 0.164623,
+      "scan_s": null,
+      "write_s": null
+     }
+    ],
+    "rebuild_open_s": 0.164623,
+    "scan_s": null,
+    "attach_s": null,
+    "write": null,
+    "write_error": null,
+    "cache_bytes": 0,
+    "peak_maxrss_delta_bytes": 291258368,
+    "load_avg": [
+     2.18,
+     2.18,
+     2.15
+    ]
+   }
+  }
+ },
+ "append": {
+  "cache_map": {
+   "val1190": {
+    "arm": "cache_map",
+    "corpus": "val1190",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 1190,
+    "rows_after": 1390,
+    "appended": 200,
+    "reopen_s_median": 0.001353,
+    "source": "cache+append",
+    "rows_from_cache": 1190,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_map",
+    "corpus": "n10000",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 10000,
+    "rows_after": 10200,
+    "appended": 200,
+    "reopen_s_median": 0.006817,
+    "source": "cache+append",
+    "rows_from_cache": 10000,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_map",
+    "corpus": "n71433",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 71433,
+    "rows_after": 71633,
+    "appended": 200,
+    "reopen_s_median": 0.048748,
+    "source": "cache+append",
+    "rows_from_cache": 71433,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.49,
+     2.24,
+     2.17
+    ]
+   }
+  },
+  "cache_copy": {
+   "val1190": {
+    "arm": "cache_copy",
+    "corpus": "val1190",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 1190,
+    "rows_after": 1390,
+    "appended": 200,
+    "reopen_s_median": 0.001528,
+    "source": "cache+append",
+    "rows_from_cache": 1190,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_copy",
+    "corpus": "n10000",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 10000,
+    "rows_after": 10200,
+    "appended": 200,
+    "reopen_s_median": 0.008182,
+    "source": "cache+append",
+    "rows_from_cache": 10000,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_copy",
+    "corpus": "n71433",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 71433,
+    "rows_after": 71633,
+    "appended": 200,
+    "reopen_s_median": 0.059062,
+    "source": "cache+append",
+    "rows_from_cache": 71433,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.37,
+     2.21,
+     2.17
+    ]
+   }
+  },
+  "cache_verify": {
+   "val1190": {
+    "arm": "cache_verify",
+    "corpus": "val1190",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 1190,
+    "rows_after": 1390,
+    "appended": 200,
+    "reopen_s_median": 0.004187,
+    "source": "cache+append",
+    "rows_from_cache": 1190,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_verify",
+    "corpus": "n10000",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 10000,
+    "rows_after": 10200,
+    "appended": 200,
+    "reopen_s_median": 0.026719,
+    "source": "cache+append",
+    "rows_from_cache": 10000,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "n71433": {
+    "arm": "cache_verify",
+    "corpus": "n71433",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 71433,
+    "rows_after": 71633,
+    "appended": 200,
+    "reopen_s_median": 0.182312,
+    "source": "cache+append",
+    "rows_from_cache": 71433,
+    "rows_scanned": 200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.37,
+     2.21,
+     2.17
+    ]
+   }
+  },
+  "baseline_e617ba3": {
+   "val1190": {
+    "arm": "baseline_e617ba3",
+    "corpus": "val1190",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 1190,
+    "rows_after": 1390,
+    "appended": 200,
+    "reopen_s_median": 0.003354,
+    "source": null,
+    "rows_from_cache": null,
+    "rows_scanned": null,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n10000",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 10000,
+    "rows_after": 10200,
+    "appended": 200,
+    "reopen_s_median": 0.022868,
+    "source": null,
+    "rows_from_cache": null,
+    "rows_scanned": null,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "n71433": {
+    "arm": "baseline_e617ba3",
+    "corpus": "n71433",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 71433,
+    "rows_after": 71633,
+    "appended": 200,
+    "reopen_s_median": 0.167071,
+    "source": null,
+    "rows_from_cache": null,
+    "rows_scanned": null,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.37,
+     2.21,
+     2.17
+    ]
+   }
+  },
+  "cache_off": {
+   "val1190": {
+    "arm": "cache_off",
+    "corpus": "val1190",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 1190,
+    "rows_after": 1390,
+    "appended": 200,
+    "reopen_s_median": 0.003098,
+    "source": "scan",
+    "rows_from_cache": 0,
+    "rows_scanned": 1390,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "n10000": {
+    "arm": "cache_off",
+    "corpus": "n10000",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 10000,
+    "rows_after": 10200,
+    "appended": 200,
+    "reopen_s_median": 0.022516,
+    "source": "scan",
+    "rows_from_cache": 0,
+    "rows_scanned": 10200,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "n71433": {
+    "arm": "cache_off",
+    "corpus": "n71433",
+    "phase": "append",
+    "ok": true,
+    "rows_before": 71433,
+    "rows_after": 71633,
+    "appended": 200,
+    "reopen_s_median": 0.169602,
+    "source": "scan",
+    "rows_from_cache": 0,
+    "rows_scanned": 71633,
+    "rewrote_cache": false,
+    "load_avg": [
+     2.18,
+     2.18,
+     2.15
+    ]
+   }
+  }
+ },
+ "competitors": {
+  "val1190": {
+   "faiss_flat_ip": {
+    "reopen_s": 0.0006,
+    "first_query_after_reopen_s": 0.0012
+   },
+   "nanomem_v3_exact": {
+    "reopen_s": 0.0027,
+    "first_query_after_reopen_s": 0.0005
+   },
+   "nanomem_v3_router_auto": {
+    "reopen_s": 0.014,
+    "first_query_after_reopen_s": 0.0006
+   },
+   "sqlitevec_bruteforce": {
+    "reopen_s": 0.0009,
+    "first_query_after_reopen_s": 0.0012
+   },
+   "chroma_hnsw_default": {
+    "reopen_s": 0.0015,
+    "first_query_after_reopen_s": 0.001
+   },
+   "chroma_hnsw_tuned": {
+    "reopen_s": 0.0015,
+    "first_query_after_reopen_s": 0.0012
+   },
+   "chroma_bruteforce": {
+    "reopen_s": 0.0015,
+    "first_query_after_reopen_s": 0.0008
+   },
+   "chroma_legacy_segment_bruteforce": {
+    "reopen_s": 0.0016,
+    "first_query_after_reopen_s": 0.035
+   },
+   "nanomem_v3_exact_fp32": {
+    "reopen_s": 0.0034,
+    "first_query_after_reopen_s": 0.0002
+   }
+  },
+  "n10000": {
+   "faiss_flat_ip": {
+    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.0014
+   },
+   "nanomem_v3_exact": {
+    "reopen_s": 0.0218,
+    "first_query_after_reopen_s": 0.0007
+   },
+   "nanomem_v3_router_auto": {
+    "reopen_s": 0.267,
+    "first_query_after_reopen_s": 0.0008
+   },
+   "sqlitevec_bruteforce": {
+    "reopen_s": 0.001,
+    "first_query_after_reopen_s": 0.0074
+   },
+   "chroma_hnsw_default": {
+    "reopen_s": 0.0015,
+    "first_query_after_reopen_s": 0.0011
+   },
+   "chroma_hnsw_tuned": {
+    "reopen_s": 0.0016,
+    "first_query_after_reopen_s": 0.0056
+   },
+   "chroma_bruteforce": {
+    "reopen_s": 0.0016,
+    "first_query_after_reopen_s": 0.0012
+   },
+   "chroma_legacy_segment_bruteforce": {
+    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.0653
+   },
+   "nanomem_v3_exact_fp32": {
+    "reopen_s": 0.0277,
+    "first_query_after_reopen_s": 0.0007
+   }
+  },
+  "n71433": {
+   "faiss_flat_ip": {
+    "reopen_s": 0.0121,
+    "first_query_after_reopen_s": 0.0032
+   },
+   "nanomem_v3_exact": {
+    "reopen_s": 0.1609,
+    "first_query_after_reopen_s": 0.0028
+   },
+   "nanomem_v3_router_auto": {
+    "reopen_s": 7.0127,
+    "first_query_after_reopen_s": 0.0038
+   },
+   "sqlitevec_bruteforce": {
+    "reopen_s": 0.0014,
+    "first_query_after_reopen_s": 0.0531
+   },
+   "chroma_hnsw_default": {
+    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.0013
+   },
+   "chroma_hnsw_tuned": {
+    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.01
+   },
+   "chroma_bruteforce": {
+    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.0014
+   },
+   "chroma_legacy_segment_bruteforce": {
+    "reopen_s": 0.0019,
+    "first_query_after_reopen_s": 0.2831
+   },
+   "nanomem_v3_exact_fp32": {
+    "reopen_s": 0.2053,
+    "first_query_after_reopen_s": 0.0027
+   }
+  }
+ },
+ "failures": [],
+ "warm": {
+  "val1190": {
+   "arm": "cache_map",
+   "corpus": "val1190",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 1190,
+   "runs": [
+    {
+     "open_s": 0.006113,
+     "scan_s": 0.002885,
+     "write_s": 0.002569
+    },
+    {
+     "open_s": 0.005918,
+     "scan_s": 0.002678,
+     "write_s": 0.002735
+    },
+    {
+     "open_s": 0.005848,
+     "scan_s": 0.002508,
+     "write_s": 0.002848
+    }
+   ],
+   "rebuild_open_s": 0.005918,
+   "scan_s": 0.002678,
+   "attach_s": 7e-06,
+   "write": {
+    "bytes": 4583424,
+    "write_s": 0.002848,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 4583424,
+   "peak_maxrss_delta_bytes": 5128192,
+   "load_avg": [
+    2.16,
+    2.17,
+    2.15
+   ]
+  },
+  "n10000": {
+   "arm": "cache_map",
+   "corpus": "n10000",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 10000,
+   "runs": [
+    {
+     "open_s": 0.045814,
+     "scan_s": 0.022451,
+     "write_s": 0.020648
+    },
+    {
+     "open_s": 0.047534,
+     "scan_s": 0.021584,
+     "write_s": 0.023483
+    },
+    {
+     "open_s": 0.042957,
+     "scan_s": 0.021179,
+     "write_s": 0.019223
+    }
+   ],
+   "rebuild_open_s": 0.045814,
+   "scan_s": 0.021584,
+   "attach_s": 6e-06,
+   "write": {
+    "bytes": 37982208,
+    "write_s": 0.019223,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 37982208,
+   "peak_maxrss_delta_bytes": 42237952,
+   "load_avg": [
+    2.16,
+    2.17,
+    2.15
+   ]
+  },
+  "n71433": {
+   "arm": "cache_map",
+   "corpus": "n71433",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 71433,
+   "runs": [
+    {
+     "open_s": 0.308211,
+     "scan_s": 0.164303,
+     "write_s": 0.127726
+    },
+    {
+     "open_s": 0.313205,
+     "scan_s": 0.158812,
+     "write_s": 0.137894
+    },
+    {
+     "open_s": 0.513816,
+     "scan_s": 0.156503,
+     "write_s": 0.34043
+    }
+   ],
+   "rebuild_open_s": 0.313205,
+   "scan_s": 0.158812,
+   "attach_s": 8e-06,
+   "write": {
+    "bytes": 269991936,
+    "write_s": 0.34043,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 269991936,
+   "peak_maxrss_delta_bytes": 296878080,
+   "load_avg": [
+    2.05,
+    2.15,
+    2.14
+   ]
+  }
+ },
+ "rewarm": {
+  "val1190": {
+   "arm": "cache_map",
+   "corpus": "val1190",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 1190,
+   "runs": [
+    {
+     "open_s": 0.006289,
+     "scan_s": 0.002878,
+     "write_s": 0.002806
+    },
+    {
+     "open_s": 0.005656,
+     "scan_s": 0.002659,
+     "write_s": 0.002505
+    },
+    {
+     "open_s": 0.00634,
+     "scan_s": 0.002665,
+     "write_s": 0.003208
+    }
+   ],
+   "rebuild_open_s": 0.006289,
+   "scan_s": 0.002665,
+   "attach_s": 4e-06,
+   "write": {
+    "bytes": 4583424,
+    "write_s": 0.003208,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 4583424,
+   "peak_maxrss_delta_bytes": 5046272,
+   "load_avg": [
+    2.16,
+    2.17,
+    2.15
+   ]
+  },
+  "n10000": {
+   "arm": "cache_map",
+   "corpus": "n10000",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 10000,
+   "runs": [
+    {
+     "open_s": 0.043226,
+     "scan_s": 0.023018,
+     "write_s": 0.017471
+    },
+    {
+     "open_s": 0.044783,
+     "scan_s": 0.022015,
+     "write_s": 0.020206
+    },
+    {
+     "open_s": 0.045562,
+     "scan_s": 0.021933,
+     "write_s": 0.021083
+    }
+   ],
+   "rebuild_open_s": 0.044783,
+   "scan_s": 0.022015,
+   "attach_s": 7e-06,
+   "write": {
+    "bytes": 37982208,
+    "write_s": 0.021083,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 37982208,
+   "peak_maxrss_delta_bytes": 42663936,
+   "load_avg": [
+    2.05,
+    2.15,
+    2.14
+   ]
+  },
+  "n71433": {
+   "arm": "cache_map",
+   "corpus": "n71433",
+   "phase": "rebuild",
+   "ok": true,
+   "n_docs": 71433,
+   "runs": [
+    {
+     "open_s": 0.302757,
+     "scan_s": 0.164574,
+     "write_s": 0.12176
+    },
+    {
+     "open_s": 0.300926,
+     "scan_s": 0.164056,
+     "write_s": 0.120031
+    },
+    {
+     "open_s": 0.348694,
+     "scan_s": 0.161563,
+     "write_s": 0.170583
+    }
+   ],
+   "rebuild_open_s": 0.302757,
+   "scan_s": 0.164056,
+   "attach_s": 8e-06,
+   "write": {
+    "bytes": 269991936,
+    "write_s": 0.170583,
+    "durable": false
+   },
+   "write_error": null,
+   "cache_bytes": 269991936,
+   "peak_maxrss_delta_bytes": 296878080,
+   "load_avg": [
+    2.18,
+    2.18,
+    2.15
+   ]
+  }
+ },
+ "scan_path_duel": {
+  "val1190": {
+   "baseline_e617ba3_open_s": [
+    0.002847,
+    0.002756,
+    0.002835,
+    0.002805,
+    0.002831
+   ],
+   "cache_off_open_s": [
+    0.002797,
+    0.002799,
+    0.002781,
+    0.002801,
+    0.002805
+   ],
+   "paired_ratio_new_over_baseline": [
+    0.9824,
+    1.0156,
+    0.981,
+    0.9986,
+    0.9908
+   ],
+   "median_ratio": 0.9908,
+   "what": "same vault, same protocol, arms alternated cycle by cycle. The cache is not read or written in either arm, so a ratio away from 1.0 is the new package's cost on the path it did not change."
+  },
+  "n10000": {
+   "baseline_e617ba3_open_s": [
+    0.023035,
+    0.023018,
+    0.023007,
+    0.023444,
+    0.023041
+   ],
+   "cache_off_open_s": [
+    0.022658,
+    0.022856,
+    0.023639,
+    0.02293,
+    0.022848
+   ],
+   "paired_ratio_new_over_baseline": [
+    0.9836,
+    0.993,
+    1.0275,
+    0.9781,
+    0.9916
+   ],
+   "median_ratio": 0.9916,
+   "what": "same vault, same protocol, arms alternated cycle by cycle. The cache is not read or written in either arm, so a ratio away from 1.0 is the new package's cost on the path it did not change."
+  },
+  "n71433": {
+   "baseline_e617ba3_open_s": [
+    0.166019,
+    0.164584,
+    0.166632,
+    0.166434,
+    0.165643
+   ],
+   "cache_off_open_s": [
+    0.166253,
+    0.164514,
+    0.1649,
+    0.166476,
+    0.165029
+   ],
+   "paired_ratio_new_over_baseline": [
+    1.0014,
+    0.9996,
+    0.9896,
+    1.0003,
+    0.9963
+   ],
+   "median_ratio": 0.9996,
+   "what": "same vault, same protocol, arms alternated cycle by cycle. The cache is not read or written in either arm, so a ratio away from 1.0 is the new package's cost on the path it did not change."
+  }
+ },
+ "first_write_after_open": {
+  "cache_off": {
+   "val1190": {
+    "arm": "cache_off",
+    "corpus": "val1190",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "scan",
+    "rows_after": 1241,
+    "first_add_fact_s": 2.7e-05,
+    "first_flush_s": 0.000481,
+    "next_50_rows_s": 0.000978,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 8241152,
+    "load_avg": [
+     1.86,
+     2.1,
+     2.13
+    ]
+   },
+   "n10000": {
+    "arm": "cache_off",
+    "corpus": "n10000",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "scan",
+    "rows_after": 10051,
+    "first_add_fact_s": 4.1e-05,
+    "first_flush_s": 0.00201,
+    "next_50_rows_s": 0.001039,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 72138752,
+    "load_avg": [
+     1.86,
+     2.1,
+     2.13
+    ]
+   },
+   "n71433": {
+    "arm": "cache_off",
+    "corpus": "n71433",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "scan",
+    "rows_after": 71484,
+    "first_add_fact_s": 4.5e-05,
+    "first_flush_s": 0.012413,
+    "next_50_rows_s": 0.001596,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 510001152,
+    "load_avg": [
+     1.87,
+     2.09,
+     2.12
+    ]
+   }
+  },
+  "cache_map": {
+   "val1190": {
+    "arm": "cache_map",
+    "corpus": "val1190",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "cache",
+    "rows_after": 1241,
+    "first_add_fact_s": 2.7e-05,
+    "first_flush_s": 0.00252,
+    "next_50_rows_s": 0.00097,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 8437760,
+    "load_avg": [
+     1.86,
+     2.1,
+     2.13
+    ]
+   },
+   "n10000": {
+    "arm": "cache_map",
+    "corpus": "n10000",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "cache",
+    "rows_after": 10051,
+    "first_add_fact_s": 3.4e-05,
+    "first_flush_s": 0.006256,
+    "next_50_rows_s": 0.001085,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 64110592,
+    "load_avg": [
+     1.86,
+     2.1,
+     2.13
+    ]
+   },
+   "n71433": {
+    "arm": "cache_map",
+    "corpus": "n71433",
+    "phase": "firstwrite",
+    "ok": true,
+    "source": "cache",
+    "rows_after": 71484,
+    "first_add_fact_s": 4.2e-05,
+    "first_flush_s": 0.047444,
+    "next_50_rows_s": 0.001554,
+    "arena_growth_copies": 1,
+    "peak_maxrss_delta_bytes": 457441280,
+    "load_avg": [
+     1.87,
+     2.09,
+     2.12
+    ]
+   }
+  }
+ },
+ "exactness": {
+  "val1190": {
+   "baseline_e617ba3": {
+    "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 120
+   },
+   "cache_off": {
+    "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 120
+   },
+   "cache_map": {
+    "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 120
+   },
+   "cache_copy": {
+    "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 120
+   },
+   "cache_verify": {
+    "scores_sha256": "f87e1d4b9c1c2271fdf389b0d3204b7e87f8fccc7a7fd672493195dceccc45fd",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 120
+   }
+  },
+  "n10000": {
+   "baseline_e617ba3": {
+    "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 1,
+    "n_queries": 500
+   },
+   "cache_off": {
+    "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 1,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_map": {
+    "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 1,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_copy": {
+    "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 1,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_verify": {
+    "scores_sha256": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 1,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   }
+  },
+  "n71433": {
+   "baseline_e617ba3": {
+    "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 0,
+    "top10_lists_changed_vs_same_build_cache_off": 8,
+    "n_queries": 500
+   },
+   "cache_off": {
+    "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 8,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_map": {
+    "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 8,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_copy": {
+    "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 8,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   },
+   "cache_verify": {
+    "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+    "identical_to_baseline": true,
+    "identical_to_cache_off": true,
+    "top10_lists_changed_vs_baseline": 8,
+    "top10_lists_changed_vs_same_build_cache_off": 0,
+    "n_queries": 500
+   }
+  }
+ },
+ "tie_forensics": {
+  "val1190": {
+   "arm": "cache_off",
+   "corpus": "val1190",
+   "phase": "ties",
+   "ok": true,
+   "n_queries": 120,
+   "top10_lists_changed_vs_baseline": 0,
+   "queries_changed": [],
+   "positions_compared": 0,
+   "max_abs_score_gap_at_a_changed_position": 0.0,
+   "all_disagreements_are_exact_ties": true,
+   "verdict": "every disagreement is between two documents holding the SAME float32 cosine, so both orders are correct answers",
+   "cause": "engine._select_top_k, new in this working tree from the PCA-screen workstream: it replaces argpartition's unspecified order among equal scores with a defined ascending-row-id tie-break. Not the arena cache -- cache_off shows the same lists as cache_map."
+  },
+  "n10000": {
+   "arm": "cache_off",
+   "corpus": "n10000",
+   "phase": "ties",
+   "ok": true,
+   "n_queries": 500,
+   "top10_lists_changed_vs_baseline": 1,
+   "queries_changed": [
+    405
+   ],
+   "positions_compared": 2,
+   "max_abs_score_gap_at_a_changed_position": 0.0,
+   "all_disagreements_are_exact_ties": true,
+   "verdict": "every disagreement is between two documents holding the SAME float32 cosine, so both orders are correct answers",
+   "cause": "engine._select_top_k, new in this working tree from the PCA-screen workstream: it replaces argpartition's unspecified order among equal scores with a defined ascending-row-id tie-break. Not the arena cache -- cache_off shows the same lists as cache_map."
+  },
+  "n71433": {
+   "arm": "cache_off",
+   "corpus": "n71433",
+   "phase": "ties",
+   "ok": true,
+   "n_queries": 500,
+   "top10_lists_changed_vs_baseline": 8,
+   "queries_changed": [
+    77,
+    119,
+    225,
+    338,
+    389,
+    420,
+    425,
+    431
+   ],
+   "positions_compared": 14,
+   "max_abs_score_gap_at_a_changed_position": 0.0,
+   "all_disagreements_are_exact_ties": true,
+   "verdict": "every disagreement is between two documents holding the SAME float32 cosine, so both orders are correct answers",
+   "cause": "engine._select_top_k, new in this working tree from the PCA-screen workstream: it replaces argpartition's unspecified order among equal scores with a defined ascending-row-id tie-break. Not the arena cache -- cache_off shows the same lists as cache_map."
+  }
+ },
+ "headline": {
+  "val1190": {
+   "baseline_e617ba3": {
+    "reopen_s": 0.002657,
+    "reopen_s_fresh_process": 0.00321,
+    "first_query_s": 0.000105,
+    "time_to_first_answer_s": 0.002762,
+    "p50_ms": 0.0814,
+    "p95_ms": 0.0889,
+    "numpy_floor_p50_ms": 0.0083,
+    "peak_rss_mb": 4.4,
+    "live_rss_mb": 4.4,
+    "phys_footprint_mb": 5.0,
+    "vault_mib": 2.5,
+    "cache_mib": 4.4,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_off": {
+    "reopen_s": 0.002663,
+    "reopen_s_fresh_process": 0.003245,
+    "first_query_s": 0.000106,
+    "time_to_first_answer_s": 0.002769,
+    "p50_ms": 0.0849,
+    "p95_ms": 0.0929,
+    "numpy_floor_p50_ms": 0.0082,
+    "peak_rss_mb": 4.5,
+    "live_rss_mb": 4.5,
+    "phys_footprint_mb": 4.0,
+    "vault_mib": 2.5,
+    "cache_mib": 4.4,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_map": {
+    "reopen_s": 0.000186,
+    "reopen_s_fresh_process": 0.007643,
+    "first_query_s": 0.000253,
+    "time_to_first_answer_s": 0.000439,
+    "p50_ms": 0.0901,
+    "p95_ms": 0.0989,
+    "numpy_floor_p50_ms": 0.0083,
+    "peak_rss_mb": 4.8,
+    "live_rss_mb": 4.8,
+    "phys_footprint_mb": null,
+    "vault_mib": 2.5,
+    "cache_mib": 4.4,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_copy": {
+    "reopen_s": 0.000517,
+    "reopen_s_fresh_process": 0.005448,
+    "first_query_s": 0.000119,
+    "time_to_first_answer_s": 0.000637,
+    "p50_ms": 0.0887,
+    "p95_ms": 0.0961,
+    "numpy_floor_p50_ms": 0.0085,
+    "peak_rss_mb": 8.4,
+    "live_rss_mb": 8.4,
+    "phys_footprint_mb": 4.0,
+    "vault_mib": 2.5,
+    "cache_mib": 4.4,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_verify": {
+    "reopen_s": 0.00279,
+    "reopen_s_fresh_process": 0.008615,
+    "first_query_s": 0.000104,
+    "time_to_first_answer_s": 0.002894,
+    "p50_ms": 0.0911,
+    "p95_ms": 0.1002,
+    "numpy_floor_p50_ms": 0.0083,
+    "peak_rss_mb": 4.9,
+    "live_rss_mb": 4.9,
+    "phys_footprint_mb": null,
+    "vault_mib": 2.5,
+    "cache_mib": 4.4,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   }
+  },
+  "n10000": {
+   "baseline_e617ba3": {
+    "reopen_s": 0.022559,
+    "reopen_s_fresh_process": 0.022989,
+    "first_query_s": 0.000548,
+    "time_to_first_answer_s": 0.023108,
+    "p50_ms": 0.3579,
+    "p95_ms": 0.3973,
+    "numpy_floor_p50_ms": 0.1836,
+    "peak_rss_mb": 41.5,
+    "live_rss_mb": 41.5,
+    "phys_footprint_mb": 41.0,
+    "vault_mib": 21.0,
+    "cache_mib": 36.2,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.16,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_off": {
+    "reopen_s": 0.02234,
+    "reopen_s_fresh_process": 0.022784,
+    "first_query_s": 0.000532,
+    "time_to_first_answer_s": 0.022872,
+    "p50_ms": 0.3819,
+    "p95_ms": 0.437,
+    "numpy_floor_p50_ms": 0.1838,
+    "peak_rss_mb": 41.6,
+    "live_rss_mb": 41.6,
+    "phys_footprint_mb": 41.0,
+    "vault_mib": 21.0,
+    "cache_mib": 36.2,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_map": {
+    "reopen_s": 0.000206,
+    "reopen_s_fresh_process": 0.004749,
+    "first_query_s": 0.0016,
+    "time_to_first_answer_s": 0.001806,
+    "p50_ms": 0.3707,
+    "p95_ms": 0.4082,
+    "numpy_floor_p50_ms": 0.1949,
+    "peak_rss_mb": 37.6,
+    "live_rss_mb": 37.6,
+    "phys_footprint_mb": 1.0,
+    "vault_mib": 21.0,
+    "cache_mib": 36.2,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_copy": {
+    "reopen_s": 0.002999,
+    "reopen_s_fresh_process": 0.008442,
+    "first_query_s": 0.000505,
+    "time_to_first_answer_s": 0.003504,
+    "p50_ms": 0.372,
+    "p95_ms": 0.4288,
+    "numpy_floor_p50_ms": 0.1825,
+    "peak_rss_mb": 67.4,
+    "live_rss_mb": 67.4,
+    "phys_footprint_mb": 31.0,
+    "vault_mib": 21.0,
+    "cache_mib": 36.2,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   },
+   "cache_verify": {
+    "reopen_s": 0.020942,
+    "reopen_s_fresh_process": 0.025444,
+    "first_query_s": 0.000522,
+    "time_to_first_answer_s": 0.021464,
+    "p50_ms": 0.3936,
+    "p95_ms": 0.4411,
+    "numpy_floor_p50_ms": 0.1824,
+    "peak_rss_mb": 38.3,
+    "live_rss_mb": 38.3,
+    "phys_footprint_mb": 2.0,
+    "vault_mib": 21.0,
+    "cache_mib": 36.2,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.14,
+     2.17,
+     2.15
+    ]
+   }
+  },
+  "n71433": {
+   "baseline_e617ba3": {
+    "reopen_s": 0.163351,
+    "reopen_s_fresh_process": 0.16958,
+    "first_query_s": 0.005331,
+    "time_to_first_answer_s": 0.168681,
+    "p50_ms": 1.8127,
+    "p95_ms": 2.0719,
+    "numpy_floor_p50_ms": 0.9742,
+    "peak_rss_mb": 287.5,
+    "live_rss_mb": 287.5,
+    "phys_footprint_mb": 288.0,
+    "vault_mib": 148.7,
+    "cache_mib": 257.5,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "cache_off": {
+    "reopen_s": 0.168968,
+    "reopen_s_fresh_process": 0.164147,
+    "first_query_s": 0.005021,
+    "time_to_first_answer_s": 0.173989,
+    "p50_ms": 1.8106,
+    "p95_ms": 2.0451,
+    "numpy_floor_p50_ms": 0.9687,
+    "peak_rss_mb": 286.9,
+    "live_rss_mb": 286.9,
+    "phys_footprint_mb": 287.0,
+    "vault_mib": 148.7,
+    "cache_mib": 257.5,
+    "arena_source": "scan",
+    "load_avg_start": [
+     2.05,
+     2.15,
+     2.14
+    ]
+   },
+   "cache_map": {
+    "reopen_s": 0.000193,
+    "reopen_s_fresh_process": 0.006346,
+    "first_query_s": 0.010742,
+    "time_to_first_answer_s": 0.010935,
+    "p50_ms": 1.7806,
+    "p95_ms": 2.0167,
+    "numpy_floor_p50_ms": 0.9981,
+    "peak_rss_mb": 258.2,
+    "live_rss_mb": 258.2,
+    "phys_footprint_mb": 9.0,
+    "vault_mib": 148.7,
+    "cache_mib": 257.5,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.12,
+     2.16,
+     2.15
+    ]
+   },
+   "cache_copy": {
+    "reopen_s": 0.021744,
+    "reopen_s_fresh_process": 0.025313,
+    "first_query_s": 0.00417,
+    "time_to_first_answer_s": 0.025914,
+    "p50_ms": 1.8538,
+    "p95_ms": 2.0912,
+    "numpy_floor_p50_ms": 0.9648,
+    "peak_rss_mb": 467.5,
+    "live_rss_mb": 467.5,
+    "phys_footprint_mb": 219.0,
+    "vault_mib": 148.7,
+    "cache_mib": 257.5,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.12,
+     2.16,
+     2.15
+    ]
+   },
+   "cache_verify": {
+    "reopen_s": 0.153498,
+    "reopen_s_fresh_process": 0.151757,
+    "first_query_s": 0.002476,
+    "time_to_first_answer_s": 0.155974,
+    "p50_ms": 1.8086,
+    "p95_ms": 2.0429,
+    "numpy_floor_p50_ms": 0.9766,
+    "peak_rss_mb": 266.5,
+    "live_rss_mb": 266.5,
+    "phys_footprint_mb": 9.0,
+    "vault_mib": 148.7,
+    "cache_mib": 257.5,
+    "arena_source": "cache",
+    "load_avg_start": [
+     2.27,
+     2.19,
+     2.16
+    ]
+   }
+  }
+ },
+ "verdict": {
+  "reopen_before_s": 0.163351,
+  "reopen_after_s": 0.000193,
+  "speedup": 846.4,
+  "target_sqlitevec_s": 0.0014,
+  "wins_reopen": true,
+  "margin_vs_sqlitevec": 0.14,
+  "time_to_first_answer_before_s": 0.168681,
+  "time_to_first_answer_after_s": 0.010935,
+  "exactness_gate_passed": false,
+  "exactness_gate_passed_note": "This is the gate AS PRE-REGISTERED -- zero changed top-10 lists against the committed package -- and it does not pass: {'val1190': 0, 'n10000': 1, 'n71433': 8}. Every one of those disagreements is proved by `tie_forensics` to be between two documents holding the SAME float32 cosine (max gap 0.0), and it is carried by engine._select_top_k, which this working tree gained from the PCA-screen workstream and which deliberately replaced argpartition's unspecified tie order with an ascending-row-id one. It is not the arena cache: cache_off, which never reads or writes a cache, shows exactly the same lists as cache_map.",
+  "exactness_gate_vs_same_build_cache_off_passed": true,
+  "exactness_gate_vs_same_build_cache_off_note": "The isolating control: same build, same vault, same queries, the ONLY difference being whether the arena was mapped from the cache or rebuilt by a scan. Mapping the arena changes no score and no top-10 list at any size.",
+  "all_baseline_disagreements_are_exact_ties": true,
+  "exactness_n71433_map": {
+   "scores_sha256": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+   "identical_to_baseline": true,
+   "identical_to_cache_off": true,
+   "top10_lists_changed_vs_baseline": 8,
+   "top10_lists_changed_vs_same_build_cache_off": 0,
+   "n_queries": 500
+  }
+ },
+ "cache_integrity": {
+  "what": "ask every mode what it answers under four attacks, and time what the checking costs",
+  "withdrawn": [
+   "\"verify SAFE\" -- verify is hijacked by a forged content digest (cache_tamper.forged_digest), because the digest is unkeyed and stored inside the file it authenticates behind a CRC32.",
+   "\"the sidecar is a strictly weaker, unauthenticated path to the same answers\" -- the vault is forgeable too and by the same means (vault_forgery); a cache is only ever written beside a plaintext vault, whose block trailer is an unkeyed SHA-256.",
+   "\"a real security defect, found and fixed\" -- the defect is real, the fix is a corruption check. Nothing here resists an attacker who can write the vault's directory, with or without a cache."
+  ],
+  "supersedes": "the version of this phase that reported 'map HIJACKED, copy HIJACKED, verify SAFE'. It had one arm too few: it never let the attacker update the digest it was being caught by.",
+  "corpora": {
+   "val1190": {
+    "cache_bytes": 4583424,
+    "cache_mib": 4.4,
+    "vault_mib": 2.5,
+    "content_digest_s_median": 0.00146,
+    "vault_reauth_s_median": 0.000948,
+    "verify_open_s_median": 0.00262,
+    "off_open_s_median": 0.00269,
+    "verify_vs_scan_x": 0.974,
+    "digest_throughput_mib_s": 2994.2,
+    "cache_tamper": {
+     "body_only": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 973,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 973,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "scan",
+       "reason": "cache content does not match its own digest",
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 0.252279,
+       "scored_row": 0,
+       "top1_returned": 1,
+       "top1_honest": 1,
+       "answer_hijacked": false,
+       "cache_repaired_by_this_open": true
+      }
+     },
+     "forged_digest": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 973,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 973,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 973,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      }
+     }
+    },
+    "vault_forgery": {
+     "served_from": "scan",
+     "reason": "mode=off",
+     "raised": null,
+     "vault_changed_since_cache": null,
+     "vault_blocks_checked": "all",
+     "planted_row_score": 0.999995,
+     "scored_row": 867,
+     "top1_returned": 989,
+     "top1_honest": 1,
+     "answer_hijacked": true,
+     "victim_row": 867,
+     "victim_idx": 989,
+     "cache_on_disk": false,
+     "note": "no sidecar exists here and mode=off never looks for one: this is the full scan that re-reads every block and recomputes every trailer, and it accepts a row forged with crypto.block_tag(None, ...)"
+    },
+    "vault_inplace_edit": {
+     "off": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "verify": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map_mtime_restored": {
+      "served_from": "cache",
+      "reason": null,
+      "raised": null,
+      "vault_changed_since_cache": "unchanged",
+      "vault_blocks_checked": "none",
+      "planted_row_score": 0.252279,
+      "scored_row": 0,
+      "top1_returned": 1,
+      "top1_honest": 1,
+      "answer_hijacked": false,
+      "note": "this row IS the pre-fix behaviour of the default, reproduced by putting the mtime back: a hard IntegrityError becomes a successful open"
+     }
+    }
+   },
+   "n10000": {
+    "cache_bytes": 37982208,
+    "cache_mib": 36.2,
+    "vault_mib": 21.0,
+    "content_digest_s_median": 0.012238,
+    "vault_reauth_s_median": 0.00824,
+    "verify_open_s_median": 0.021268,
+    "off_open_s_median": 0.022397,
+    "verify_vs_scan_x": 0.95,
+    "digest_throughput_mib_s": 2959.8,
+    "cache_tamper": {
+     "body_only": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 3577,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 3577,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "scan",
+       "reason": "cache content does not match its own digest",
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 0.43522,
+       "scored_row": 0,
+       "top1_returned": 1,
+       "top1_honest": 1,
+       "answer_hijacked": false,
+       "cache_repaired_by_this_open": true
+      }
+     },
+     "forged_digest": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 3577,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 3577,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 3577,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      }
+     }
+    },
+    "vault_forgery": {
+     "served_from": "scan",
+     "reason": "mode=off",
+     "raised": null,
+     "vault_changed_since_cache": null,
+     "vault_blocks_checked": "all",
+     "planted_row_score": 0.999997,
+     "scored_row": 8778,
+     "top1_returned": 2959,
+     "top1_honest": 1,
+     "answer_hijacked": true,
+     "victim_row": 8778,
+     "victim_idx": 2959,
+     "cache_on_disk": false,
+     "note": "no sidecar exists here and mode=off never looks for one: this is the full scan that re-reads every block and recomputes every trailer, and it accepts a row forged with crypto.block_tag(None, ...)"
+    },
+    "vault_inplace_edit": {
+     "off": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "verify": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map_mtime_restored": {
+      "served_from": "cache",
+      "reason": null,
+      "raised": null,
+      "vault_changed_since_cache": "unchanged",
+      "vault_blocks_checked": "none",
+      "planted_row_score": 0.43522,
+      "scored_row": 0,
+      "top1_returned": 1,
+      "top1_honest": 1,
+      "answer_hijacked": false,
+      "note": "this row IS the pre-fix behaviour of the default, reproduced by putting the mtime back: a hard IntegrityError becomes a successful open"
+     }
+    }
+   },
+   "n71433": {
+    "cache_bytes": 269991936,
+    "cache_mib": 257.5,
+    "vault_mib": 148.7,
+    "content_digest_s_median": 0.086552,
+    "vault_reauth_s_median": 0.06053,
+    "verify_open_s_median": 0.147816,
+    "off_open_s_median": 0.165634,
+    "verify_vs_scan_x": 0.892,
+    "digest_throughput_mib_s": 2974.9,
+    "cache_tamper": {
+     "body_only": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 44985,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 44985,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "scan",
+       "reason": "cache content does not match its own digest",
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 0.425524,
+       "scored_row": 0,
+       "top1_returned": 1,
+       "top1_honest": 1,
+       "answer_hijacked": false,
+       "cache_repaired_by_this_open": true
+      }
+     },
+     "forged_digest": {
+      "map": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 44985,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "copy": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "none",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 44985,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      },
+      "verify": {
+       "served_from": "cache",
+       "reason": null,
+       "raised": null,
+       "vault_changed_since_cache": "unchanged",
+       "vault_blocks_checked": "all",
+       "planted_row_score": 1.0,
+       "scored_row": 0,
+       "top1_returned": 44985,
+       "top1_honest": 1,
+       "answer_hijacked": true,
+       "cache_repaired_by_this_open": false
+      }
+     }
+    },
+    "vault_forgery": {
+     "served_from": "scan",
+     "reason": "mode=off",
+     "raised": null,
+     "vault_changed_since_cache": null,
+     "vault_blocks_checked": "all",
+     "planted_row_score": 0.999997,
+     "scored_row": 31289,
+     "top1_returned": 40924,
+     "top1_honest": 1,
+     "answer_hijacked": true,
+     "victim_row": 31289,
+     "victim_idx": 40924,
+     "cache_on_disk": false,
+     "note": "no sidecar exists here and mode=off never looks for one: this is the full scan that re-reads every block and recomputes every trailer, and it accepts a row forged with crypto.block_tag(None, ...)"
+    },
+    "vault_inplace_edit": {
+     "off": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "verify": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map": {
+      "served_from": null,
+      "reason": null,
+      "raised": "IntegrityError",
+      "raised_text": "block 0 at offset 256: trailer mismatch",
+      "top1_returned": null,
+      "top1_honest": 1,
+      "answer_hijacked": false
+     },
+     "map_mtime_restored": {
+      "served_from": "cache",
+      "reason": null,
+      "raised": null,
+      "vault_changed_since_cache": "unchanged",
+      "vault_blocks_checked": "none",
+      "planted_row_score": 0.425524,
+      "scored_row": 0,
+      "top1_returned": 1,
+      "top1_honest": 1,
+      "answer_hijacked": false,
+      "note": "this row IS the pre-fix behaviour of the default, reproduced by putting the mtime back: a hard IntegrityError becomes a successful open"
+     }
+    }
+   }
+  },
+  "finding": "CORRECTED. (1) A forged content digest defeats `verify` in every corpus: the digest is unkeyed, it is stored in the header of the file it describes, and that header is protected by a CRC32, so the same editor recomputes both. (2) The vault is forgeable by the same means with no cache involved at all, because a plaintext vault's block trailer is an unkeyed SHA-256 and an encrypted vault is refused a cache -- so the sidecar inherits the vault's threat model rather than lowering it. Nothing here is tamper resistance; all of it is corruption detection. (3) The one real improvement is narrow and is measured as such: a (size, mtime) binding makes `map` refuse a vault that was rewritten in place, where it used to serve one silently while `off` and `verify` raised -- and `os.utime` defeats that binding, which is the `map_mtime_restored` row."
+ },
+ "latency_duel": {
+  "val1190": {
+   "baseline_e617ba3_p50_ms": [
+    0.0716,
+    0.0721,
+    0.0796,
+    0.0721,
+    0.0795
+   ],
+   "cache_map_p50_ms": [
+    0.0861,
+    0.0815,
+    0.0843,
+    0.0808,
+    0.0848
+   ],
+   "baseline_floor_p50_ms": [
+    0.0075,
+    0.0075,
+    0.0082,
+    0.0081,
+    0.0081
+   ],
+   "cache_map_floor_p50_ms": [
+    0.0082,
+    0.0075,
+    0.0078,
+    0.0079,
+    0.0082
+   ],
+   "paired_ratio_mapped_over_scanned": [
+    1.2025,
+    1.1304,
+    1.059,
+    1.1207,
+    1.0667
+   ],
+   "median_ratio": 1.1207,
+   "what": "does scanning a mapped fp32 arena cost anything per query? Same vault, same 500 queries, arms alternated cycle by cycle, bare-matvec floor measured in every cycle."
+  },
+  "n10000": {
+   "baseline_e617ba3_p50_ms": [
+    0.3888,
+    0.3734,
+    0.3776,
+    0.3858,
+    0.3689
+   ],
+   "cache_map_p50_ms": [
+    0.3682,
+    0.3711,
+    0.3726,
+    0.3733,
+    0.3703
+   ],
+   "baseline_floor_p50_ms": [
+    0.1908,
+    0.1851,
+    0.1856,
+    0.1894,
+    0.1918
+   ],
+   "cache_map_floor_p50_ms": [
+    0.1887,
+    0.1871,
+    0.1889,
+    0.1855,
+    0.1878
+   ],
+   "paired_ratio_mapped_over_scanned": [
+    0.947,
+    0.9938,
+    0.9868,
+    0.9676,
+    1.0038
+   ],
+   "median_ratio": 0.9868,
+   "what": "does scanning a mapped fp32 arena cost anything per query? Same vault, same 500 queries, arms alternated cycle by cycle, bare-matvec floor measured in every cycle."
+  },
+  "n71433": {
+   "baseline_e617ba3_p50_ms": [
+    1.8448,
+    1.8085,
+    1.7579,
+    1.7702,
+    1.8024
+   ],
+   "cache_map_p50_ms": [
+    1.7729,
+    1.7808,
+    1.7846,
+    1.7804,
+    1.7994
+   ],
+   "baseline_floor_p50_ms": [
+    0.973,
+    0.9652,
+    0.9704,
+    0.9673,
+    0.9783
+   ],
+   "cache_map_floor_p50_ms": [
+    0.9625,
+    0.9689,
+    0.9662,
+    0.966,
+    0.9671
+   ],
+   "paired_ratio_mapped_over_scanned": [
+    0.961,
+    0.9847,
+    1.0152,
+    1.0058,
+    0.9983
+   ],
+   "median_ratio": 0.9983,
+   "what": "does scanning a mapped fp32 arena cost anything per query? Same vault, same 500 queries, arms alternated cycle by cycle, bare-matvec floor measured in every cycle."
+  }
+ },
+ "binding_cost": {
+  "what": "paired A/B of the same package with and without the (size, mtime) binding check, in-process reopen median of 25, 5 interleaved cycles",
+  "control_build": {
+   "dir": "/tmp/nanomem_nobinding/nanomem_standalone",
+   "removed_chars": 500,
+   "other_modules_identical": {
+    "arena.py": true,
+    "container.py": true,
+    "screen.py": true,
+    "vault.py": true
+   }
+  },
+  "cycles": {},
+  "corpora": {
+   "n10000": {
+    "with_binding_s": 0.00017546,
+    "no_binding_s": 0.00016904,
+    "delta_us": 6.42,
+    "ratio": 1.038,
+    "per_cycle": {
+     "with_binding": [
+      0.00017587,
+      0.00017546,
+      0.000174,
+      0.00017517,
+      0.00017642
+     ],
+     "no_binding": [
+      0.00017108,
+      0.00016904,
+      0.00016683,
+      0.00017029,
+      0.00016846
+     ]
+    }
+   },
+   "n71433": {
+    "with_binding_s": 0.00017529,
+    "no_binding_s": 0.00017121,
+    "delta_us": 4.08,
+    "ratio": 1.0239,
+    "per_cycle": {
+     "with_binding": [
+      0.00018758,
+      0.00017133,
+      0.00016833,
+      0.00017529,
+      0.00017896
+     ],
+     "no_binding": [
+      0.00017296,
+      0.00016908,
+      0.00017033,
+      0.00017296,
+      0.00017121
+     ]
+    }
+   }
+  },
+  "loadavg": [
+   1.22,
+   1.86,
+   2.03
+  ]
+ },
+ "post_fix_check": {
+  "what": "score-vector digest and p50 per mode on the build WITH the binding, so the isolating control is cache-on vs cache-off inside one build",
+  "corpora": {
+   "n10000": {
+    "off": {
+     "scores_sha256": "f556e97dc74392569c8a0eb68cc61869eedb484f294fb42bcc50970452d7d9ca",
+     "source": "scan",
+     "vault_changed_since_cache": null,
+     "vault_blocks_checked": "all",
+     "p50_ms": 0.3975,
+     "n_queries": 200
+    },
+    "map": {
+     "scores_sha256": "f556e97dc74392569c8a0eb68cc61869eedb484f294fb42bcc50970452d7d9ca",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "none",
+     "p50_ms": 0.4034,
+     "n_queries": 200
+    },
+    "copy": {
+     "scores_sha256": "f556e97dc74392569c8a0eb68cc61869eedb484f294fb42bcc50970452d7d9ca",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "none",
+     "p50_ms": 0.2944,
+     "n_queries": 200
+    },
+    "verify": {
+     "scores_sha256": "f556e97dc74392569c8a0eb68cc61869eedb484f294fb42bcc50970452d7d9ca",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "all",
+     "p50_ms": 0.3962,
+     "n_queries": 200
+    },
+    "all_modes_identical": true
+   },
+   "n71433": {
+    "off": {
+     "scores_sha256": "e8eed4e1073c142f59dc8ca09f2d58b060a0612c55521e781fca79fa66944f35",
+     "source": "scan",
+     "vault_changed_since_cache": null,
+     "vault_blocks_checked": "all",
+     "p50_ms": 1.7932,
+     "n_queries": 200
+    },
+    "map": {
+     "scores_sha256": "e8eed4e1073c142f59dc8ca09f2d58b060a0612c55521e781fca79fa66944f35",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "none",
+     "p50_ms": 1.779,
+     "n_queries": 200
+    },
+    "copy": {
+     "scores_sha256": "e8eed4e1073c142f59dc8ca09f2d58b060a0612c55521e781fca79fa66944f35",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "none",
+     "p50_ms": 1.8414,
+     "n_queries": 200
+    },
+    "verify": {
+     "scores_sha256": "e8eed4e1073c142f59dc8ca09f2d58b060a0612c55521e781fca79fa66944f35",
+     "source": "cache",
+     "vault_changed_since_cache": "unchanged",
+     "vault_blocks_checked": "all",
+     "p50_ms": 1.84,
+     "n_queries": 200
+    },
+    "all_modes_identical": true
+   }
+  },
+  "loadavg": [
+   1.29,
+   1.86,
+   2.03
+  ]
+ }
+}

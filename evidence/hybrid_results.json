@@ -1,0 +1,2157 @@
+{
+ "title": "Hybrid sparse-lexical + dense-cosine retrieval: does changing the scoring function break the exact-cosine recall tie?",
+ "script": "<repo>/prime_4d_unified_engine_2026_09_13/hybrid_retrieval.py",
+ "owner_files": [
+  "<repo>/prime_4d_unified_engine_2026_09_13/hybrid_retrieval.py",
+  "<repo>/evidence/hybrid_results.json"
+ ],
+ "prereg": {
+  "registered_at": "2026-09-17T00:07:35+0530",
+  "registered_before_any_number": true,
+  "claim_under_test": "Every engine measured in scratch/refound ties at 60.6 evidence-recall@4 on n71433 because they all compute the same exact cosine. A lexical arm fused with that cosine is a DIFFERENT scoring function and can therefore break the tie.",
+  "baseline": {
+   "arm": "exact dense cosine over the same L2-normalised nomic-embed-text vectors every engine arm uses",
+   "cited_source": "<repo>/evidence/competitors_standard_results.json",
+   "n71433_evidence_recall_at_4_pct": 60.6,
+   "n71433_evidence_recall_at_10_pct": 71.2,
+   "n71433_per_doc_recall_at_10_pct": 84.6,
+   "val1190_evidence_recall_at_4_pct": 68.33,
+   "note_on_the_brief": "The brief quotes '60.6 / 84.6' for recall@4/@10 at n71433. In competitors_standard_results.json 60.6 is evidence_recall@4 and 84.6 is PER-DOC recall@10; evidence_recall@10 is 71.2. Both metrics are reported here against their own baseline so neither is silently swapped."
+  },
+  "primary_metric": "evidence_recall_at_4_pct (ALL gold paragraphs inside top-4) -- the metric whose value is the cited 60.6",
+  "secondary_metrics": [
+   "evidence_recall_at_10_pct",
+   "per_doc_recall_at_4_pct",
+   "per_doc_recall_at_10_pct"
+  ],
+  "corpora": {
+   "n71433": {
+    "role": "primary",
+    "n_docs": 71433,
+    "n_questions": 500,
+    "questions": "hotpot_train_8k questions 0..499 (the same set bench_competitors.py scores: all gold < n_docs, first 500 in file order)"
+   },
+   "val1190": {
+    "role": "transfer (parameters chosen on n71433 train questions, applied unchanged)",
+    "n_docs": 1190,
+    "n_questions": 120
+   },
+   "n10000": {
+    "role": "disclosed-contaminated by inspection (see pre_registration_integrity_disclosure); reported for completeness, carries no weight in the verdict",
+    "n_docs": 10000,
+    "n_questions": 500
+   }
+  },
+  "tuning_pool": {
+   "questions": "hotpot_train_8k questions 500..7999",
+   "subsample": 2000,
+   "rng": "np.random.default_rng(0).choice(no replacement), sorted",
+   "disjoint_from_eval_by": "index (eval = 0..499) AND by normalised question text (audited, see leak_audit)"
+  },
+  "bar": {
+   "statistic": "paired bootstrap over questions, 10,000 draws, seed 20260917, of (fused - dense) primary metric",
+   "pass_condition": "ci95_lo_pt > 0 AND delta_pt >= +2.0",
+   "note": "Registered BEFORE any hybrid number exists. It is not restated afterwards for any arm, winning or losing."
+  },
+  "cost_criteria_registered_up_front": {
+   "why": "A recall win that triples latency or doubles disk is a different decision from one that costs 0.2 ms, so the cost bar is fixed now.",
+   "dense_p50_ms_cited": 1.1494,
+   "ship_if": "recall bar passed AND added query latency <= +1.0 ms p50 (i.e. under 2x the cited dense p50) AND index adds <= 25% of the 406.2 MiB nanomem already writes for this corpus",
+   "report_regardless": [
+    "index build seconds",
+    "index bytes on disk",
+    "index bytes in RAM",
+    "added p50/p95 query ms"
+   ]
+  },
+  "arms": [
+   "dense (baseline)",
+   "bm25 alone",
+   "rrf (sweep c, depth m)",
+   "linear z-score (sweep w, depth m)",
+   "linear min-max (sweep w, depth m)",
+   "linear z-score with exact backfill (isolates the floor)",
+   "linear min-max with exact backfill",
+   "cascade bm25 -> cosine rerank (sweep c)",
+   "cascade cosine -> bm25 rerank (sweep c)"
+  ],
+  "bm25": {
+   "k1_grid": [
+    0.6,
+    0.9,
+    1.2,
+    1.5,
+    2.0
+   ],
+   "b_grid": [
+    0.3,
+    0.4,
+    0.6,
+    0.75,
+    0.9
+   ],
+   "idf": "ln(1 + (N-df+0.5)/(df+0.5))",
+   "tokeniser": {
+    "normalise": "NFKD then strip combining marks",
+    "case": "str.casefold",
+    "pattern": "[a-z0-9]+",
+    "min_len": "2 for alphabetic tokens, 1 for digits",
+    "stemming": null,
+    "stopwords": null
+   }
+  },
+  "union_rule": "fusion ranks the UNION of the two candidate lists only; a document one arm never returned is floored (rrf: 0; min-max: 0.0; z: the z of that arm's weakest returned candidate) -- and the *_backfill arms recompute the true score instead, so the floor is priced separately",
+  "pre_registration_integrity_disclosure": {
+   "what_happened": "Before this block was written, a debugging smoke test printed aggregate recall for the dense arm, the BM25 arm and the full config grid on a 200-question subset at corpus size 10,000.",
+   "which_questions": "the first 200 questions whose gold indices are < 10000; all 200 fall inside the 500-question EVALUATION set (indices 0..499) and 0 of them fall in the tuning pool",
+   "what_was_seen": {
+    "dense_evidence_at_4_pct": 70.5,
+    "bm25_alone_evidence_at_4_pct": 38.5,
+    "best_grid_config_evidence_at_4_pct": 73.5,
+    "corpus": "n10000 only; n71433 and val1190 were NOT scored"
+   },
+   "why_it_does_not_choose_anything": "the config grid (K1_GRID, B_GRID, M_GRID, RRF_C_GRID, W_GRID, CASCADE_C_GRID) and every fusion rule were written before that run and are unchanged; selection is a mechanical argmax over the grid on the DISJOINT tuning pool (questions 500..7999), with no human choice",
+   "consequence_applied": "n10000 is demoted from 'secondary' to 'disclosed-contaminated by inspection, reported for completeness only'. The primary corpus n71433 and the transfer corpus val1190 were never scored before this registration."
+  },
+  "negative_result_is_a_deliverable": true,
+  "quarantine": "This script can only open the four files in ALLOWED_INPUTS; any other path raises PermissionError. No held-out or quarantined fixture is reachable from this code."
+ },
+ "tune": {
+  "n_tune_questions": 2000,
+  "tune_question_indices_sha256": "a176f437946fe700",
+  "eval_question_indices_sha256": "0c107320ad64414b",
+  "leak_audit": {
+   "tune_eval_index_overlap": 0,
+   "tune_eval_question_text_overlap_before_drop": 0,
+   "tune_eval_question_text_overlap_after_drop": 0,
+   "tune_questions_kept": 2000,
+   "vocab_growth_during_query": 0,
+   "gold_independence_mismatches_per_arm": {
+    "dense": 0,
+    "bm25": 0,
+    "rrf m=100 c=60": 0,
+    "linear_z m=100 w=0.5": 0,
+    "cascade_bm25_then_dense c=100": 0
+   },
+   "gold_independence_mismatches_total": 0,
+   "raised": false
+  },
+  "dense_baseline_on_tune_pool": {
+   "evidence_recall_at_4_pct": 58.85,
+   "per_doc_recall_at_4_pct": 77.38,
+   "evidence_recall_at_10_pct": 71.25,
+   "per_doc_recall_at_10_pct": 84.65,
+   "n_questions": 2000
+  },
+  "index": {
+   "n_docs": 71433,
+   "n_terms_vocab": 166054,
+   "n_postings_nnz": 4098142,
+   "postings_per_doc_mean": 57.37,
+   "tokens_per_doc_mean": 84.4,
+   "build_s": 4.652,
+   "tokenise_s": 3.495,
+   "arrays_bytes": {
+    "indices_i32": 16392568,
+    "tf_i32": 16392568,
+    "weights_f32": 16392568,
+    "indptr_i64": 1328440,
+    "doc_len_i32": 285732,
+    "idf_f32": 664216
+   },
+   "vocab_blob_bytes": 1376559,
+   "ram_total_bytes": 52832651,
+   "ram_serving_only_bytes": 35490135
+  },
+  "n_configs_scored": 7150,
+  "best_per_family": {
+   "rrf": {
+    "family": "rrf",
+    "m": 200,
+    "c": 1,
+    "k1": 0.9,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 61.65,
+    "per_doc_recall_at_4_pct": 79.9,
+    "evidence_recall_at_10_pct": 76.3,
+    "per_doc_recall_at_10_pct": 87.85,
+    "n_questions": 2000
+   },
+   "linear_z": {
+    "family": "linear_z",
+    "m": 200,
+    "w": 0.65,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.0,
+    "per_doc_recall_at_4_pct": 80.95,
+    "evidence_recall_at_10_pct": 77.2,
+    "per_doc_recall_at_10_pct": 88.33,
+    "n_questions": 2000
+   },
+   "linear_minmax": {
+    "family": "linear_minmax",
+    "m": 200,
+    "w": 0.65,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 63.4,
+    "per_doc_recall_at_4_pct": 80.58,
+    "evidence_recall_at_10_pct": 77.05,
+    "per_doc_recall_at_10_pct": 88.1,
+    "n_questions": 2000
+   },
+   "linear_z_backfill": {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.8,
+    "per_doc_recall_at_4_pct": 81.33,
+    "evidence_recall_at_10_pct": 77.35,
+    "per_doc_recall_at_10_pct": 88.33,
+    "n_questions": 2000
+   },
+   "linear_minmax_backfill": {
+    "family": "linear_minmax_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.5,
+    "per_doc_recall_at_4_pct": 81.15,
+    "evidence_recall_at_10_pct": 77.15,
+    "per_doc_recall_at_10_pct": 88.15,
+    "n_questions": 2000
+   },
+   "cascade_bm25_then_dense": {
+    "family": "cascade_bm25_then_dense",
+    "c": 500,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 60.75,
+    "per_doc_recall_at_4_pct": 78.67,
+    "evidence_recall_at_10_pct": 72.7,
+    "per_doc_recall_at_10_pct": 85.78,
+    "n_questions": 2000
+   },
+   "cascade_dense_then_bm25": {
+    "family": "cascade_dense_then_bm25",
+    "c": 20,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 49.25,
+    "per_doc_recall_at_4_pct": 71.97,
+    "evidence_recall_at_10_pct": 71.6,
+    "per_doc_recall_at_10_pct": 84.95,
+    "n_questions": 2000
+   },
+   "bm25": {
+    "family": "bm25",
+    "k1": 0.9,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 35.85,
+    "per_doc_recall_at_4_pct": 62.95,
+    "evidence_recall_at_10_pct": 56.2,
+    "per_doc_recall_at_10_pct": 76.3,
+    "n_questions": 2000
+   }
+  },
+  "top_25_overall": [
+   {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.8,
+    "per_doc_recall_at_4_pct": 81.33,
+    "evidence_recall_at_10_pct": 77.35,
+    "per_doc_recall_at_10_pct": 88.33,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 50,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.65,
+    "per_doc_recall_at_4_pct": 81.17,
+    "evidence_recall_at_10_pct": 77.5,
+    "per_doc_recall_at_10_pct": 88.42,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.6,
+    "per_doc_recall_at_4_pct": 81.27,
+    "evidence_recall_at_10_pct": 77.55,
+    "per_doc_recall_at_10_pct": 88.38,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.6,
+    "per_doc_recall_at_4_pct": 81.25,
+    "evidence_recall_at_10_pct": 77.4,
+    "per_doc_recall_at_10_pct": 88.3,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.55,
+    "per_doc_recall_at_4_pct": 81.23,
+    "evidence_recall_at_10_pct": 77.05,
+    "per_doc_recall_at_10_pct": 88.12,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 50,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.5,
+    "per_doc_recall_at_4_pct": 81.12,
+    "evidence_recall_at_10_pct": 77.8,
+    "per_doc_recall_at_10_pct": 88.5,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.5,
+    "per_doc_recall_at_4_pct": 81.15,
+    "evidence_recall_at_10_pct": 77.15,
+    "per_doc_recall_at_10_pct": 88.15,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.5,
+    "per_doc_recall_at_4_pct": 81.15,
+    "evidence_recall_at_10_pct": 77.5,
+    "per_doc_recall_at_10_pct": 88.4,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.4,
+    "evidence_recall_at_4_pct": 64.45,
+    "per_doc_recall_at_4_pct": 81.17,
+    "evidence_recall_at_10_pct": 77.25,
+    "per_doc_recall_at_10_pct": 88.25,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 200,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.45,
+    "per_doc_recall_at_4_pct": 81.17,
+    "evidence_recall_at_10_pct": 77.7,
+    "per_doc_recall_at_10_pct": 88.5,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 50,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.45,
+    "per_doc_recall_at_4_pct": 81.1,
+    "evidence_recall_at_10_pct": 77.8,
+    "per_doc_recall_at_10_pct": 88.58,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.9,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.45,
+    "per_doc_recall_at_4_pct": 81.12,
+    "evidence_recall_at_10_pct": 77.25,
+    "per_doc_recall_at_10_pct": 88.22,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.4,
+    "per_doc_recall_at_4_pct": 81.15,
+    "evidence_recall_at_10_pct": 77.85,
+    "per_doc_recall_at_10_pct": 88.55,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 50,
+    "w": 0.7,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.4,
+    "per_doc_recall_at_4_pct": 81.23,
+    "evidence_recall_at_10_pct": 78.25,
+    "per_doc_recall_at_10_pct": 88.75,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.4,
+    "per_doc_recall_at_4_pct": 81.1,
+    "evidence_recall_at_10_pct": 77.05,
+    "per_doc_recall_at_10_pct": 88.12,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.4,
+    "per_doc_recall_at_4_pct": 81.05,
+    "evidence_recall_at_10_pct": 77.3,
+    "per_doc_recall_at_10_pct": 88.25,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 200,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.9,
+    "evidence_recall_at_4_pct": 64.4,
+    "per_doc_recall_at_4_pct": 81.23,
+    "evidence_recall_at_10_pct": 77.45,
+    "per_doc_recall_at_10_pct": 88.38,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.3,
+    "evidence_recall_at_4_pct": 64.35,
+    "per_doc_recall_at_4_pct": 81.1,
+    "evidence_recall_at_10_pct": 77.1,
+    "per_doc_recall_at_10_pct": 88.15,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 50,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.35,
+    "per_doc_recall_at_4_pct": 81.1,
+    "evidence_recall_at_10_pct": 77.5,
+    "per_doc_recall_at_10_pct": 88.38,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.35,
+    "per_doc_recall_at_4_pct": 81.08,
+    "evidence_recall_at_10_pct": 77.15,
+    "per_doc_recall_at_10_pct": 88.12,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 100,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.35,
+    "per_doc_recall_at_4_pct": 81.05,
+    "evidence_recall_at_10_pct": 77.0,
+    "per_doc_recall_at_10_pct": 88.02,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.75,
+    "evidence_recall_at_4_pct": 64.35,
+    "per_doc_recall_at_4_pct": 81.08,
+    "evidence_recall_at_10_pct": 77.45,
+    "per_doc_recall_at_10_pct": 88.35,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 50,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.3,
+    "evidence_recall_at_4_pct": 64.3,
+    "per_doc_recall_at_4_pct": 81.05,
+    "evidence_recall_at_10_pct": 77.0,
+    "per_doc_recall_at_10_pct": 88.1,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_z_backfill",
+    "m": 200,
+    "w": 0.8,
+    "k1": 0.6,
+    "b": 0.4,
+    "evidence_recall_at_4_pct": 64.3,
+    "per_doc_recall_at_4_pct": 81.08,
+    "evidence_recall_at_10_pct": 77.3,
+    "per_doc_recall_at_10_pct": 88.28,
+    "n_questions": 2000
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "m": 100,
+    "w": 0.75,
+    "k1": 0.6,
+    "b": 0.6,
+    "evidence_recall_at_4_pct": 64.3,
+    "per_doc_recall_at_4_pct": 81.03,
+    "evidence_recall_at_10_pct": 77.45,
+    "per_doc_recall_at_10_pct": 88.38,
+    "n_questions": 2000
+   }
+  ],
+  "wall_s": 264.2
+ },
+ "eval": {
+  "chosen_on_train_only": [
+   {
+    "family": "bm25",
+    "k1": 0.9,
+    "b": 0.9
+   },
+   {
+    "family": "cascade_bm25_then_dense",
+    "k1": 0.6,
+    "b": 0.75,
+    "c": 500
+   },
+   {
+    "family": "cascade_dense_then_bm25",
+    "k1": 0.6,
+    "b": 0.9,
+    "c": 20
+   },
+   {
+    "family": "dense",
+    "k1": 0.9,
+    "b": 0.9
+   },
+   {
+    "family": "linear_minmax",
+    "k1": 0.6,
+    "b": 0.75,
+    "m": 200,
+    "w": 0.65
+   },
+   {
+    "family": "linear_minmax_backfill",
+    "k1": 0.6,
+    "b": 0.75,
+    "m": 100,
+    "w": 0.8
+   },
+   {
+    "family": "linear_z",
+    "k1": 0.6,
+    "b": 0.6,
+    "m": 200,
+    "w": 0.65
+   },
+   {
+    "family": "linear_z_backfill",
+    "k1": 0.6,
+    "b": 0.9,
+    "m": 200,
+    "w": 0.8
+   },
+   {
+    "family": "rrf",
+    "k1": 0.9,
+    "b": 0.9,
+    "m": 200,
+    "c": 1
+   }
+  ],
+  "corpora": {
+   "n71433": {
+    "corpus": "n71433",
+    "n_docs": 71433,
+    "n_questions": 500,
+    "gold_rule": "G[:, :2] from hotpot_train_8k_embeds.npz, first 500 questions with gold < n_docs (identical to bench_competitors.py prep)",
+    "dense_baseline": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    },
+    "index": {
+     "n_docs": 71433,
+     "n_terms_vocab": 166054,
+     "n_postings_nnz": 4098142,
+     "postings_per_doc_mean": 57.37,
+     "tokens_per_doc_mean": 84.4,
+     "build_s": 2.784,
+     "tokenise_s": 2.33,
+     "arrays_bytes": {
+      "indices_i32": 16392568,
+      "tf_i32": 16392568,
+      "weights_f32": 16392568,
+      "indptr_i64": 1328440,
+      "doc_len_i32": 285732,
+      "idf_f32": 664216
+     },
+     "vocab_blob_bytes": 1376559,
+     "ram_total_bytes": 52832651,
+     "ram_serving_only_bytes": 35490135
+    },
+    "arms": [
+     {
+      "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+      "family": "linear_z",
+      "k1": 0.6,
+      "b": 0.6,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 64.0,
+      "per_doc_recall_at_4_pct": 80.9,
+      "evidence_recall_at_10_pct": 76.2,
+      "per_doc_recall_at_10_pct": 87.8,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 3.4,
+       "ci95_lo_pt": 0.6,
+       "ci95_hi_pt": 6.2,
+       "p_two_sided_sign": 0.0208,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 5.0,
+       "ci95_lo_pt": 2.6,
+       "ci95_hi_pt": 7.6,
+       "p_two_sided_sign": 0.0004,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": true
+     },
+     {
+      "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+      "family": "linear_minmax_backfill",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 100,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 63.4,
+      "per_doc_recall_at_4_pct": 80.8,
+      "evidence_recall_at_10_pct": 77.4,
+      "per_doc_recall_at_10_pct": 88.5,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 2.8,
+       "ci95_lo_pt": 0.2,
+       "ci95_hi_pt": 5.4,
+       "p_two_sided_sign": 0.0426,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 6.2,
+       "ci95_lo_pt": 4.0,
+       "ci95_hi_pt": 8.6,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": true
+     },
+     {
+      "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+      "family": "linear_z_backfill",
+      "k1": 0.6,
+      "b": 0.9,
+      "m": 200,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 63.2,
+      "per_doc_recall_at_4_pct": 80.7,
+      "evidence_recall_at_10_pct": 77.2,
+      "per_doc_recall_at_10_pct": 88.3,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 2.6,
+       "ci95_lo_pt": -0.2,
+       "ci95_hi_pt": 5.2,
+       "p_two_sided_sign": 0.0714,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 6.0,
+       "ci95_lo_pt": 3.8,
+       "ci95_hi_pt": 8.4,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+      "family": "linear_minmax",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 62.0,
+      "per_doc_recall_at_4_pct": 80.0,
+      "evidence_recall_at_10_pct": 76.4,
+      "per_doc_recall_at_10_pct": 88.0,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 1.4,
+       "ci95_lo_pt": -1.4,
+       "ci95_hi_pt": 4.2,
+       "p_two_sided_sign": 0.368,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 5.2,
+       "ci95_lo_pt": 2.6,
+       "ci95_hi_pt": 7.8,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+      "family": "rrf",
+      "k1": 0.9,
+      "b": 0.9,
+      "m": 200,
+      "c": 1,
+      "evidence_recall_at_4_pct": 61.6,
+      "per_doc_recall_at_4_pct": 79.4,
+      "evidence_recall_at_10_pct": 77.2,
+      "per_doc_recall_at_10_pct": 88.1,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 1.0,
+       "ci95_lo_pt": -2.0,
+       "ci95_hi_pt": 4.0,
+       "p_two_sided_sign": 0.5618,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 6.0,
+       "ci95_lo_pt": 3.4,
+       "ci95_hi_pt": 8.8,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_bm25_then_dense c=500 k1=0.6 b=0.75",
+      "family": "cascade_bm25_then_dense",
+      "k1": 0.6,
+      "b": 0.75,
+      "c": 500,
+      "evidence_recall_at_4_pct": 61.4,
+      "per_doc_recall_at_4_pct": 79.0,
+      "evidence_recall_at_10_pct": 72.4,
+      "per_doc_recall_at_10_pct": 85.8,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.8,
+       "ci95_lo_pt": -0.8,
+       "ci95_hi_pt": 2.6,
+       "p_two_sided_sign": 0.3974,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 1.2,
+       "ci95_lo_pt": -0.8,
+       "ci95_hi_pt": 3.2,
+       "p_two_sided_sign": 0.281,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "dense k1=0.9 b=0.9",
+      "family": "dense",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 60.6,
+      "per_doc_recall_at_4_pct": 78.1,
+      "evidence_recall_at_10_pct": 71.2,
+      "per_doc_recall_at_10_pct": 84.6,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_dense_then_bm25 c=20 k1=0.6 b=0.9",
+      "family": "cascade_dense_then_bm25",
+      "k1": 0.6,
+      "b": 0.9,
+      "c": 20,
+      "evidence_recall_at_4_pct": 50.8,
+      "per_doc_recall_at_4_pct": 72.9,
+      "evidence_recall_at_10_pct": 70.8,
+      "per_doc_recall_at_10_pct": 84.4,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -9.8,
+       "ci95_lo_pt": -14.0,
+       "ci95_hi_pt": -5.6,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -0.4,
+       "ci95_lo_pt": -3.2,
+       "ci95_hi_pt": 2.4,
+       "p_two_sided_sign": 0.8404,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "bm25 k1=0.9 b=0.9",
+      "family": "bm25",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 35.4,
+      "per_doc_recall_at_4_pct": 61.0,
+      "evidence_recall_at_10_pct": 52.8,
+      "per_doc_recall_at_10_pct": 74.6,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -25.2,
+       "ci95_lo_pt": -30.4,
+       "ci95_hi_pt": -20.2,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -18.4,
+       "ci95_lo_pt": -23.4,
+       "ci95_hi_pt": -13.4,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     }
+    ],
+    "wall_s": 6.0
+   },
+   "n10000": {
+    "corpus": "n10000",
+    "n_docs": 10000,
+    "n_questions": 500,
+    "gold_rule": "G[:, :2] from hotpot_train_8k_embeds.npz, first 500 questions with gold < n_docs (identical to bench_competitors.py prep)",
+    "dense_baseline": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    },
+    "index": {
+     "n_docs": 10000,
+     "n_terms_vocab": 52190,
+     "n_postings_nnz": 586586,
+     "postings_per_doc_mean": 58.66,
+     "tokens_per_doc_mean": 87.12,
+     "build_s": 0.369,
+     "tokenise_s": 0.325,
+     "arrays_bytes": {
+      "indices_i32": 2346344,
+      "tf_i32": 2346344,
+      "weights_f32": 2346344,
+      "indptr_i64": 417528,
+      "doc_len_i32": 40000,
+      "idf_f32": 208760
+     },
+     "vocab_blob_bytes": 420786,
+     "ram_total_bytes": 8126106,
+     "ram_serving_only_bytes": 5531002
+    },
+    "arms": [
+     {
+      "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+      "family": "linear_z_backfill",
+      "k1": 0.6,
+      "b": 0.9,
+      "m": 200,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 72.0,
+      "per_doc_recall_at_4_pct": 85.3,
+      "evidence_recall_at_10_pct": 87.0,
+      "per_doc_recall_at_10_pct": 93.4,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 1.6,
+       "ci95_lo_pt": -1.2,
+       "ci95_hi_pt": 4.4,
+       "p_two_sided_sign": 0.2904,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 2.6,
+       "ci95_lo_pt": 0.6,
+       "ci95_hi_pt": 4.8,
+       "p_two_sided_sign": 0.0176,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+      "family": "linear_minmax_backfill",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 100,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 71.4,
+      "per_doc_recall_at_4_pct": 85.1,
+      "evidence_recall_at_10_pct": 86.6,
+      "per_doc_recall_at_10_pct": 93.2,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 1.0,
+       "ci95_lo_pt": -1.6,
+       "ci95_hi_pt": 3.6,
+       "p_two_sided_sign": 0.5092,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 2.2,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 4.2,
+       "p_two_sided_sign": 0.0502,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_bm25_then_dense c=500 k1=0.6 b=0.75",
+      "family": "cascade_bm25_then_dense",
+      "k1": 0.6,
+      "b": 0.75,
+      "c": 500,
+      "evidence_recall_at_4_pct": 71.0,
+      "per_doc_recall_at_4_pct": 84.6,
+      "evidence_recall_at_10_pct": 84.6,
+      "per_doc_recall_at_10_pct": 92.1,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.6,
+       "ci95_lo_pt": -0.6,
+       "ci95_hi_pt": 2.0,
+       "p_two_sided_sign": 0.4472,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.2,
+       "ci95_lo_pt": -1.4,
+       "ci95_hi_pt": 1.8,
+       "p_two_sided_sign": 0.9014,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "dense k1=0.9 b=0.9",
+      "family": "dense",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 70.4,
+      "per_doc_recall_at_4_pct": 84.2,
+      "evidence_recall_at_10_pct": 84.4,
+      "per_doc_recall_at_10_pct": 92.0,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+      "family": "linear_minmax",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 69.6,
+      "per_doc_recall_at_4_pct": 84.1,
+      "evidence_recall_at_10_pct": 87.2,
+      "per_doc_recall_at_10_pct": 93.5,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -0.8,
+       "ci95_lo_pt": -3.8,
+       "ci95_hi_pt": 2.4,
+       "p_two_sided_sign": 0.6598,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 2.8,
+       "ci95_lo_pt": 0.4,
+       "ci95_hi_pt": 5.2,
+       "p_two_sided_sign": 0.0228,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+      "family": "linear_z",
+      "k1": 0.6,
+      "b": 0.6,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 69.4,
+      "per_doc_recall_at_4_pct": 83.9,
+      "evidence_recall_at_10_pct": 86.8,
+      "per_doc_recall_at_10_pct": 93.3,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -1.0,
+       "ci95_lo_pt": -4.2,
+       "ci95_hi_pt": 2.0,
+       "p_two_sided_sign": 0.5642,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 2.4,
+       "ci95_lo_pt": 0.2,
+       "ci95_hi_pt": 4.6,
+       "p_two_sided_sign": 0.0452,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+      "family": "rrf",
+      "k1": 0.9,
+      "b": 0.9,
+      "m": 200,
+      "c": 1,
+      "evidence_recall_at_4_pct": 67.8,
+      "per_doc_recall_at_4_pct": 83.1,
+      "evidence_recall_at_10_pct": 85.6,
+      "per_doc_recall_at_10_pct": 92.7,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -2.6,
+       "ci95_lo_pt": -5.8,
+       "ci95_hi_pt": 0.6,
+       "p_two_sided_sign": 0.1214,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 1.2,
+       "ci95_lo_pt": -1.0,
+       "ci95_hi_pt": 3.4,
+       "p_two_sided_sign": 0.3382,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_dense_then_bm25 c=20 k1=0.6 b=0.9",
+      "family": "cascade_dense_then_bm25",
+      "k1": 0.6,
+      "b": 0.9,
+      "c": 20,
+      "evidence_recall_at_4_pct": 49.2,
+      "per_doc_recall_at_4_pct": 72.4,
+      "evidence_recall_at_10_pct": 81.4,
+      "per_doc_recall_at_10_pct": 90.3,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -21.2,
+       "ci95_lo_pt": -26.0,
+       "ci95_hi_pt": -16.4,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -3.0,
+       "ci95_lo_pt": -5.8,
+       "ci95_hi_pt": -0.2,
+       "p_two_sided_sign": 0.0388,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "bm25 k1=0.9 b=0.9",
+      "family": "bm25",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 38.2,
+      "per_doc_recall_at_4_pct": 64.1,
+      "evidence_recall_at_10_pct": 67.4,
+      "per_doc_recall_at_10_pct": 82.9,
+      "n_questions": 500,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -32.2,
+       "ci95_lo_pt": -37.4,
+       "ci95_hi_pt": -27.0,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -17.0,
+       "ci95_lo_pt": -21.2,
+       "ci95_hi_pt": -12.8,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 500,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     }
+    ],
+    "wall_s": 1.6
+   },
+   "val1190": {
+    "corpus": "val1190",
+    "n_docs": 1190,
+    "n_questions": 120,
+    "questions_dropped_unresolvable_gold": 0,
+    "role": "transfer: k1/b/w/c chosen on the 71,433 train questions, applied unchanged",
+    "gold_rule": "supporting facts located by first 80 chars (bench_competitors.py rule)",
+    "dense_baseline": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    },
+    "index": {
+     "n_docs": 1190,
+     "n_terms_vocab": 14035,
+     "n_postings_nnz": 70366,
+     "postings_per_doc_mean": 59.13,
+     "tokens_per_doc_mean": 89.02,
+     "build_s": 0.038,
+     "tokenise_s": 0.034,
+     "arrays_bytes": {
+      "indices_i32": 281464,
+      "tf_i32": 281464,
+      "weights_f32": 281464,
+      "indptr_i64": 112288,
+      "doc_len_i32": 4760,
+      "idf_f32": 56140
+     },
+     "vocab_blob_bytes": 110065,
+     "ram_total_bytes": 1127645,
+     "ram_serving_only_bytes": 785281
+    },
+    "arms": [
+     {
+      "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+      "family": "linear_z_backfill",
+      "k1": 0.6,
+      "b": 0.9,
+      "m": 200,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 70.0,
+      "per_doc_recall_at_4_pct": 84.58,
+      "evidence_recall_at_10_pct": 94.17,
+      "per_doc_recall_at_10_pct": 97.08,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 1.67,
+       "ci95_lo_pt": -5.0,
+       "ci95_hi_pt": 8.33,
+       "p_two_sided_sign": 0.7162,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.83,
+       "ci95_lo_pt": -2.5,
+       "ci95_hi_pt": 4.17,
+       "p_two_sided_sign": 0.826,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+      "family": "linear_minmax_backfill",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 100,
+      "w": 0.8,
+      "evidence_recall_at_4_pct": 69.17,
+      "per_doc_recall_at_4_pct": 84.17,
+      "evidence_recall_at_10_pct": 93.33,
+      "per_doc_recall_at_10_pct": 96.67,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.83,
+       "ci95_lo_pt": -5.83,
+       "ci95_hi_pt": 7.5,
+       "p_two_sided_sign": 0.9182,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": -3.33,
+       "ci95_hi_pt": 3.33,
+       "p_two_sided_sign": 1.1968,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "dense k1=0.9 b=0.9",
+      "family": "dense",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 68.33,
+      "per_doc_recall_at_4_pct": 83.75,
+      "evidence_recall_at_10_pct": 93.33,
+      "per_doc_recall_at_10_pct": 96.25,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_bm25_then_dense c=500 k1=0.6 b=0.75",
+      "family": "cascade_bm25_then_dense",
+      "k1": 0.6,
+      "b": 0.75,
+      "c": 500,
+      "evidence_recall_at_4_pct": 68.33,
+      "per_doc_recall_at_4_pct": 83.75,
+      "evidence_recall_at_10_pct": 93.33,
+      "per_doc_recall_at_10_pct": 96.25,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": 0.0,
+       "ci95_hi_pt": 0.0,
+       "p_two_sided_sign": 2.0,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": -2.5,
+       "ci95_hi_pt": 2.5,
+       "p_two_sided_sign": 1.306,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+      "family": "linear_minmax",
+      "k1": 0.6,
+      "b": 0.75,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 65.83,
+      "per_doc_recall_at_4_pct": 82.5,
+      "evidence_recall_at_10_pct": 95.0,
+      "per_doc_recall_at_10_pct": 97.5,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -2.5,
+       "ci95_lo_pt": -10.83,
+       "ci95_hi_pt": 5.83,
+       "p_two_sided_sign": 0.6428,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 1.67,
+       "ci95_lo_pt": -2.5,
+       "ci95_hi_pt": 5.83,
+       "p_two_sided_sign": 0.5326,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+      "family": "linear_z",
+      "k1": 0.6,
+      "b": 0.6,
+      "m": 200,
+      "w": 0.65,
+      "evidence_recall_at_4_pct": 65.83,
+      "per_doc_recall_at_4_pct": 82.08,
+      "evidence_recall_at_10_pct": 93.33,
+      "per_doc_recall_at_10_pct": 96.67,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -2.5,
+       "ci95_lo_pt": -10.83,
+       "ci95_hi_pt": 5.83,
+       "p_two_sided_sign": 0.6238,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 0.0,
+       "ci95_lo_pt": -4.17,
+       "ci95_hi_pt": 4.17,
+       "p_two_sided_sign": 1.1574,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+      "family": "rrf",
+      "k1": 0.9,
+      "b": 0.9,
+      "m": 200,
+      "c": 1,
+      "evidence_recall_at_4_pct": 64.17,
+      "per_doc_recall_at_4_pct": 81.67,
+      "evidence_recall_at_10_pct": 95.0,
+      "per_doc_recall_at_10_pct": 97.5,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -4.17,
+       "ci95_lo_pt": -11.67,
+       "ci95_hi_pt": 3.33,
+       "p_two_sided_sign": 0.3454,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": 1.67,
+       "ci95_lo_pt": -2.5,
+       "ci95_hi_pt": 5.83,
+       "p_two_sided_sign": 0.583,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "cascade_dense_then_bm25 c=20 k1=0.6 b=0.9",
+      "family": "cascade_dense_then_bm25",
+      "k1": 0.6,
+      "b": 0.9,
+      "c": 20,
+      "evidence_recall_at_4_pct": 45.0,
+      "per_doc_recall_at_4_pct": 70.42,
+      "evidence_recall_at_10_pct": 85.83,
+      "per_doc_recall_at_10_pct": 92.92,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -23.33,
+       "ci95_lo_pt": -35.0,
+       "ci95_hi_pt": -11.67,
+       "p_two_sided_sign": 0.0002,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -7.5,
+       "ci95_lo_pt": -13.33,
+       "ci95_hi_pt": -1.67,
+       "p_two_sided_sign": 0.0202,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     },
+     {
+      "config": "bm25 k1=0.9 b=0.9",
+      "family": "bm25",
+      "k1": 0.9,
+      "b": 0.9,
+      "evidence_recall_at_4_pct": 36.67,
+      "per_doc_recall_at_4_pct": 65.0,
+      "evidence_recall_at_10_pct": 75.83,
+      "per_doc_recall_at_10_pct": 87.5,
+      "n_questions": 120,
+      "vs_dense_evidence_at_4": {
+       "delta_pt": -31.67,
+       "ci95_lo_pt": -42.5,
+       "ci95_hi_pt": -20.0,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "vs_dense_evidence_at_10": {
+       "delta_pt": -17.5,
+       "ci95_lo_pt": -25.83,
+       "ci95_hi_pt": -9.17,
+       "p_two_sided_sign": 0.0,
+       "n_questions": 120,
+       "draws": 10000,
+       "seed": 20260917
+      },
+      "passes_prereg_bar_at_4": false
+     }
+    ],
+    "wall_s": 0.2
+   }
+  }
+ },
+ "costs": {
+  "priced_config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+  "candidate_depth_used": 200,
+  "bm25_index_build_s": 2.99,
+  "bm25_index_tokenise_s": 2.41,
+  "bm25_index_disk_bytes_npz": 52834371,
+  "bm25_index_disk_MiB_npz": 50.39,
+  "bm25_index_ram_bytes": 52832651,
+  "bm25_index_ram_MiB": 50.39,
+  "bm25_index_ram_serving_only_MiB": 33.85,
+  "latency_ms": {
+   "bm25_query_p50": 0.8832,
+   "bm25_query_p95": 1.3316,
+   "fuse_p50": 0.1779,
+   "fuse_p95": 0.2267,
+   "backfill_exact_rescore_p50": 0.0697,
+   "cascade_rerank_p50": 0.0188,
+   "dense_matvec_p50_in_this_process": 1.911,
+   "dense_matvec_p95_in_this_process": 2.7541,
+   "added_by_hybrid_p50": 1.0611,
+   "added_by_hybrid_p95": 1.5583,
+   "nanomem_dense_p50_cited_ms": 1.1494,
+   "hybrid_p50_estimate_on_nanomem_ms": 2.2105,
+   "added_as_multiple_of_cited_dense_p50": 0.92,
+   "note": "the dense figure here is a plain numpy matvec over 71,433x768 fp32 in this process, NOT nanomem's fp16 mmap scan with the PCA screen; the added_* rows are the ones that transfer"
+  },
+  "disk": {
+   "nanomem_cited_total_MiB": 406.2,
+   "nanomem_cited_vault_MiB": 148.7,
+   "nanomem_cited_sidecar_MiB": 257.5,
+   "index_pct_of_cited_total": 12.4,
+   "prereg_limit_pct": 25,
+   "nanomem_current_total_MiB_after_the_sidecar_change": 153.05,
+   "index_pct_of_current_total": 32.9,
+   "passes_against_the_cited_406_2": true,
+   "passes_against_the_current_153_05": false,
+   "reading": "the registered arithmetic passes (12.4% of 406.2 MiB); the same criterion against the vault nanomem actually writes today FAILS (32.9% of 153.05 MiB). The 'disk passes' sub-claim is WITHDRAWN.",
+   "provenance_of_this_correction": "added after the run by arithmetic on the ALREADY-MEASURED index size (50.39 MiB, costs.bm25_index_disk_MiB_npz). No sweep, no scoring and no measurement was repeated, and no recall number in this file changed. The 153.05 MiB denominator is scratch/refound/sidecar_size_results.json's n71433 total for the shipped default, independently confirmed on disk."
+  },
+  "index_cost": {
+   "n_docs": 71433,
+   "n_terms_vocab": 166054,
+   "n_postings_nnz": 4098142,
+   "postings_per_doc_mean": 57.37,
+   "tokens_per_doc_mean": 84.4,
+   "build_s": 2.971,
+   "tokenise_s": 2.409,
+   "arrays_bytes": {
+    "indices_i32": 16392568,
+    "tf_i32": 16392568,
+    "weights_f32": 16392568,
+    "indptr_i64": 1328440,
+    "doc_len_i32": 285732,
+    "idf_f32": 664216
+   },
+   "vocab_blob_bytes": 1376559,
+   "ram_total_bytes": 52832651,
+   "ram_serving_only_bytes": 35490135
+  },
+  "n_timed_queries": 500,
+  "machine": {
+   "loadavg_1_5_15_at_measure": [
+    6.57,
+    8.02,
+    5.61
+   ],
+   "co_tenancy_warning": "this machine was running other benchmark processes during the measurement; absolute latency is inflated for BOTH arms, so read the added/dense RATIO, not the absolute ms, and compare the ratio to the cited 1.1494"
+  },
+  "meets_prereg_cost_bar": false,
+  "meets_prereg_cost_bar_note": "unchanged and still false: the latency criterion fails at +1.0611 ms against the +1.0 ms bar. What changed is that the disk criterion no longer passes either, once its denominator is the vault nanomem now writes."
+ },
+ "analysis": {
+  "what_this_is": "post-hoc DESCRIPTIVE statistics on the same predictions; no new arm, no new selection, registered bar unchanged",
+  "pre_committed_single_arm": {
+   "rule": "the config with the highest evidence_recall@4 on the tuning pool -- the one arm a caller who had to pick before seeing the eval set would have shipped",
+   "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+   "tune_evidence_at_4_pct": 64.8
+  },
+  "multiplicity": {
+   "n_fusion_families_tested": 7,
+   "adjustment": "Bonferroni: per-arm two-sided level 0.05/7, i.e. a 99.29% bootstrap interval"
+  },
+  "corpora": {
+   "n71433": {
+    "n_questions": 500,
+    "arms": [
+     {
+      "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+      "evidence_at_4_pct": 64.0,
+      "delta_at_4_pt": 3.4,
+      "ci95_lo_pt": 0.6,
+      "bonferroni_ci_lo_pt_K7": -0.4,
+      "bonferroni_ci_hi_pt_K7": 7.4,
+      "evidence_at_10_pct": 76.2,
+      "delta_at_10_pt": 5.0,
+      "ci95_lo_pt_at_10": 2.6,
+      "bonferroni_ci_lo_pt_at_10_K7": 1.6,
+      "bonferroni_ci_hi_pt_at_10_K7": 8.8,
+      "questions_fixed_at_4": 35,
+      "questions_broken_at_4": 18,
+      "questions_fixed_at_10": 35,
+      "questions_broken_at_10": 10
+     },
+     {
+      "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 63.4,
+      "delta_at_4_pt": 2.8,
+      "ci95_lo_pt": 0.2,
+      "bonferroni_ci_lo_pt_K7": -0.6,
+      "bonferroni_ci_hi_pt_K7": 6.6,
+      "evidence_at_10_pct": 77.4,
+      "delta_at_10_pt": 6.2,
+      "ci95_lo_pt_at_10": 4.0,
+      "bonferroni_ci_lo_pt_at_10_K7": 3.2,
+      "bonferroni_ci_hi_pt_at_10_K7": 9.6,
+      "questions_fixed_at_4": 30,
+      "questions_broken_at_4": 16,
+      "questions_fixed_at_10": 35,
+      "questions_broken_at_10": 4
+     },
+     {
+      "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+      "evidence_at_4_pct": 63.2,
+      "delta_at_4_pt": 2.6,
+      "ci95_lo_pt": -0.2,
+      "bonferroni_ci_lo_pt_K7": -1.0,
+      "bonferroni_ci_hi_pt_K7": 6.46,
+      "evidence_at_10_pct": 77.2,
+      "delta_at_10_pt": 6.0,
+      "ci95_lo_pt_at_10": 3.8,
+      "bonferroni_ci_lo_pt_at_10_K7": 3.0,
+      "bonferroni_ci_hi_pt_at_10_K7": 9.4,
+      "questions_fixed_at_4": 31,
+      "questions_broken_at_4": 18,
+      "questions_fixed_at_10": 33,
+      "questions_broken_at_10": 3
+     },
+     {
+      "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 62.0,
+      "delta_at_4_pt": 1.4,
+      "ci95_lo_pt": -1.4,
+      "bonferroni_ci_lo_pt_K7": -2.4,
+      "bonferroni_ci_hi_pt_K7": 5.2,
+      "evidence_at_10_pct": 76.4,
+      "delta_at_10_pt": 5.2,
+      "ci95_lo_pt_at_10": 2.6,
+      "bonferroni_ci_lo_pt_at_10_K7": 1.8,
+      "bonferroni_ci_hi_pt_at_10_K7": 8.8,
+      "questions_fixed_at_4": 29,
+      "questions_broken_at_4": 22,
+      "questions_fixed_at_10": 36,
+      "questions_broken_at_10": 10
+     },
+     {
+      "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+      "evidence_at_4_pct": 61.6,
+      "delta_at_4_pt": 1.0,
+      "ci95_lo_pt": -2.0,
+      "bonferroni_ci_lo_pt_K7": -3.2,
+      "bonferroni_ci_hi_pt_K7": 5.2,
+      "evidence_at_10_pct": 77.2,
+      "delta_at_10_pt": 6.0,
+      "ci95_lo_pt_at_10": 3.4,
+      "bonferroni_ci_lo_pt_at_10_K7": 2.2,
+      "bonferroni_ci_hi_pt_at_10_K7": 10.0,
+      "questions_fixed_at_4": 33,
+      "questions_broken_at_4": 28,
+      "questions_fixed_at_10": 41,
+      "questions_broken_at_10": 11
+     },
+     {
+      "config": "cascade_bm25_then_dense c=500 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 61.4,
+      "delta_at_4_pt": 0.8,
+      "ci95_lo_pt": -0.8,
+      "bonferroni_ci_lo_pt_K7": -1.4,
+      "bonferroni_ci_hi_pt_K7": 3.2,
+      "evidence_at_10_pct": 72.4,
+      "delta_at_10_pt": 1.2,
+      "ci95_lo_pt_at_10": -0.8,
+      "bonferroni_ci_lo_pt_at_10_K7": -1.4,
+      "bonferroni_ci_hi_pt_at_10_K7": 4.2,
+      "questions_fixed_at_4": 11,
+      "questions_broken_at_4": 7,
+      "questions_fixed_at_10": 16,
+      "questions_broken_at_10": 10
+     },
+     {
+      "config": "dense k1=0.9 b=0.9",
+      "evidence_at_4_pct": 60.6,
+      "delta_at_4_pt": 0.0,
+      "ci95_lo_pt": 0.0,
+      "bonferroni_ci_lo_pt_K7": 0.0,
+      "bonferroni_ci_hi_pt_K7": 0.0,
+      "evidence_at_10_pct": 71.2,
+      "delta_at_10_pt": 0.0,
+      "ci95_lo_pt_at_10": 0.0,
+      "bonferroni_ci_lo_pt_at_10_K7": 0.0,
+      "bonferroni_ci_hi_pt_at_10_K7": 0.0,
+      "questions_fixed_at_4": 0,
+      "questions_broken_at_4": 0,
+      "questions_fixed_at_10": 0,
+      "questions_broken_at_10": 0
+     },
+     {
+      "config": "cascade_dense_then_bm25 c=20 k1=0.6 b=0.9",
+      "evidence_at_4_pct": 50.8,
+      "delta_at_4_pt": -9.8,
+      "ci95_lo_pt": -14.0,
+      "bonferroni_ci_lo_pt_K7": -15.6,
+      "bonferroni_ci_hi_pt_K7": -4.0,
+      "evidence_at_10_pct": 70.8,
+      "delta_at_10_pt": -0.4,
+      "ci95_lo_pt_at_10": -3.2,
+      "bonferroni_ci_lo_pt_at_10_K7": -4.4,
+      "bonferroni_ci_hi_pt_at_10_K7": 3.4,
+      "questions_fixed_at_4": 37,
+      "questions_broken_at_4": 86,
+      "questions_fixed_at_10": 26,
+      "questions_broken_at_10": 28
+     },
+     {
+      "config": "bm25 k1=0.9 b=0.9",
+      "evidence_at_4_pct": 35.4,
+      "delta_at_4_pt": -25.2,
+      "ci95_lo_pt": -30.4,
+      "bonferroni_ci_lo_pt_K7": -32.2,
+      "bonferroni_ci_hi_pt_K7": -18.2,
+      "evidence_at_10_pct": 52.8,
+      "delta_at_10_pt": -18.4,
+      "ci95_lo_pt_at_10": -23.4,
+      "bonferroni_ci_lo_pt_at_10_K7": -25.06,
+      "bonferroni_ci_hi_pt_at_10_K7": -11.6,
+      "questions_fixed_at_4": 37,
+      "questions_broken_at_4": 163,
+      "questions_fixed_at_10": 43,
+      "questions_broken_at_10": 135
+     }
+    ],
+    "candidate_pool_ceiling": {
+     "m=100": {
+      "all_gold_in_dense_top_m_pct": 88.8,
+      "all_gold_in_bm25_top_m_pct": 79.4,
+      "all_gold_in_UNION_pct": 93.2
+     },
+     "m=200": {
+      "all_gold_in_dense_top_m_pct": 92.4,
+      "all_gold_in_bm25_top_m_pct": 83.0,
+      "all_gold_in_UNION_pct": 95.4
+     }
+    }
+   },
+   "val1190": {
+    "n_questions": 120,
+    "arms": [
+     {
+      "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+      "evidence_at_4_pct": 70.0,
+      "delta_at_4_pt": 1.67,
+      "ci95_lo_pt": -5.0,
+      "bonferroni_ci_lo_pt_K7": -8.33,
+      "bonferroni_ci_hi_pt_K7": 11.67,
+      "evidence_at_10_pct": 94.17,
+      "delta_at_10_pt": 0.83,
+      "ci95_lo_pt_at_10": -2.5,
+      "bonferroni_ci_lo_pt_at_10_K7": -4.17,
+      "bonferroni_ci_hi_pt_at_10_K7": 5.83,
+      "questions_fixed_at_4": 10,
+      "questions_broken_at_4": 8,
+      "questions_fixed_at_10": 3,
+      "questions_broken_at_10": 2
+     },
+     {
+      "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 69.17,
+      "delta_at_4_pt": 0.83,
+      "ci95_lo_pt": -5.83,
+      "bonferroni_ci_lo_pt_K7": -9.17,
+      "bonferroni_ci_hi_pt_K7": 10.0,
+      "evidence_at_10_pct": 93.33,
+      "delta_at_10_pt": 0.0,
+      "ci95_lo_pt_at_10": -3.33,
+      "bonferroni_ci_lo_pt_at_10_K7": -4.17,
+      "bonferroni_ci_hi_pt_at_10_K7": 4.17,
+      "questions_fixed_at_4": 9,
+      "questions_broken_at_4": 8,
+      "questions_fixed_at_10": 2,
+      "questions_broken_at_10": 2
+     },
+     {
+      "config": "dense k1=0.9 b=0.9",
+      "evidence_at_4_pct": 68.33,
+      "delta_at_4_pt": 0.0,
+      "ci95_lo_pt": 0.0,
+      "bonferroni_ci_lo_pt_K7": 0.0,
+      "bonferroni_ci_hi_pt_K7": 0.0,
+      "evidence_at_10_pct": 93.33,
+      "delta_at_10_pt": 0.0,
+      "ci95_lo_pt_at_10": 0.0,
+      "bonferroni_ci_lo_pt_at_10_K7": 0.0,
+      "bonferroni_ci_hi_pt_at_10_K7": 0.0,
+      "questions_fixed_at_4": 0,
+      "questions_broken_at_4": 0,
+      "questions_fixed_at_10": 0,
+      "questions_broken_at_10": 0
+     },
+     {
+      "config": "cascade_bm25_then_dense c=500 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 68.33,
+      "delta_at_4_pt": 0.0,
+      "ci95_lo_pt": 0.0,
+      "bonferroni_ci_lo_pt_K7": 0.0,
+      "bonferroni_ci_hi_pt_K7": 0.0,
+      "evidence_at_10_pct": 93.33,
+      "delta_at_10_pt": 0.0,
+      "ci95_lo_pt_at_10": -2.5,
+      "bonferroni_ci_lo_pt_at_10_K7": -3.33,
+      "bonferroni_ci_hi_pt_at_10_K7": 3.33,
+      "questions_fixed_at_4": 0,
+      "questions_broken_at_4": 0,
+      "questions_fixed_at_10": 1,
+      "questions_broken_at_10": 1
+     },
+     {
+      "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+      "evidence_at_4_pct": 65.83,
+      "delta_at_4_pt": -2.5,
+      "ci95_lo_pt": -10.83,
+      "bonferroni_ci_lo_pt_K7": -15.0,
+      "bonferroni_ci_hi_pt_K7": 9.17,
+      "evidence_at_10_pct": 95.0,
+      "delta_at_10_pt": 1.67,
+      "ci95_lo_pt_at_10": -2.5,
+      "bonferroni_ci_lo_pt_at_10_K7": -3.33,
+      "bonferroni_ci_hi_pt_at_10_K7": 7.5,
+      "questions_fixed_at_4": 12,
+      "questions_broken_at_4": 15,
+      "questions_fixed_at_10": 4,
+      "questions_broken_at_10": 2
+     },
+     {
+      "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+      "evidence_at_4_pct": 65.83,
+      "delta_at_4_pt": -2.5,
+      "ci95_lo_pt": -10.83,
+      "bonferroni_ci_lo_pt_K7": -14.17,
+      "bonferroni_ci_hi_pt_K7": 9.17,
+      "evidence_at_10_pct": 93.33,
+      "delta_at_10_pt": 0.0,
+      "ci95_lo_pt_at_10": -4.17,
+      "bonferroni_ci_lo_pt_at_10_K7": -5.83,
+      "bonferroni_ci_hi_pt_at_10_K7": 5.0,
+      "questions_fixed_at_4": 11,
+      "questions_broken_at_4": 14,
+      "questions_fixed_at_10": 3,
+      "questions_broken_at_10": 3
+     },
+     {
+      "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+      "evidence_at_4_pct": 64.17,
+      "delta_at_4_pt": -4.17,
+      "ci95_lo_pt": -11.67,
+      "bonferroni_ci_lo_pt_K7": -15.0,
+      "bonferroni_ci_hi_pt_K7": 6.67,
+      "evidence_at_10_pct": 95.0,
+      "delta_at_10_pt": 1.67,
+      "ci95_lo_pt_at_10": -2.5,
+      "bonferroni_ci_lo_pt_at_10_K7": -4.17,
+      "bonferroni_ci_hi_pt_at_10_K7": 8.33,
+      "questions_fixed_at_4": 9,
+      "questions_broken_at_4": 14,
+      "questions_fixed_at_10": 5,
+      "questions_broken_at_10": 3
+     },
+     {
+      "config": "cascade_dense_then_bm25 c=20 k1=0.6 b=0.9",
+      "evidence_at_4_pct": 45.0,
+      "delta_at_4_pt": -23.33,
+      "ci95_lo_pt": -35.0,
+      "bonferroni_ci_lo_pt_K7": -39.17,
+      "bonferroni_ci_hi_pt_K7": -6.67,
+      "evidence_at_10_pct": 85.83,
+      "delta_at_10_pt": -7.5,
+      "ci95_lo_pt_at_10": -13.33,
+      "bonferroni_ci_lo_pt_at_10_K7": -16.07,
+      "bonferroni_ci_hi_pt_at_10_K7": 0.83,
+      "questions_fixed_at_4": 14,
+      "questions_broken_at_4": 42,
+      "questions_fixed_at_10": 3,
+      "questions_broken_at_10": 12
+     },
+     {
+      "config": "bm25 k1=0.9 b=0.9",
+      "evidence_at_4_pct": 36.67,
+      "delta_at_4_pt": -31.67,
+      "ci95_lo_pt": -42.5,
+      "bonferroni_ci_lo_pt_K7": -46.91,
+      "bonferroni_ci_hi_pt_K7": -16.67,
+      "evidence_at_10_pct": 75.83,
+      "delta_at_10_pt": -17.5,
+      "ci95_lo_pt_at_10": -25.83,
+      "bonferroni_ci_lo_pt_at_10_K7": -29.17,
+      "bonferroni_ci_hi_pt_at_10_K7": -6.67,
+      "questions_fixed_at_4": 10,
+      "questions_broken_at_4": 48,
+      "questions_fixed_at_10": 4,
+      "questions_broken_at_10": 25
+     }
+    ],
+    "candidate_pool_ceiling": {
+     "m=100": {
+      "all_gold_in_dense_top_m_pct": 99.17,
+      "all_gold_in_bm25_top_m_pct": 95.83,
+      "all_gold_in_UNION_pct": 100.0
+     },
+     "m=200": {
+      "all_gold_in_dense_top_m_pct": 100.0,
+      "all_gold_in_bm25_top_m_pct": 98.33,
+      "all_gold_in_UNION_pct": 100.0
+     }
+    }
+   }
+  }
+ },
+ "verdict": {
+  "one_line": "The tie DOES break -- fusing a stdlib BM25 arm with the same exact cosine gains +5.0 to +6.2 evidence-recall@10 points at 71,433 docs (95% CI lower bounds +2.6 to +4.0, still positive after Bonferroni over 7 families) -- but on the registered PRIMARY metric, recall@4, the gain is +2.6 to +3.4 and the pre-committed arm's 95% CI includes zero, so the registered bar is NOT met.",
+  "registered_bar": "ci95_lo_pt > 0 AND delta_pt >= +2.0 on evidence_recall@4, n71433, 500 questions",
+  "outcome_primary_metric_recall_at_4": {
+   "pre_committed_single_arm": {
+    "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+    "chosen_by": "highest evidence_recall@4 on the 2,000 disjoint train questions (64.80)",
+    "eval_evidence_at_4_pct": 63.2,
+    "delta_pt": 2.6,
+    "ci95": [
+     -0.2,
+     5.2
+    ],
+    "passes_registered_bar": false,
+    "why": "delta +2.60 clears the +2.0 point requirement but the 95% CI lower bound is -0.20, so the CI half of the bar fails"
+   },
+   "best_family_arms_unadjusted": [
+    {
+     "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+     "evidence_at_4_pct": 64.0,
+     "delta_pt": 3.4,
+     "ci95_lo_pt": 0.6,
+     "bonferroni_lo_pt": -0.4,
+     "passes_registered_bar": true
+    },
+    {
+     "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+     "evidence_at_4_pct": 63.4,
+     "delta_pt": 2.8,
+     "ci95_lo_pt": 0.2,
+     "bonferroni_lo_pt": -0.6,
+     "passes_registered_bar": true
+    },
+    {
+     "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+     "evidence_at_4_pct": 63.2,
+     "delta_pt": 2.6,
+     "ci95_lo_pt": -0.2,
+     "bonferroni_lo_pt": -1.0,
+     "passes_registered_bar": false
+    }
+   ],
+   "multiplicity_note": "7 fusion families were tested; with a Bonferroni-adjusted interval no arm's recall@4 lower bound stays above zero (best is -0.40). The unadjusted per-arm bar is what was registered and is reported as such; the adjusted number is given because it is the more conservative reading, not as a replacement bar."
+  },
+  "outcome_secondary_metric_recall_at_10": {
+   "note": "registered as a secondary metric before any number existed",
+   "arms": [
+    {
+     "config": "linear_z m=200 w=0.65 k1=0.6 b=0.6",
+     "evidence_at_10_pct": 76.2,
+     "delta_pt": 5.0,
+     "ci95_lo_pt": 2.6,
+     "bonferroni_lo_pt": 1.6,
+     "questions_fixed": 35,
+     "questions_broken": 10
+    },
+    {
+     "config": "linear_minmax_backfill m=100 w=0.8 k1=0.6 b=0.75",
+     "evidence_at_10_pct": 77.4,
+     "delta_pt": 6.2,
+     "ci95_lo_pt": 4.0,
+     "bonferroni_lo_pt": 3.2,
+     "questions_fixed": 35,
+     "questions_broken": 4
+    },
+    {
+     "config": "linear_z_backfill m=200 w=0.8 k1=0.6 b=0.9",
+     "evidence_at_10_pct": 77.2,
+     "delta_pt": 6.0,
+     "ci95_lo_pt": 3.8,
+     "bonferroni_lo_pt": 3.0,
+     "questions_fixed": 33,
+     "questions_broken": 3
+    },
+    {
+     "config": "linear_minmax m=200 w=0.65 k1=0.6 b=0.75",
+     "evidence_at_10_pct": 76.4,
+     "delta_pt": 5.2,
+     "ci95_lo_pt": 2.6,
+     "bonferroni_lo_pt": 1.8,
+     "questions_fixed": 36,
+     "questions_broken": 10
+    },
+    {
+     "config": "rrf m=200 c=1 k1=0.9 b=0.9",
+     "evidence_at_10_pct": 77.2,
+     "delta_pt": 6.0,
+     "ci95_lo_pt": 3.4,
+     "bonferroni_lo_pt": 2.2,
+     "questions_fixed": 41,
+     "questions_broken": 11
+    }
+   ],
+   "reading": "every fusion arm gains 5-6 points and survives multiplicity correction; the lexical arm reliably pulls gold evidence INTO the top 10 (best arm: 35 questions fixed against 4 broken) and is far less reliable about placing it in the top 4 (30 fixed against 16 broken)."
+  },
+  "bm25_alone": {
+   "n71433": {
+    "evidence_at_4_pct": 35.4,
+    "evidence_at_10_pct": 52.8
+   },
+   "n10000": {
+    "evidence_at_4_pct": 38.2,
+    "evidence_at_10_pct": 67.4
+   },
+   "val1190": {
+    "evidence_at_4_pct": 36.67,
+    "evidence_at_10_pct": 75.83
+   },
+   "finding": "lexical alone is NOT competitive on HotpotQA against nomic-embed-text: 25.2 points behind dense at recall@4 on the 71,433 corpus. The hybrid gain comes from COMPLEMENTARITY, not lexical strength -- BM25 is a minority vote that is right about different questions."
+  },
+  "complementarity_evidence": {
+   "all_gold_in_dense_top200_pct": 92.4,
+   "all_gold_in_bm25_top200_pct": 83.0,
+   "all_gold_in_union_top200_pct": 95.4,
+   "reading": "the lexical arm adds 3.0 points of candidate-pool ceiling the dense arm never returns at any depth up to 200. This is a property of the two scoring functions, measured with no fusion parameter involved."
+  },
+  "corpus_size_dependence": {
+   "val1190_delta_at_4_pt": 1.67,
+   "n10000_delta_at_4_pt": 1.6,
+   "n71433_delta_at_4_pt": 3.4,
+   "val1190_union_ceiling_pct": 100.0,
+   "reading": "on the 1,190-doc corpus the dense top-200 already holds 100% of gold, so there is nothing for a lexical arm to add, and the transfer result is a clean negative (+1.67, CI [-5.00, +8.33]). The win appears only where the corpus is large enough for dense retrieval to crowd evidence out of the head."
+  },
+  "cost_outcome": {
+   "index_build_s": 2.99,
+   "index_disk_MiB": 50.39,
+   "index_ram_MiB": 50.39,
+   "pct_of_nanomem_cited_disk": 12.4,
+   "added_query_p50_ms": 1.0611,
+   "registered_limit_ms": 1.0,
+   "meets_registered_cost_bar": false,
+   "why": "disk passes easily (50.4 MiB = 12.4% of the 406.2 MiB nanomem already writes for this corpus, limit was 25%); latency fails by 6% (1.0611 ms measured against the 1.0 ms limit). The measurement was taken while other benchmark processes ran on this machine. It is reported as a FAIL and was NOT re-measured to cross the line; a faster implementation must be re-measured against the same 1.0 ms limit before anyone claims a pass.",
+   "where_the_time_goes": {
+    "bm25_postings_and_bincount_ms": 0.8832,
+    "fusion_merge_ms": 0.1779,
+    "note": "the fusion merge is batch-shaped numpy call overhead on two 200-element lists, not algorithmic work"
+   }
+  },
+  "clean_negatives_reported": [
+   "cascade cosine -> BM25 rerank: -9.80 at recall@4 (CI [-14.00, -5.60]); using BM25 as a re-ranker destroys the dense ordering it was handed",
+   "cascade BM25 -> cosine rerank: +0.80 at recall@4, CI includes zero; a lexical prefilter caps recall at BM25's own 83.0% pool ceiling",
+   "RRF: +1.00 at recall@4 (CI [-2.00, +4.00]); rank-only fusion discards the score margin the linear blends exploit, and its tuned constant was c=1, i.e. the sweep pushed it as far from standard RRF (c=60) as the grid allowed",
+   "val1190 transfer: +1.67 at recall@4, CI [-5.00, +8.33] -- not a win",
+   "BM25 alone: 25.2 points behind dense at recall@4",
+   "the exact-backfill variants, which remove the imputation entirely, did not beat the floored ones on the evaluation set (+2.60 vs +3.40 at recall@4): the imputation choice is worth less than the noise on 500 questions"
+  ],
+  "recommendation": "Do NOT integrate into nanomem on this evidence alone. What is proven: a mechanism-level complementarity (+3.0 points of candidate ceiling that does not depend on any tuned parameter) and a +5 to +6 point recall@10 gain that survives multiplicity correction. What is NOT proven: the registered recall@4 bar, and the query-latency limit was missed. The next step is a recall@10-shaped question -- does the chat pipeline consume a top-10? -- plus a re-measured query path, not another fusion sweep."
+ }
+}

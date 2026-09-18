@@ -1,0 +1,417 @@
+{
+ "engine_version": "3.0.2",
+ "cost_of_the_tag_check": {
+  "with_tag_check": {
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "chat_3persona_top1_of_36": 31,
+   "chat_heldout_top1_of_24": 17,
+   "golden_chat_of_12": 12
+  },
+  "without_tag_check": {
+   "adjacent_top1": 30,
+   "revision_top1": 13,
+   "chat_3persona_top1_of_36": 31,
+   "chat_heldout_top1_of_24": 18,
+   "golden_chat_of_12": 11
+  },
+  "note": "The adjacent-attribute blocker is fixed by refusing to group records the tagger has already called different attributes. That fix is what costs one answer on the 2-persona held-out chat set; everything else it touches it improves or leaves alone."
+ },
+ "package_version": "0.3.0",
+ "fixture": "../nanomem_standalone/tests/data/adjacent_attributes.npz",
+ "what": "40 generic adjacent-attribute probes and 16 same-attribute revision probes, fixture-free vocabulary, nomic-embed-text",
+ "shipped_defaults": {
+  "group_cos_delta": 0.06,
+  "window_delta": 0.16,
+  "window_sim": 0.6,
+  "window_max": 4,
+  "intent_boost": 0.25,
+  "group_hoist": 0.25,
+  "revision_lead": 0.2
+ },
+ "v3.0.2": {
+  "adjacent": {
+   "engine": 40,
+   "cosine": 40,
+   "n": 40,
+   "failures": []
+  },
+  "revision_current": {
+   "engine": 11,
+   "cosine": 4,
+   "n": 16
+  },
+  "revision_historical": {
+   "engine": 16,
+   "n": 16
+  },
+  "contract": {
+   "violations": 0,
+   "max_excess": 0.6113,
+   "min_delta": 0.0,
+   "max_boost": 0.7
+  }
+ },
+ "v3.0.1": {
+  "adjacent": {
+   "engine": 30,
+   "cosine": 40,
+   "n": 40,
+   "failures": [
+    {
+     "question": "What is my home address?",
+     "wanted": "My home address is 12 Larkspur Way.",
+     "wanted_cosine": 0.7271,
+     "returned": "My work address is 44 Steelmill Lane.",
+     "returned_cosine": 0.5869,
+     "returned_score": 1.2271
+    },
+    {
+     "question": "What is my primary email?",
+     "wanted": "My primary email is quill.harrow@mailbox.test.",
+     "wanted_cosine": 0.6494,
+     "returned": "My backup email is spare.harrow@mailbox.test.",
+     "returned_cosine": 0.5928,
+     "returned_score": 1.1494
+    },
+    {
+     "question": "What is my first language?",
+     "wanted": "My first language is Marathi.",
+     "wanted_cosine": 0.7711,
+     "returned": "My second language is German.",
+     "returned_cosine": 0.6696,
+     "returned_score": 1.2711
+    },
+    {
+     "question": "What is my weekday lunch?",
+     "wanted": "My weekday lunch is a rice bowl.",
+     "wanted_cosine": 0.7717,
+     "returned": "My weekend lunch is flatbread and stew.",
+     "returned_cosine": 0.6897,
+     "returned_score": 1.2717
+    },
+    {
+     "question": "Where is my savings account?",
+     "wanted": "My savings account is at Corvid Union Bank.",
+     "wanted_cosine": 0.7094,
+     "returned": "My current account is at Thornfield Bank.",
+     "returned_cosine": 0.5807,
+     "returned_score": 1.2094
+    },
+    {
+     "question": "What is my work laptop?",
+     "wanted": "My work laptop is a Grellan X14.",
+     "wanted_cosine": 0.7324,
+     "returned": "My personal laptop is a Marrow Slate 9.",
+     "returned_cosine": 0.6384,
+     "returned_score": 1.2324
+    },
+    {
+     "question": "What school does my daughter go to?",
+     "wanted": "My daughter's school is Penrose Grammar.",
+     "wanted_cosine": 0.7774,
+     "returned": "My son's school is Aldbury Fields.",
+     "returned_cosine": 0.6523,
+     "returned_score": 0.7774
+    },
+    {
+     "question": "What is my blood group?",
+     "wanted": "My blood group is B negative.",
+     "wanted_cosine": 0.7846,
+     "returned": "My partner's blood group is O positive.",
+     "returned_cosine": 0.692,
+     "returned_score": 1.2846
+    },
+    {
+     "question": "Where is my office desk?",
+     "wanted": "My office desk is on the fourth floor.",
+     "wanted_cosine": 0.7462,
+     "returned": "My office locker is on the second floor.",
+     "returned_cosine": 0.6814,
+     "returned_score": 1.2462
+    },
+    {
+     "question": "What is my wifi password?",
+     "wanted": "My wifi password is thistle-moor-41.",
+     "wanted_cosine": 0.7734,
+     "returned": "My router admin password is gantry-loom-07.",
+     "returned_cosine": 0.6698,
+     "returned_score": 1.2734
+    }
+   ]
+  },
+  "revision_current": {
+   "engine": 13,
+   "cosine": 4,
+   "n": 16
+  },
+  "revision_historical": {
+   "engine": 16,
+   "n": 16
+  },
+  "contract": {
+   "violations": 3,
+   "max_excess": 0.6402,
+   "min_delta": -0.125,
+   "max_boost": 0.7
+  },
+  "note": "3.0.1's ranking, reconstructed in-process: the score PERMUTATION (entities.permute_group_scores) plus a cosine window that ignored the tagger's own verdict, at 3.0.1's thresholds (0.06 / 0.16 / 0.60). 3.0.1 PUBLISHED stats()['max_boost'] = 0.50, so its measured max_excess of +0.6402 and min_delta of -0.125 both broke the contract; `contract.max_boost` in this block is this build's 0.70.",
+  "published_max_boost": 0.5
+ },
+ "chat_3persona_selection_set": {
+  "v3.0.2_reopened": {
+   "top1": 31,
+   "top3": 35,
+   "n": 36
+  },
+  "note": "36 gold-store verification queries, benchmark_clean_chat_v3r2.py scoring"
+ },
+ "golden_chat_v2_vault": {
+  "v3.0.2": {
+   "correct": 12,
+   "n": 12
+  }
+ },
+ "threshold_grid": [
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.05,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 9,
+   "historical_top1": 16,
+   "chat_3persona_top1": 21,
+   "golden_chat": 10
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.05,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 9,
+   "historical_top1": 16,
+   "chat_3persona_top1": 21,
+   "golden_chat": 10
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.1,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 27,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.1,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 27,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.16,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 31,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.16,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 31,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.2,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 29,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.06,
+   "window_delta": 0.2,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 29,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.05,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 21,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.05,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 21,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.1,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 25,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.1,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 25,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.16,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 28,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.16,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 28,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.2,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 26,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.1,
+   "window_delta": 0.2,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 26,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.05,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 20,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.05,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 10,
+   "historical_top1": 16,
+   "chat_3persona_top1": 20,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.1,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 23,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.1,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 11,
+   "historical_top1": 16,
+   "chat_3persona_top1": 23,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.16,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 26,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.16,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 26,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.2,
+   "revision_lead": 0.2,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 24,
+   "golden_chat": 12
+  },
+  {
+   "group_cos_delta": 0.16,
+   "window_delta": 0.2,
+   "revision_lead": 0.3,
+   "adjacent_top1": 40,
+   "revision_top1": 12,
+   "historical_top1": 16,
+   "chat_3persona_top1": 24,
+   "golden_chat": 12
+  }
+ ]
+}

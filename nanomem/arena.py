@@ -23,7 +23,7 @@ paid for it:
 container counts the rows from block headers before it reads a single one, the
 arena allocates each array exactly once, and nothing is ever copied. Measured on
 a reopened 71,433-document vault: 643.6 MB of resident RSS becomes 286.0 MB,
-with all 500 queries' top-10 unchanged (scratch/refound/memory_results.json,
+with all 500 queries' top-10 unchanged (evidence/memory_results.json,
 ``summary.reopen_only.n71433``).
 
 That fixed the SERVER and left the LOADER, which is where nanomem lost: a
@@ -31,11 +31,11 @@ process that INGESTS 71,433 documents one ``add_fact()`` at a time is told
 nothing about how many are coming, so it grew by doubling and peaked at 826.4 MB
 of ru_maxrss to build-then-serve, against 230.6 MB for FAISS IndexFlatIP and
 290.5 MB for Chroma's default HNSW on the same corpus
-(scratch/refound/competitors_standard_results.json). THIS CHANGE fixes it in
+(evidence/competitors_standard_results.json). THIS CHANGE fixes it in
 the allocator rather than in the caller: :class:`_VectorStore` holds the
 vectors in a lazily committed RESERVATION and grows by re-viewing it, so growth
 never copies and the array is still cut to the exact row count. Measured by
-scratch/refound/bench_ingest_ram.py, which imports the committed package from a
+evidence/bench_ingest_ram.py, which imports the committed package from a
 git checkout as its own baseline arm, two independent runs each (``summary``,
 ``replicate``):
 
@@ -194,7 +194,7 @@ RESIDENCY_MODES = ("float32", "float16", "float16_mmap", "int8")
 DEFAULT_SCAN_CHUNK = 4096
 
 #: How many rows ``int8`` re-ranks exactly. Swept over 32..8,192 in
-#: scratch/refound/memory_results.json (``int8_pool_sweep``). The sweep's answer
+#: evidence/memory_results.json (``int8_pool_sweep``). The sweep's answer
 #: is that the pool is NOT the binding constraint: at 71,433 rows every pool in
 #: that range still disagreed with the fp32 engine on 1 to 4 of 500 queries, and
 #: EVERY one of those disagreements had a cosine gap of exactly 0.0 -- a tie
@@ -291,7 +291,7 @@ class _VectorStore:
     a new view over the same pages -- no allocation, no copy, nothing left
     behind. Measured by ``ru_maxrss``, growing a 768-d fp32 arena to 71,433 rows
     50 rows at a time, one subprocess per policy (memory_results.json,
-    ``growth_policy``, and scratch/refound/ingest_ram_results.json):
+    ``growth_policy``, and evidence/ingest_ram_results.json):
 
         policy                    final capacity   copies   peak RSS delta
         capacity doubling (as was)  131,072 rows       12       591.8 MB
@@ -652,7 +652,7 @@ class _MappedStrings:
     open (0.000193 s cached against 0.1634 s scanned) and what it defers shows
     up in the first write after one, which has to build the tables it skipped:
     0.0474 s against 0.0124 s at 71,433 rows
-    (scratch/refound/reopen_results.json, ``first_write_after_open.n71433``).
+    (evidence/reopen_results.json, ``first_write_after_open.n71433``).
 
     Rows appended after the snapshot land in a plain Python tail, so a vault
     that is opened from the cache and then written to behaves exactly as before
@@ -1124,7 +1124,7 @@ class ArenaSnapshot:
     WHY. Opening a vault used to cost a full pass over the container: every
     block's payload read, its trailer recomputed, its vectors upcast, its records
     parsed and one Python dict entry made per row. Measured on the 71,433-row
-    corpus (scratch/refound/reopen_results.json, ``headline.n71433``), that is
+    corpus (evidence/reopen_results.json, ``headline.n71433``), that is
     0.1634 s against 0.000193 s for a cached open -- 846x. It is O(rows) and it
     is paid on EVERY open, which is why sqlite-vec (0.0014 s) and Chroma
     (0.0017 s) beat nanomem by two orders of magnitude on reopen: they map or
@@ -1149,7 +1149,7 @@ class ArenaSnapshot:
     which takes the sidecar to 4.38 MiB and the pair to 153.05 MiB at 71,433
     rows -- under sqlite-vec's 258.0 and 4.4 MiB above a vault with no sidecar at
     all. That is the shipped default (``arena_cache_vectors="offsets_ram"``);
-    what it costs is in scratch/refound/sidecar_size_results.json and in the
+    what it costs is in evidence/sidecar_size_results.json and in the
     ``arena_cache_vectors`` block of :class:`~nanomem.engine.VaultEngine`.
 
     ONE SENTENCE THAT WAS HERE WAS WRONG, and is kept because it is the reason
@@ -2141,7 +2141,7 @@ class Arena:
         taken at its word, so nothing is over-allocated and ``stats()`` reports
         the arena at its true size. Measured at 71,433 rows on an M4 Pro: 643.6
         MB of resident RSS becomes 286.0 MB, with all 500 queries' top-10
-        bit-for-bit unchanged (scratch/refound/memory_results.json,
+        bit-for-bit unchanged (evidence/memory_results.json,
         ``summary.reopen_only.n71433``). It is only a hint: a short or missing
         hint still grows correctly, and the container caps it by the bytes the
         file actually holds so a forged header cannot forge an allocation.
@@ -2319,7 +2319,7 @@ class Arena:
         # reopen -- was measurably slower than the plain attributes they
         # replaced. Hoisting them, and decoding the ids in one list
         # comprehension, puts the scan back under what it cost before the cache
-        # existed (scratch/refound/reopen_results.json, `scan_path_duel`).
+        # existed (evidence/reopen_results.json, `scan_path_duel`).
         names = [b.decode("utf-8") for b in rec.ids]
         self.ids.extend(names)
         idx = self.id_index
@@ -2441,7 +2441,7 @@ class Arena:
         get from a full fp32 arena; chunking changes which rows share a call, not
         the arithmetic inside one. Measured over all 500 queries of the 71,433-row
         corpus, the resulting score vectors are BITWISE identical to the fp32
-        arena's (scratch/refound/memory_results.json).
+        arena's (evidence/memory_results.json).
         """
         n = out.shape[0]
         c = self.scan_chunk

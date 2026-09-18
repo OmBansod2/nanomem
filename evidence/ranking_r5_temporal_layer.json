@@ -1,0 +1,500 @@
+{
+ "label": "round-5 entity/temporal layer",
+ "engine_before": "3.0.3 (nanomem_standalone as found)",
+ "engine_after": "this build",
+ "dataset": "scratch/refound/temporal_bench.json (built by the benchmark agent; 10 users, 456 docs, 326 questions, vocabulary audited clean)",
+ "scorer_note": "top-1/top-3 computed by an independent scorer in the round-5 dev harness. It was validated by reproducing the recorded nanomem_default arm EXACTLY on all 326 questions (44.2%/88.0% overall and every by_type figure), so these numbers are directly comparable with temporal_bench_results.json.",
+ "methodology": {
+  "tuned_on": [
+   "temporal_bench.json users u01-u02 (the benchmark's own dev split)",
+   "clean_chat_benchmark.json (3 personas)",
+   "dev_personas_v3r4.json",
+   "tests/data/adjacent_attributes.npz + the 16 generic revision probes",
+   "scratch/refound/golden/chat_v2.dat"
+  ],
+  "never_read": [
+   "clean_chat_benchmark_heldout.json",
+   "clean_chat_benchmark_persona4.json"
+  ],
+  "test_split_note": "temporal_bench users u03-u10 (261 questions) were measured ONCE, after the code was frozen, and no change was made afterwards. Individual u03-u10 failures were never inspected."
+ },
+ "temporal_bench": {
+  "dev_split_u01_u02": {
+   "before": {
+    "overall": {
+     "n": 65,
+     "top1": 29,
+     "top3": 55,
+     "top1_pct": 44.6,
+     "top3_pct": 84.6
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 8,
+      "top1": 5,
+      "top3": 6,
+      "top1_pct": 62.5,
+      "top3_pct": 75.0
+     },
+     "current_value": {
+      "n": 20,
+      "top1": 18,
+      "top3": 20,
+      "top1_pct": 90.0,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 20,
+      "top1": 2,
+      "top3": 17,
+      "top1_pct": 10.0,
+      "top3_pct": 85.0
+     },
+     "previous_value": {
+      "n": 11,
+      "top1": 0,
+      "top3": 8,
+      "top1_pct": 0.0,
+      "top3_pct": 72.7
+     },
+     "third_party": {
+      "n": 6,
+      "top1": 4,
+      "top3": 4,
+      "top1_pct": 66.7,
+      "top3_pct": 66.7
+     }
+    }
+   },
+   "after": {
+    "overall": {
+     "n": 65,
+     "top1": 59,
+     "top3": 64,
+     "top1_pct": 90.8,
+     "top3_pct": 98.5
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 8,
+      "top1": 8,
+      "top3": 8,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     },
+     "current_value": {
+      "n": 20,
+      "top1": 20,
+      "top3": 20,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 20,
+      "top1": 15,
+      "top3": 20,
+      "top1_pct": 75.0,
+      "top3_pct": 100.0
+     },
+     "previous_value": {
+      "n": 11,
+      "top1": 10,
+      "top3": 10,
+      "top1_pct": 90.9,
+      "top3_pct": 90.9
+     },
+     "third_party": {
+      "n": 6,
+      "top1": 6,
+      "top3": 6,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     }
+    }
+   }
+  },
+  "test_split_u03_u10": {
+   "before": {
+    "overall": {
+     "n": 261,
+     "top1": 115,
+     "top3": 232,
+     "top1_pct": 44.1,
+     "top3_pct": 88.9
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 32,
+      "top1": 18,
+      "top3": 26,
+      "top1_pct": 56.2,
+      "top3_pct": 81.2
+     },
+     "current_value": {
+      "n": 80,
+      "top1": 73,
+      "top3": 80,
+      "top1_pct": 91.2,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 80,
+      "top1": 7,
+      "top3": 65,
+      "top1_pct": 8.8,
+      "top3_pct": 81.2
+     },
+     "previous_value": {
+      "n": 45,
+      "top1": 1,
+      "top3": 43,
+      "top1_pct": 2.2,
+      "top3_pct": 95.6
+     },
+     "third_party": {
+      "n": 24,
+      "top1": 16,
+      "top3": 18,
+      "top1_pct": 66.7,
+      "top3_pct": 75.0
+     }
+    }
+   },
+   "after": {
+    "overall": {
+     "n": 261,
+     "top1": 236,
+     "top3": 258,
+     "top1_pct": 90.4,
+     "top3_pct": 98.9
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 32,
+      "top1": 28,
+      "top3": 32,
+      "top1_pct": 87.5,
+      "top3_pct": 100.0
+     },
+     "current_value": {
+      "n": 80,
+      "top1": 80,
+      "top3": 80,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 80,
+      "top1": 60,
+      "top3": 77,
+      "top1_pct": 75.0,
+      "top3_pct": 96.2
+     },
+     "previous_value": {
+      "n": 45,
+      "top1": 45,
+      "top3": 45,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     },
+     "third_party": {
+      "n": 24,
+      "top1": 23,
+      "top3": 24,
+      "top1_pct": 95.8,
+      "top3_pct": 100.0
+     }
+    }
+   }
+  },
+  "all_326": {
+   "before": {
+    "overall": {
+     "n": 326,
+     "top1": 144,
+     "top3": 287,
+     "top1_pct": 44.2,
+     "top3_pct": 88.0
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 40,
+      "top1": 23,
+      "top3": 32,
+      "top1_pct": 57.5,
+      "top3_pct": 80.0
+     },
+     "current_value": {
+      "n": 100,
+      "top1": 91,
+      "top3": 100,
+      "top1_pct": 91.0,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 100,
+      "top1": 9,
+      "top3": 82,
+      "top1_pct": 9.0,
+      "top3_pct": 82.0
+     },
+     "previous_value": {
+      "n": 56,
+      "top1": 1,
+      "top3": 51,
+      "top1_pct": 1.8,
+      "top3_pct": 91.1
+     },
+     "third_party": {
+      "n": 30,
+      "top1": 20,
+      "top3": 22,
+      "top1_pct": 66.7,
+      "top3_pct": 73.3
+     }
+    }
+   },
+   "after": {
+    "overall": {
+     "n": 326,
+     "top1": 295,
+     "top3": 322,
+     "top1_pct": 90.5,
+     "top3_pct": 98.8
+    },
+    "by_type": {
+     "adjacent_attribute": {
+      "n": 40,
+      "top1": 36,
+      "top3": 40,
+      "top1_pct": 90.0,
+      "top3_pct": 100.0
+     },
+     "current_value": {
+      "n": 100,
+      "top1": 100,
+      "top3": 100,
+      "top1_pct": 100.0,
+      "top3_pct": 100.0
+     },
+     "historical_value": {
+      "n": 100,
+      "top1": 75,
+      "top3": 97,
+      "top1_pct": 75.0,
+      "top3_pct": 97.0
+     },
+     "previous_value": {
+      "n": 56,
+      "top1": 55,
+      "top3": 55,
+      "top1_pct": 98.2,
+      "top3_pct": 98.2
+     },
+     "third_party": {
+      "n": 30,
+      "top1": 29,
+      "top3": 30,
+      "top1_pct": 96.7,
+      "top3_pct": 100.0
+     }
+    }
+   }
+  }
+ },
+ "vs_competitor_arms_recorded_in_temporal_bench_results": {
+  "note": "UNPAIRED normal-approximation intervals: the recorded competitor arms carry no per-question detail, so a paired bootstrap is not possible from this side. Unpaired intervals are WIDER than the paired ones the benchmark reports, so a result called significant here would also be significant paired; a result called NOT significant here may still be paired-significant. The benchmark agent must re-run bench_temporal.py against this build for the authoritative paired table.",
+  "comparisons": [
+   {
+    "competitor": "exact_cosine_floor",
+    "competitor_top1_pct": 47.9,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 42.6,
+    "unpaired_se_pts": 3.21,
+    "unpaired_ci95_pts": [
+     36.3,
+     48.9
+    ],
+    "unpaired_significant": true
+   },
+   {
+    "competitor": "chroma_recency",
+    "competitor_top1_pct": 72.7,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 17.8,
+    "unpaired_se_pts": 2.95,
+    "unpaired_ci95_pts": [
+     12.0,
+     23.6
+    ],
+    "unpaired_significant": true
+   },
+   {
+    "competitor": "sqlitevec_recency_sql",
+    "competitor_top1_pct": 72.7,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 17.8,
+    "unpaired_se_pts": 2.95,
+    "unpaired_ci95_pts": [
+     12.0,
+     23.6
+    ],
+    "unpaired_significant": true
+   },
+   {
+    "competitor": "chroma_recency_3way",
+    "competitor_top1_pct": 86.2,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 4.3,
+    "unpaired_se_pts": 2.51,
+    "unpaired_ci95_pts": [
+     -0.6,
+     9.2
+    ],
+    "unpaired_significant": false
+   },
+   {
+    "competitor": "chroma_oracle_group",
+    "competitor_top1_pct": 82.5,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 8.0,
+    "unpaired_se_pts": 2.66,
+    "unpaired_ci95_pts": [
+     2.8,
+     13.2
+    ],
+    "unpaired_significant": true
+   },
+   {
+    "competitor": "chroma_oracle_group_and_query",
+    "competitor_top1_pct": 82.8,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 7.7,
+    "unpaired_se_pts": 2.65,
+    "unpaired_ci95_pts": [
+     2.5,
+     12.9
+    ],
+    "unpaired_significant": true
+   },
+   {
+    "competitor": "nanomem_wording_dir",
+    "competitor_top1_pct": 64.4,
+    "nanomem_after_top1_pct": 90.5,
+    "delta_pts": 26.1,
+    "unpaired_se_pts": 3.11,
+    "unpaired_ci95_pts": [
+     20.0,
+     32.2
+    ],
+    "unpaired_significant": true
+   }
+  ]
+ },
+ "other_sets": {
+  "note": "the five sets round 4 tuned on, re-measured; ranking_dev_r4_shipped.json vs ranking_dev_r5_final.json",
+  "adjacent_attribute_probes": {
+   "before": "40/40",
+   "after": "40/40",
+   "plain_cosine": "40/40"
+  },
+  "generic_revision_probes_current": {
+   "before": "14/16",
+   "after": "14/16",
+   "plain_cosine": "3/16"
+  },
+  "generic_revision_probes_historical": {
+   "before": "16/16",
+   "after": "16/16"
+  },
+  "chat3_selection_set": {
+   "before": "33/36 (91.7%)",
+   "after": "35/36 (97.2%)",
+   "file": "clean_chat_results_r5_3p.json vs clean_chat_results_v3r4_engine.json"
+  },
+  "dev_personas_v3r4": {
+   "before": "23/24",
+   "after": "23/24"
+  },
+  "golden_migrated_v2_vault": {
+   "before": "12/12",
+   "after": "12/12"
+  },
+  "score_contract": {
+   "violations": 0,
+   "max_excess": 0.6114,
+   "cap": 0.7
+  },
+  "document_exactness_1190_paragraphs_120_questions": {
+   "top4_order_differs": 0,
+   "rank1_differs": 0,
+   "metadata_filter_differs_from_brute_force": 0,
+   "file": "scratch/refound/exactness_v3r2.json"
+  }
+ },
+ "rejected_after_measurement": [
+  {
+   "rule": "group_cos_delta widened from 0.06",
+   "why_tempting": "it is what blocks the remaining historical failures",
+   "measured": {
+    "temporal_dev": {
+     "0.06": "55/65",
+     "0.10": "56/65",
+     "0.25": "58/65",
+     "1.0": "58/65"
+    },
+    "chat3": {
+     "0.06": "35/36",
+     "0.10": "32/36",
+     "0.16": "31/36",
+     "0.25": "30/36",
+     "1.0": "30/36"
+    }
+   },
+   "verdict": "rejected: the floor is doing real work on realistic chat"
+  },
+  {
+   "rule": "floor_skips_single_valued",
+   "measured": {
+    "temporal_dev": "59/65 with and without",
+    "chat3": "35/36 -> 30/36"
+   },
+   "verdict": "rejected: pays nothing, costs 5"
+  },
+  {
+   "rule": "group_floor_sim (record-to-record floor)",
+   "measured": {
+    "temporal_dev": {
+     "0.0": "59/65",
+     "0.50": "62/65",
+     "0.60": "61/65",
+     "0.70": "59/65"
+    },
+    "chat3": {
+     "0.0": "35/36",
+     "0.50": "30/36",
+     "0.60": "33/36",
+     "0.70": "35/36"
+    }
+   },
+   "verdict": "rejected: no value pays on both sets; shipped off, knob kept for the ablation"
+  },
+  {
+   "rule": "denominal-verb slot pattern: I <verb> with/at <named institution>",
+   "measured": {
+    "temporal_dev": "59/65 -> 60/65",
+    "five round-4 sets": "unchanged"
+   },
+   "verdict": "rejected: the only positive evidence is one attribute family on one set, and the pattern fires on every 'I <verb> at/with <x>' sentence in a chat log"
+  }
+ ],
+ "known_gaps_after": [
+  "adjacent_attribute is 36/40 (90.0%) against a plain cosine scan's 40/40 -- improved from 23/40 but still BELOW cosine, so USER_MANUAL_DEVELOPER's 'same as plain cosine' claim is still not met on this fixture-free set.",
+  "historical_value/home_address is 0/10: the genuine oldest revision ('I live at <a>.') sits 0.18 cosine below the newest ('my home address is now <b>.') when the question says 'home address', and group_relevance_floor (0.06) drops it. Every fix measured for it costs more on the 3-persona chat set than it gains.",
+  "historical_value/bank is 4/10 and previous_value/bank 5/6: 'I bank with <Name>.' carries no possessive and no structural class, so it is untagged, and the only rule that would tag it was rejected above.",
+  "third_party/inner_possessive is 9/10 and third_party overall 29/30 against a plain scan's 30/30.",
+  "The write path costs about 6% more per add_fact (median 19.4 us -> 20.6 us at 10k rows, D=64, durable=none), from the proper-name scan and the wider slot bound. It is a constant, not a growth: tests/test_scale.py's flatness assertion still passes.",
+  "Two contacts' copies of one attribute still collide in the other_ namespace when neither is named by a role noun; that is the documented third-party treatment (is_single_valued is False there, so neither supersedes the other).",
+  "'Where does <Name> work?' -- a third-person question with no possessive -- still gets a boost of exactly +0.000. Plain cosine answers it correctly (10/10) and the only way to make the layer fire would be a capitalisation-derived entity rule, which this module bans."
+ ]
+}

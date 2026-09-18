@@ -1,0 +1,33 @@
+{
+ "label": "current_engine",
+ "10000": {
+  "N": 10000,
+  "questions": 500,
+  "ingest_s": 2.1,
+  "index_MB": 71.8,
+  "engine_p50_ms": 44.01,
+  "engine_p95_ms": 75.35,
+  "engine_recall_pct": 24.0,
+  "exhaustive_numpy_p50_ms": 0.4,
+  "exhaustive_recall_pct": 70.4,
+  "faiss_flat_p50_ms": 0.483,
+  "faiss_flat_recall_pct": 70.4,
+  "peak_rss_MB": 1143.0,
+  "rss_delta_MB": 218.0
+ },
+ "71433": {
+  "N": 71433,
+  "questions": 500,
+  "ingest_s": 18.6,
+  "index_MB": 511.5,
+  "engine_p50_ms": 461.22,
+  "engine_p95_ms": 529.42,
+  "engine_recall_pct": 5.8,
+  "exhaustive_numpy_p50_ms": 1.99,
+  "exhaustive_recall_pct": 60.6,
+  "faiss_flat_p50_ms": 1.062,
+  "faiss_flat_recall_pct": 60.6,
+  "peak_rss_MB": 1472.0,
+  "rss_delta_MB": 330.0
+ }
+}

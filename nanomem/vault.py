@@ -184,14 +184,14 @@ class Vault:
 
     MEASURED on 10,000 HotpotQA paragraphs in the shape a caller actually runs
     (a vault opened from an existing file, 500 questions,
-    ``scratch/refound/scale_results_v3r3.json``): 22.0 MB on disk, 0.344 ms p50
+    ``evidence/scale_results_v3r3.json``): 22.0 MB on disk, 0.344 ms p50
     search, evidence recall@4 70.4% -- identical to an exhaustive scan (0.272 ms)
     and to FAISS IndexFlatIP (0.391 ms) on the same data. At 71,433 paragraphs:
     155.9 MB, 1.809 ms p50, 60.6% -- again identical to both. The index is 0.609x
     of (raw UTF-8 text + fp32 vectors), but roughly half of that saving is
     precision, not format: against raw text + fp16 vectors, the shape nanomem
     actually stores, the same index is 1.056x
-    (``scratch/refound/headtohead_v3.json`` -> ``index_size``). Search is exact and
+    (``evidence/headtohead_v3.json`` -> ``index_size``). Search is exact and
     LINEAR; there is no fixed millisecond guarantee.
     """
 
@@ -543,7 +543,7 @@ class Vault:
         # the hint is taken from the one number a directory walk already has:
         # total bytes, divided by BYTES_PER_CHUNK_ESTIMATE. MEASURED ratio of
         # bytes to chunks at the default 50-line/10-overlap split
-        # (scratch/refound/ingest_ram_results.json, ``directory_estimate``):
+        # (evidence/ingest_ram_results.json, ``directory_estimate``):
         # 1,640 B/chunk over 23 source files, 1,755 over the 50 files of the
         # nanomem package, 2,339 over 15,361 files of a whole repository and
         # 9,703 over a documentation tree of very long lines. 2,048 sits inside
@@ -588,7 +588,7 @@ class Vault:
         # does not, and nothing in the library used to tell it. Measured over
         # a 71,433-document ingest of 768-d vectors, peak ru_maxrss of the whole
         # build-then-serve process, two runs each
-        # (scratch/refound/ingest_ram_results.json, summary + replicate),
+        # (evidence/ingest_ram_results.json, summary + replicate),
         # median of four runs: 820.5 MB through the capacity doubling this
         # engine shipped with, 313.7 MB through this method today -- 15 MB of
         # which is the caller's own list of 71,433 record dicts, not the
@@ -731,11 +731,11 @@ class Vault:
         It forces an exhaustive scan and turns the PCA screen off, because
         masking a routed or screened shortlist would drop exactly the older
         record the query is asking for. Proven against physically truncated
-        vaults in ``scratch/refound/temporal_as_of_results.json``.
+        vaults in ``evidence/temporal_as_of_results.json``.
 
         Search is an exact, LINEAR scan: latency grows with the corpus and the
         measured p50 is published per size in
-        ``scratch/refound/scale_results_v3r3.json`` -- there is no fixed
+        ``evidence/scale_results_v3r3.json`` -- there is no fixed
         millisecond guarantee here. Supports multi-query decomposition for
         composite multi-part questions, and `multihop=True` for a second,
         text-bridged pass (`search_multihop`); alpha-steering was measured worse
@@ -955,7 +955,7 @@ class Vault:
         de-duplicated by id, so the budget is the same `k` documents.
 
         MEASURED, equal budget, evidence recall@4, on a re-opened vault
-        (scratch/refound/multihop_texthop_v3r2_1190.json, 1,190 paragraphs, 120
+        (evidence/multihop_texthop_v3r2_1190.json, 1,190 paragraphs, 120
         questions): single pass 68.3 -> text-hop 79.2. The orchestrator's prior
         run of the same mechanism: 1,190 docs 68.3 -> 73.3 (+5.0), hop-2 recall@4
         93.8 vs 87.9; 71,433 docs 60.4 -> 63.5 (+3.1), McNemar discordant 167 vs
@@ -1475,7 +1475,7 @@ class Vault:
         docstring claimed through 3.0.2. The rewrite holds the container's
         exclusive lock for its whole duration, so concurrent appenders block.
         Batch your deletions: one call with a list of ids costs one rewrite.
-        See scratch/refound/rewrite_cost_v3r4.json.
+        See evidence/rewrite_cost_v3r4.json.
         """
         self.flush()
         if not os.path.exists(self.path):

@@ -1,0 +1,67 @@
+{
+ "what": "generic third-party / third-person probes, controlled vectors so the result does not depend on an embedder",
+ "cases": [],
+ "v3.0.2_reconstructed": {
+  "anaphora": {
+   "their_entity": "phone_number",
+   "their_revision": 2,
+   "top1_is_the_users_own": false,
+   "top1_text": "His phone number is 555-0199.",
+   "top1_score": 1.300001,
+   "top1_cosine": 0.78
+  },
+  "cross_request_leak": {
+   "address_entity": "phone_number",
+   "address_revision": 2
+  },
+  "third_person": {
+   "first_person": {
+    "intent": "phone_number",
+    "top1_correct": true,
+    "boost": 0.5
+   },
+   "possessive_name": {
+    "intent": null,
+    "top1_correct": false,
+    "boost": 0.0
+   },
+   "possessive_pronoun": {
+    "intent": null,
+    "top1_correct": false,
+    "boost": 0.0
+   }
+  }
+ },
+ "v3.0.3": {
+  "anaphora": {
+   "their_entity": "other_phone_number",
+   "their_revision": 1,
+   "top1_is_the_users_own": true,
+   "top1_text": "My phone number is 555-0143.",
+   "top1_score": 1.3,
+   "top1_cosine": 0.8
+  },
+  "cross_request_leak": {
+   "address_entity": "other_location",
+   "address_revision": 1
+  },
+  "third_person": {
+   "first_person": {
+    "intent": "phone_number",
+    "top1_correct": true,
+    "boost": 0.5
+   },
+   "possessive_name": {
+    "intent": "other_phone_number",
+    "top1_correct": true,
+    "boost": 0.5
+   },
+   "possessive_pronoun": {
+    "intent": "other_phone_number",
+    "top1_correct": true,
+    "boost": 0.5
+   }
+  }
+ },
+ "engine_version": "3.0.3"
+}

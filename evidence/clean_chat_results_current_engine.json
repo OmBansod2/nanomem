@@ -1,0 +1,42 @@
+{
+ "label": "current_engine",
+ "classifier": {
+  "tp": 80,
+  "fp": 41,
+  "fn": 50,
+  "tn": 178,
+  "precision": 0.6611570247933884,
+  "recall": 0.6153846153846154,
+  "accuracy": 0.7392550143266475,
+  "f1": 0.6374501992031872,
+  "p50_ms": 12.35937500041473,
+  "per_persona": {
+   "nurse-lagos": {
+    "acc": 0.7739130434782608,
+    "n": 115
+   },
+   "retired-osaka": {
+    "acc": 0.6982758620689655,
+    "n": 116
+   },
+   "gradstudent-saopaulo": {
+    "acc": 0.7457627118644068,
+    "n": 118
+   }
+  }
+ },
+ "temporal_verification_gold_stores": {
+  "top1": 18,
+  "top3": 31,
+  "n": 36,
+  "top1_pct": 50.0,
+  "top3_pct": 86.11111111111111
+ },
+ "temporal_verification_end_to_end": {
+  "top1": 12,
+  "top3": 20,
+  "n": 36,
+  "top1_pct": 33.333333333333336,
+  "top3_pct": 55.55555555555556
+ }
+}

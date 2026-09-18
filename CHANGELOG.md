@@ -1,7 +1,95 @@
 # Changelog
 
-Paths of the form `scratch/refound/…` are relative to the repository root. Every
+Paths of the form `evidence/…` are relative to the repository root and the files
+are published there. Every
 number below is from one of those files.
+
+---
+
+## 0.7.14 — engine 3.4.2
+
+**`history` reported a three-revision chain as a fact that had never changed.**
+Found by the second black-box review. On a DECLARED chain alone in its vault:
+
+```
+history()          -> 1 entry, superseded=False, the OLDEST value
+changes()          -> 3 rows, revisions [1, 2, 3]
+get_all_records()  -> 3 rows
+```
+
+`superseded=False` on a single entry is defined by this library as "this value
+has never changed", so the answer was not degraded, it was the opposite of the
+truth — and 0.7.12's README had just told users to believe `history` over
+`search`. That claim was withdrawn in 0.7.13 as a stopgap; this is the fix.
+
+**Both diagnoses of it were wrong, including mine.** The review attributed it to
+the relevance floor and I agreed. `history` already passes `apply_floor=False`,
+and the comment beside that argument describes this exact failure as the reason
+it is there. Instrumenting found the cause one line earlier:
+
+```
+intent inferred from "where is my desk"  ->  'desk'
+entities the vault actually holds        ->  ['office']
+matching_ids('desk', ['office'])         ->  []      -> tagged group EMPTY
+```
+
+`resolve_top_entity` was `if intent: return intent` — the question's inferred
+intent won unconditionally, **even when it named no entity this vault holds**.
+The group was then empty and the cosine window returned the single best hit. All
+three records were correctly tagged `office`. An intent that matches nothing is
+not evidence about this vault, so it now falls back to the best hit's own tag,
+which is exactly the no-intent path. An intent that DOES match keeps priority.
+
+**A second, independent truncation, found by the new test rather than the
+review.** `history`'s `mask` is `cosine >= min_score`, default 0.0, applied
+before the group is formed. A revision worded unlike the question — the ordinary
+case for an old value, and the whole reason the method exists — was dropped. On
+this chain "Moved down to the annexe at Larkfield." scores -0.0298 against
+"where is my desk" and vanished, leaving a 2-entry history of a 3-entry chain.
+It survived the intent fix and would have shipped. `min_score` still decides
+whether there is a fact here and which one; it no longer deletes records the
+tagger has already called statements of that same fact.
+
+**Engine 3.4.1 -> 3.4.2, and every benchmark re-measured.** `resolve_top_entity`
+is shared with `_resolve_revisions`, so this can move ranking. No corpus
+detected a difference — the 520-result baseline is bitwise identical, clean-chat
+is unchanged, adjacent attributes are unchanged — but absence of a measured
+difference in these corpora is not proof of none, and the rule is that anything
+touching ranking bumps the engine. All 11 results files were re-run rather than
+re-stamped.
+
+**What this does NOT fix, stated plainly.** In a vault holding several declared
+attributes, `_resolve_intent` maps every "where…" question to one intent, so
+`history` now returns a full chain — of the wrong attribute for 3 of 4 queries
+in a four-chain probe. The review's reproduction was a single-chain vault, where
+this is fully fixed. The multi-attribute case is the review's third finding,
+query-intent classification, and it is still open. Until it lands, `history`
+being the right LENGTH does not mean it is about the fact you asked for.
+
+Suite 598 -> 602.
+
+**The cited evidence is now published.** Around 80 paths under `scratch/refound/`
+were cited from the source and the documentation, and that directory has never
+been committed to either remote — so a reader who followed a citation found
+nothing, and every claim resting on one was unverifiable in practice however
+true it was. 116 files (4.1 MiB) are published under `evidence/` with an index,
+local paths redacted structurally so no measurement could be altered, and every
+citation rewritten to point at them. `release_preflight.py` now fails a release
+if any cited path is missing, if a glob matches nothing, or if anything derived
+from a held-out fixture ever appears there.
+
+Three things are deliberately not published and say so instead of dangling: the
+held-out fixtures and the two results files derived from them (publishing them
+would make every future measurement against them worthless), a 139 MB archived
+model file, and two vault fixtures containing ingested book text whose
+provenance could not be established.
+
+**The head-to-head table is now generated, not typed.** Re-measuring on 3.4.2
+moved every figure in it (p50 2.14 -> 1.91 ms, reopen 0.261 -> 0.247 s,
+sqlite-vec 56.17 -> 54.42 ms) and the preflight guard caught all six. It is
+rewritten from the results file like the two latency blocks, which also
+corrected a bolding error the hand-typed version carried: sqlite-vec's 0.001 s
+reopen is the fastest, not FAISS's 0.013 s.
 
 ---
 
@@ -380,7 +468,7 @@ Suite 570 -> 571.
 ## 0.7.7 — engine 3.4.0 (unchanged)
 
 **Retention deleted the record `search` calls current.** Found by a randomised
-operation fuzzer (`scratch/refound/exp_fuzz_ops.py`), which churns a vault
+operation fuzzer (`evidence/exp_fuzz_ops.py`), which churns a vault
 through random sequences of add / add_batch / update / delete / prune /
 forget_superseded / compact / flush / reopen and checks invariants after every
 single step.
@@ -550,7 +638,7 @@ Suite 556 -> 564.
 ## 0.7.4 — engine 3.3.5
 
 From a pre-registered edge-case sweep
-(`scratch/refound/design/edge_cases_spec.md`, 14 cases, results in
+(`evidence/design/edge_cases_spec.md`, 14 cases, results in
 `edge_cases_results.json`). 12 of 14 passed as shipped; the two that did not are
 below. Unicode round-trips exactly, a 200,000-character token stores in 0.25 s,
 odd metadata types survive JSON, `as_of` outside the range behaves, and reopening
@@ -614,8 +702,8 @@ Suite 552 -> 556.
 Found by driving nanomem through six use cases it had never been used for —
 infra config drift, price tracking, multi-tenant SaaS, agent task state, policy
 versioning and 5,000-entity fleet state. Pre-registered in
-`scratch/refound/design/new_usecases_spec.md`; numbers in
-`scratch/refound/usecases_findings.json`.
+`evidence/design/new_usecases_spec.md`; numbers in
+`evidence/usecases_findings.json`.
 
 **Retention treated the chunks of one long value as separate revisions.**
 `add()` splits a record over ~2 KB into `{parent}_chunk_N`, and every chunk
@@ -946,7 +1034,7 @@ identical lesson in 0.5.0 and was replaced for the identical reason; the same
 assertion was sitting in a second file.
 
 Measured before changing anything, pre-registered in
-`scratch/refound/design/screen_exactness_spec.md`
+`evidence/design/screen_exactness_spec.md`
 (`screen_exactness_results.json`):
 
 | corpus | worst \|fp32 − fp64\| | smallest rank-4 gap | undecided at k=1,4,10 |
@@ -1050,7 +1138,7 @@ Suite 519 -> 521.
 ## 0.6.5 — engine 3.3.2
 
 **`search()` returned a superseded value as current.** Recorded as a major
-defect on 2026-09-17 in `scratch/refound/finding_floor_drops_current_value.json`,
+defect on 2026-09-17 in `evidence/finding_floor_drops_current_value.json`,
 reproduced identically on 0.5.0, and open through 0.6.4:
 
     search("where do I work")  ->  "I moved jobs, I now work at Initech."
@@ -1072,7 +1160,7 @@ down. It does now, per revision group, and a DECLARED group's newest revision is
 exempt from the query-relative floor while an inferred group's is not.
 
 Measured over six arms, pre-registered in
-`scratch/refound/design/floor_current_value_spec.md` before the experiment was
+`evidence/design/floor_current_value_spec.md` before the experiment was
 written (`floor_current_value_results.json`):
 
 | arm | 0.6.4 | 0.6.5 |
@@ -1200,7 +1288,7 @@ redundant — `ollama pull nomic-embed-text` is the same model, and that is what
 nanomem talks to.
 
 Removed from both bundles, along with `FUSED_MODEL_PATH` and the two dead
-attributes. One archived copy kept at `scratch/refound/assets/` with a note;
+attributes. One archived copy kept locally with a note (139 MB, not published);
 there were four (two bundles, two snapshots, 556 MB).
 
 **The macOS bundle goes 152 MB → 10 MB.**
@@ -1309,8 +1397,8 @@ surface, and then discarded it. Three calls return it instead.
 Nothing existing changes. `search()` with no `as_of` is bitwise identical to
 0.5.0 across 520 recorded query results, and the entire 0.5.0 suite passes
 untouched — 443 tests before, 467 after, 0 failures
-(`scratch/refound/temporal_g1_results.json`; the gate is stated in
-`scratch/refound/design/temporal_api_spec.md`).
+(`evidence/temporal_g1_results.json`; the gate is stated in
+`evidence/design/temporal_api_spec.md`).
 
 **`history(query)`** — every value a fact has held, oldest first, the current one
 last, each with `timestamp`, `revision` and `superseded`. No boost is applied, so
@@ -1322,7 +1410,7 @@ It deliberately does **not** apply the ranker's relevance floor. That floor asks
 for ranking and the wrong one for an audit surface: measured on four restatements
 at cosine 0.80 / 0.77 / 0.74 / 0.71, `GROUP_COS_DELTA = 0.06` drops the fourth,
 and the chain then reports the **third** as current with `superseded=False` while
-a newer value exists (`scratch/refound/temporal_g1_results.json`). The cost of the opt-out is the opposite error — a record
+a newer value exists (`evidence/temporal_g1_results.json`). The cost of the opt-out is the opposite error — a record
 carrying the tag without being a restatement can appear — which is the safer
 direction, because the entry arrives with its own text and timestamp and nothing
 is hidden.
@@ -1334,7 +1422,7 @@ older one out of selection before the mask is applied, and that older record is
 exactly what an as-of query is asking for. Proven against physically truncated
 vaults — the admitted row set is exactly `{rows : ts <= t}` over 705 checks with
 no tolerance, and 5,670 comparisons give **0 id differences, 0 order differences
-and 0 timestamp leaks** (`scratch/refound/temporal_as_of_results.json`).
+and 0 timestamp leaks** (`evidence/temporal_as_of_results.json`).
 
 **`changes(since, until)`** — what was written in a window, with no query vector
 and no embedding call, read off the resident timestamp column. The interval is
@@ -1365,7 +1453,7 @@ Calibration passes on both. The second clause fails: against a single
 corpus-wide rate, the per-fact rate wins only on the corpus whose intervals were
 generated to match its own memoryless assumption. Elsewhere it is a tie, and a
 tie means the per-fact rate earned nothing. `assume_memoryless=True` turns it on
-for a caller whose domain justifies it. `scratch/refound/staleness_calibration.json`
+for a caller whose domain justifies it. `evidence/staleness_calibration.json`
 
 An earlier run of that gate used `obs.mean()` as the "constant baseline" —
 estimated from the test outcomes, an in-sample oracle with access to the answers
@@ -1395,7 +1483,7 @@ replaces element-for-element across **21,200 fuzz cases** — including
 all-identical, two-value and three-value tie profiles and arrays of 5k–80k — plus
 the 520-query recorded baseline, unchanged. `argpartition`'s own tie order is
 unspecified and is never relied on; it is read for a *value*, never to choose
-between equal ones. `scratch/refound/window_topk_results.json`
+between equal ones. `evidence/window_topk_results.json`
 
 Two corrections to earlier notes in this project:
 
@@ -1421,7 +1509,7 @@ precision* and a caller that declares its own schema has no imprecision to
 compensate for. So it stays a knob, now documented in `_apply_group_floor` with
 both numbers. This independently reproduces the engine's own recorded finding
 that three earlier floor fixes each cost more than they gained — using an arm
-its authors did not have. `scratch/refound/floor_retune_results.json`,
+its authors did not have. `evidence/floor_retune_results.json`,
 `floor_chatcheck_results.json`
 
 An earlier note in `temporal_drift_results.json` dismissed this sweep as
@@ -1441,13 +1529,13 @@ feature here:
   matching 0.517. All chance. Only the query-relative signal discriminates
   (0.880), and that is what the relevance floor already computes. Siblings share
   value shapes by construction, so shape can never separate them.
-  `scratch/refound/grouping_signal_results.json`
+  `evidence/grouping_signal_results.json`
 * *Write-time anaphora* (change marker + value shape + recency). Attached 41.7%
   of narrative restatements at 78.7% precision, 8.9% wrong — inside the wrong-rate
   bar, well under the 70% attach bar. 105 of 180 restatements carry no specific
   value shape at all, and the confusions are exactly the siblings
   (`primary_email→backup_email` 7, `home_address→office_address` 6): recency does
-  not break sibling ties. `scratch/refound/write_time_anchor_results.json`
+  not break sibling ties. `evidence/write_time_anchor_results.json`
 
 The conclusion both share is worth stating plainly: **a revision cannot be told
 from a sibling attribute without either a vocabulary or the query.** That is a
@@ -1456,7 +1544,7 @@ temporal capability here is bounded by tagger recall — 70/100 chains on canoni
 phrasing, 0/100 on drifting.
 
 **Cost**: +0.21% on p50 at 20,000 rows over 5 alternating paired runs, against a
-pre-registered bar of +1.0% (`scratch/refound/temporal_cost_results.json`). The
+pre-registered bar of +1.0% (`evidence/temporal_cost_results.json`). The
 first unrepeated pair read +1.88% and was not acted on in either direction; the
 stdev across pairs is 1.11%, which is what that single sample was measuring.
 
@@ -1481,12 +1569,12 @@ with no float comparison in it at all.
   measured evidence that three such fixes each cost more than they gained, so
   retuning it needs its own benchmark run — and the temporal benchmark reports
   100.0% on `current` questions while getting this one wrong, so the coverage
-  gap should be closed first. `scratch/refound/finding_floor_drops_current_value.json`
+  gap should be closed first. `evidence/finding_floor_drops_current_value.json`
 * The five distribution copies of the package are at **0.3.0 / engine 3.0.3**,
   four releases behind, and live under untracked trees. They still answer "what
   was my original address?" with the current value, peak at ~818 MB on a 71k
   ingest, and gate writes at 0.60.
-  `scratch/refound/finding_stale_distribution_copies.json`
+  `evidence/finding_stale_distribution_copies.json`
 
 ---
 
@@ -1511,9 +1599,9 @@ one written with every new flag off.
 
 ### Changed — the `.arena` sidecar keeps OFFSETS, not a copy (`arena_cache_vectors`, `arena_cache_records`)
 
-Measured by `scratch/refound/bench_sidecar_size.py` →
+Measured by `evidence/bench_sidecar_size.py` →
 `sidecar_size_results.json`; independently re-measured on the final tree in
-`scratch/refound/quality_summary.json`.
+`evidence/quality_summary.json`.
 
 0.4.0's sidecar *was* the resident fp32 arena, so it duplicated the vault: 209.28
 MiB of vectors and 43.81 MiB of record text beside a 148.7 MiB vault. It no
@@ -1571,10 +1659,10 @@ address), and that case is a test rather than an assertion.
 ### Changed — the write gate now keeps 57% more turns (`DEPLOYMENT_THRESHOLD_FULL` = 0.05)
 
 Measured by `prime_4d_unified_engine_2026_09_13/write_policy.py` →
-`scratch/refound/write_policy_results.json`, pre-registered and hash-verified
+`evidence/write_policy_results.json`, pre-registered and hash-verified
 before any number, tuned on a 120-question dev split, scored **once** on a
 disjoint 300-question test split. Reproduced end to end through the shipped
-classifier in `scratch/refound/quality_summary.json`.
+classifier in `evidence/quality_summary.json`.
 
 The trainer chose 0.60 by leave-one-persona-out **accuracy/F1**, which prices a
 false positive and a false negative the same. Deployment does not: a refused
@@ -1707,7 +1795,7 @@ array is a page-aligned section `mmap` can hand to numpy with no copy and no
 parse. An open becomes a stat, a 4 KiB header read, a bind and an `mmap`
 instead of a replay of every block.
 
-Measured by `scratch/refound/bench_reopen.py` → `reopen_results.json`,
+Measured by `evidence/bench_reopen.py` → `reopen_results.json`,
 regenerated against this build at machine load 2.1. Reopen is the median of 25
 opens in one warm interpreter — the protocol `competitors_standard_results.json`
 used, and the agreement is checked rather than assumed: a cache-less open here
@@ -1819,7 +1907,7 @@ the same fp32 kernel the full scan uses. `nanomem/screen.py` derives the bound;
 it holds for *any* basis, which is why an append cannot invalidate it.
 
 71,433 HotpotQA paragraphs, 200 questions × 5 paired interleaved cycles, one
-engine with the flag toggled per query (`scratch/refound/bench_screen.py` →
+engine with the flag toggled per query (`evidence/bench_screen.py` →
 `pca_screen_results.json`, `phaseC_latency_full`, re-run against this build at
 load 1.28):
 
@@ -1899,7 +1987,7 @@ have. Anything trending `arena_bytes` will see a step change.
 ### Also in this entry
 
 `tests/test_round5_temporal.py` no longer reads the chat fixtures. It globbed
-`scratch/refound` for `*chat_benchmark*.json` and `*personas*.json` and read
+the working tree for `*chat_benchmark*.json` and `*personas*.json` and read
 every match, so **every `pytest` run opened the quarantined
 `clean_chat_benchmark_persona4.json` and `clean_chat_benchmark_heldout.json`**.
 `test_entities.py` had already been moved onto the committed digest table
@@ -1911,7 +1999,7 @@ only inspected itself. Found by wrapping `builtins.open` for a whole suite run
 and reading the paths back; an access timestamp would not have settled it, since
 reads do not reliably bump `atime` on this filesystem. Verified again on this
 build: a full instrumented suite run opens exactly 6 paths under
-`scratch/refound`, none of them quarantined.
+the working tree, none of them quarantined.
 
 `tests/test_arena_residency.py::test_the_allocator_not_a_narrower_dtype_is_what_took_the_ram_off_the_default`
 was amended, because integrating the arena cache made its assertion false
@@ -1930,7 +2018,7 @@ pre-registered against a +5.0 pt bar on the personal-memory chat task and scored
 on a held-out persona split. None cleared it; the best reached +1.0 pt
 [-0.3, +2.7] (not significant) and conversation context was significantly
 **negative** at -3.3 pt [-6.0, -0.7]. See COMPETITIVE_POSITION.md, Axis 6, and
-`scratch/refound/context_lever_results.json`.
+`evidence/context_lever_results.json`.
 
 ---
 
@@ -1944,7 +2032,7 @@ is still 3 and files written by 0.3.0/0.3.1 open unchanged.
 
 `ru_maxrss` high-water mark over the whole loader shape — build 71,433
 documents, close, reopen, answer 500 queries — measured by
-`scratch/refound/bench_memory.py` (arm `fp32_reserved`, the shipped default),
+`evidence/bench_memory.py` (arm `fp32_reserved`, the shipped default),
 today's harness on today's machine against a checkout of the committed 0.3.1
 build whose `arena.py` is byte-identical to `git show 6aa6923:`:
 
@@ -1956,7 +2044,7 @@ build whose `arena.py` is byte-identical to `git show 6aa6923:`:
 Two runs per cell, both printed rather than averaged. The same file's single
 driver pass reads 305.1 MB at 71,433, so the honest range for the new arm at
 that size across today's three readings is **286.4–305.1 MB**; a separate
-harness (`scratch/refound/ingest_ram_results.json`, four runs plus two
+harness (`evidence/ingest_ram_results.json`, four runs plus two
 post-report checks) puts it at **287.9–310.0 MB** with a median of 298.4. Quote a
 range, not a point.
 
@@ -1981,7 +2069,7 @@ release fixes the *loader* shape, which was the one still losing.
 * The temporal-supersession benchmark re-run against this build reproduces
   **all 19 arms to the digit**: 90.5% top-1 at shipped defaults, 47.9% ranking-off
   floor, 86.2% for the strongest competitor arm
-  (`scratch/refound/temporal_bench_results.json`).
+  (`evidence/temporal_bench_results.json`).
 
 ### How it works
 
@@ -2091,7 +2179,7 @@ it into a real one.
 * **The reserved arm is bimodal at 71,433 rows.** Readings cluster near 288 and
   near 305–310 MB, a 7% spread. The committed-plus-hint arm shows the same jump,
   so it is an ingest transient rather than the reservation. Not chased.
-* **`scratch/refound/bench_memory.py`'s `legacy_303_fp32_doubling` arm no longer
+* **`evidence/bench_memory.py`'s `legacy_303_fp32_doubling` arm no longer
   reconstructs what it claims to.** It disables `Arena.reserve`, which was the
   whole difference under 3.0.4, but the reserved view sizes exactly regardless;
   its own `_next_capacity` assertion still passes because the *column* arrays
@@ -2113,16 +2201,16 @@ comment and each citing its own results file.
   0.3.0 did, with no argument change. Temporal-supersession top-1 at shipped
   defaults **44.2% → 90.5%**; historical questions 9.0% → 75.0%; previous-value
   questions 1.8% → 98.2%; sibling attributes 57.5% → 90.0%
-  (`scratch/refound/temporal_bench_results.json`, before-column via
+  (`evidence/temporal_bench_results.json`, before-column via
   `final_scorecard.json`). Passing the two-way `temporal_direction` argument
   explicitly now *costs* 13.2 points (90.5% → 77.3%) because it overrides that
   reading — see `COMPETITIVE_POSITION.md`.
 * **The arena is pre-sized on reopen** from the container's header row count.
   Server shape at 71,433 documents: **643.6 MB → 286.0 MB**, 0 of 500 top-10
-  lists changed, no latency cost (`scratch/refound/memory_results.json`,
+  lists changed, no latency cost (`evidence/memory_results.json`,
   `reopen_only`). This did **not** fix the loader shape; 0.3.2 does.
 * **The router gate was re-run and the default confirmed OFF**
-  (`scratch/refound/router_gate_results.json`).
+  (`evidence/router_gate_results.json`).
 
 ---
 
@@ -2171,9 +2259,9 @@ Open the file. Migration runs once and the original survives beside it as
 reader. `stats()['format_version']` is `3` afterwards, and the second open is an
 ordinary v3 open.
 
-Verified on two golden fixtures in `scratch/refound/golden/`: a chat vault
+Verified on two golden fixtures in `evidence/golden/`: a chat vault
 answers **12 of 12** expected top-1 queries after migration, against 10 of 12 for
-the v2 engine on the same fixture (`scratch/refound/ranking_dev_r4_shipped.json`,
+the v2 engine on the same fixture (`ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings),
 `golden_chat_v2`); and a book vault migrates **845 of 845** documents with **0 of
 20** top-4 differences from exhaustive fp32 cosine computed over
 `iter_records()` — that second arm was run by hand and is not in a results JSON.
@@ -2188,8 +2276,8 @@ now an error instead of being silently dropped.
 
 Real HotpotQA paragraphs in random insertion order, 500 held-out questions,
 `top_k=4`, ingest → close → re-open → search. Before:
-`scratch/refound/scale_results_current_engine.json`. After:
-`scratch/refound/scale_results_v3r4.json`.
+`evidence/scale_results_current_engine.json`. After:
+`evidence/scale_results_v3r4.json`.
 
 | Corpus | recall@4 | p50 | index |
 | :--- | :--- | :--- | :--- |
@@ -2200,15 +2288,15 @@ Real HotpotQA paragraphs in random insertion order, 500 held-out questions,
 `IndexFlatIP` score on the same data. At 1,190 documents the engine matches
 exhaustive fp32 cosine in *ordering* as well: 0/120 top-4 order differences and
 0/120 rank-1 differences with the real question strings
-(`scratch/refound/exactness_v3r2.json`, `headtohead_v3.json`). At 10,000 and
+(`evidence/exactness_v3r2.json`, `headtohead_v3.json`). At 10,000 and
 71,433 documents recall is still identical, but 2 of 500 and 5 of 500 questions
 differ in top-4 *order* — every case a tie or near-tie, largest cosine gap
 2.2e-05, caused by the fp16 vectors on disk
-(`scratch/refound/verify_round3_v3r3.json`).
+(`evidence/verify_round3_v3r3.json`).
 
 The 0.1.x collapse was the block-page router on randomly ordered blocks: in
 random insertion order it recalled 3.3–21.7 % against 68.3 % exhaustive
-(`scratch/refound/sweep_routing_1190.txt`). 3.0 scans exhaustively below
+(`evidence/sweep_routing_1190.txt`). 3.0 scans exhaustively below
 `n_exhaustive` (50,000) instead.
 
 ### Ranking
@@ -2216,10 +2304,10 @@ random insertion order it recalled 3.3–21.7 % against 68.3 % exhaustive
 * Revision resolution: the current revision is ranked first in **14 of 16**
   generic probes against **3 of 16** for plain cosine, while **40 of 40**
   adjacent-but-different attributes are left exactly where plain cosine puts
-  them. Historical lookups 16/16. `scratch/refound/ranking_dev_r4_shipped.json`.
+  them. Historical lookups 16/16. `ranking_dev_r4_shipped.json` (dev-persona probes, not published: an evaluation corpus whose value depends on not being public, and it carries realistic contact-shaped strings).
 * Third-party statements are namespaced separately, so "his number is …" can no
   longer be stored as revision 2 of your own number and returned as the answer to
-  your own question (`scratch/refound/third_party_v3r4.json`).
+  your own question (`evidence/third_party_v3r4.json`).
 * Third-person questions now resolve into that namespace; in 0.1.x and 3.0.2 they
   received a boost of exactly +0.000 and fell back to raw cosine.
 * Score contract: 0 violations over a 5,856-hit fuzz across 120 randomly shaped
@@ -2234,7 +2322,7 @@ correct records already stored):
 | 2-persona held out (n=24) | 33.3 % | **75.0 %** | 95.8 % |
 | 3-persona dev set (n=24) | — | 95.8 % | 100.0 % |
 
-`scratch/refound/clean_chat_results_current_engine.json`,
+`evidence/clean_chat_results_current_engine.json`,
 `clean_chat_results_heldout_baseline.json`,
 `clean_chat_results_v3r4_engine*.json`.
 
@@ -2251,7 +2339,7 @@ same benchmark; both are gone, and the asset was deleted. The new gate is a nump
 logistic head over the embedding plus generic surface features.
 
 Out of sample, on two unseen personas, 231 turns
-(`scratch/refound/write_classifier_v2_results.json`):
+(`evidence/write_classifier_v2_results.json`):
 
 | | accuracy | F1 |
 | :--- | ---: | ---: |
@@ -2267,7 +2355,7 @@ through `Vault`, dominated by the embedding call.
 The storage and concurrency figures in this subsection, and the tamper battery
 under *Password mode*, came from one-off scripts run during implementation and
 reproduced during verification. They are not written into a results JSON in
-`scratch/refound/`; the performance and recall tables elsewhere in this file all
+`evidence/`; the performance and recall tables elsewhere in this file all
 are.
 
 * fp16 vectors on disk, fp32 arena in RAM. Worst per-row cosine error
@@ -2295,7 +2383,7 @@ SHAKE256 keystream XOR → HMAC-SHA256 encrypt-then-MAC bound to the vault uuid,
 verified with `compare_digest` before decryption. Header key-check rejects a wrong
 passphrase before any block is read.
 
-Measured (`scratch/refound/crypto_overhead_v3r3.json`): 95.67 ms per scrypt
+Measured (`evidence/crypto_overhead_v3r3.json`): 95.67 ms per scrypt
 derivation (≈ 10.5 offline guesses/s/core); open +99.67 ms at 1,190 docs,
 +104.88 at 5,000, +165.36 at 40,000; per-search −0.0003 / +0.002 / −0.0043 ms.
 Encrypted and plaintext files are byte-for-byte the same size.
@@ -2333,25 +2421,25 @@ the file path.
 * The shipped bridge is a text hop: re-embed the question with the hop-1 winner's
   text, search again, merge under the same `top_k`. 68.3 % → 79.2 % evidence
   recall@4 at `top_k=4` on 1,190 documents
-  (`scratch/refound/multihop_texthop_v3r2_1190.json`). Single-pass `top_k=8` is
+  (`evidence/multihop_texthop_v3r2_1190.json`). Single-pass `top_k=8` is
   90.0 %, so widening `top_k` remains the larger lever.
 * Alpha-steering removed: 95 % CI [−0.050, −0.033] on MRR against the query
   alone, i.e. significantly worse.
 * No trained latent bridge shipped. Linear residual, residual MLP and an RK4
   neural ODE (3 seeds each) all had CIs at or below zero on the primary held-out
   set of 1,600 questions over 71,433 documents
-  (`scratch/refound/experiment_4d_bridge_results.json`).
+  (`evidence/experiment_4d_bridge_results.json`).
 
 ### Routing
 
 `router="auto"` (opt-in) uses global spherical k-means cells and triggers one
 `compact(recluster=True)`, recorded in the file header so later opens do not
 rewrite again (12 of 12 concurrent first opens succeed;
-`scratch/refound/router_persist_v3r4.json`). On the reclustered 71,433-document
+`evidence/router_persist_v3r4.json`). On the reclustered 71,433-document
 corpus it reaches 78.60 % recall@4 against exhaustive 78.65 % (−0.05 pt, CI
 [−0.20, +0.10]) scanning 29 % of the corpus — the recall gate passes. **It ships
 off**, because in the engine it is slower at equal recall: p50 3.604 ms versus
-1.919 ms, plus 7.51 s on every open (`scratch/refound/router_gate_v3r3.json`).
+1.919 ms, plus 7.51 s on every open (`evidence/router_gate_v3r3.json`).
 
 ### Tests
 
@@ -2416,7 +2504,7 @@ three mutually different generations (md5 `a7a29809` ×5, `84bf1848` ×3,
   at all — verified by building one — and the classifier then falls back to its
   surface-only constants without saying so. On the held-out 2-persona set that
   fallback costs 3.5 pts of accuracy and 4.5 pts of F1 (90.48 % / 87.21 % with
-  the head, 87.01 % / 82.76 % without; `scratch/refound/write_classifier_v2_results.json`,
+  the head, 87.01 % / 82.76 % without; `evidence/write_classifier_v2_results.json`,
   keys `heldout.full` and `heldout.surface`).
 * **`assets/manifold_prototypes.npz` is gone** (271,607 B in every 0.1.x copy).
   It cached the 95 archetype embeddings of the retired manifold classifier,

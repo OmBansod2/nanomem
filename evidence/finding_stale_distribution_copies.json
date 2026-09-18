@@ -1,0 +1,44 @@
+{
+ "finding": "the five distribution copies of the nanomem package are four releases stale and untracked in git",
+ "date": "2026-09-17",
+ "severity": "major",
+ "introduced_by_this_change": false,
+ "source_of_truth": {
+  "path": "nanomem_standalone/nanomem",
+  "version": "0.5.0",
+  "engine": "3.2.0"
+ },
+ "copies": {
+  "nanomem_mac_bundle/nanomem": {
+   "version": "0.3.0",
+   "engine": "3.0.3"
+  },
+  "Launch 1/shared/nanomem": {
+   "version": "0.3.0",
+   "engine": "3.0.3"
+  },
+  "Launch 1/nanomem_standalone/nanomem": {
+   "version": "0.3.0",
+   "engine": "3.0.3"
+  },
+  "Launch 1/Mac/nanomem_mac_bundle/nanomem": {
+   "version": "0.3.0",
+   "engine": "3.0.3"
+  },
+  "Launch 1/shared/build/lib/nanomem": {
+   "version": "0.3.0",
+   "engine": "3.0.3"
+  }
+ },
+ "git": "all five live under untracked trees ('Launch 1/', 'nanomem_mac_bundle/'), so no commit in this project has ever updated them",
+ "drift": "12-13 files differ per copy against HEAD's nanomem_standalone/nanomem",
+ "what_the_stale_bundles_still_contain": [
+  "engine 3.0.3 reads temporal_direction's default as an INSTRUCTION, so 'what was my original address?' is answered with the CURRENT value (9.0% top-1 on historical questions vs a plain cosine scan's 22.0%) -- fixed in 3.0.4",
+  "the pre-3.0.5 arena allocation: a 71,433-document load peaks at ~818 MB ru_maxrss instead of ~286 MB",
+  "no arena sidecar and no PCA screen (3.1.0), so reopen is the slow path",
+  "WriteClassifier threshold 0.60, which drops about 32% of answerable facts; 0.05 is worth +13.3 pt end-to-end (0.5.0)"
+ ],
+ "wheels": "every .whl in the tree is nanomem-0.3.0-py3-none-any.whl; nanomem/__init__.py already carries a standing NOTE FOR WHOEVER PUBLISHES that it must be rebuilt",
+ "why_not_fixed_in_this_commit": "Syncing five bundles across four releases changes user-visible defaults (a new .arena file appears beside every vault, the write gate keeps ~57% more turns, top-10 lists can reorder on ties) and would make a feature commit unreviewable. It is a distribution decision, not part of adding temporal primitives, and it should be its own commit with its own check that each bundle still runs.",
+ "recommended_next_step": "one sync commit that copies nanomem_standalone/nanomem into the five copies, rebuilds the wheel from the current source, and puts the bundles under git so the drift cannot recur silently"
+}

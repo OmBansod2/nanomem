@@ -100,7 +100,7 @@ header (record count, payload and section lengths, sequence number, nonce, and
 the wall-clock time the block was written) are stored in the clear, and the
 keystream is LENGTH-PRESERVING: an encrypted vault is byte-for-byte the same size
 as the plaintext one (measured: file_bytes_plain == file_bytes_password at 1,190,
-5,000 and 40,000 records, scratch/refound/crypto_overhead_v3r3.json). The leak is
+5,000 and 40,000 records, evidence/crypto_overhead_v3r3.json). The leak is
 therefore EXACT, not approximate. An observer learns exactly how many memories you
 hold, exactly how many records and exactly how many bytes of text are in each
 batch, and the wall-clock time each batch was written.
@@ -115,7 +115,7 @@ second per core. That cost is paid ONCE PER OPEN, not per query: measured open
 overhead +99.16 ms at 1,190 records, +104.86 ms at 5,000 and +163.37 ms at
 40,000 (it grows with the file, because every block's MAC is verified), against a
 per-search overhead of -0.006 / +0.005 / +0.001 ms, i.e. inside the noise. All of
-these: scratch/refound/crypto_overhead_v3r3.json.
+these: evidence/crypto_overhead_v3r3.json.
 
 In the default plaintext mode there is NO protection at all: the block trailer is
 an unkeyed SHA-256 that detects accidental corruption only and can be recomputed

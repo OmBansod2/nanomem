@@ -1,0 +1,223 @@
+{
+ "gate": "staleness calibration",
+ "spec": "design/staleness_spec.md (pre-registered)",
+ "date": "2026-09-17",
+ "bar": "ECE <= 0.15 over 10 buckets AND beats constant baseline on Brier",
+ "consequence_if_failed": "p_superseded is suppressed; volatility() still ships, because those are measured statistics not a model output",
+ "caveat": "neither corpus is evidence about how REAL facts change. No such data exists here. The uniform arm is a pessimistic bound under a knowingly wrong assumption; the exponential arm checks the estimator where the assumption holds.",
+ "arms": [
+  {
+   "label": "uniform intervals (existing generator; model MISSPECIFIED)",
+   "n_chains": 56,
+   "n_forecasts": 336,
+   "ece": 0.0771,
+   "brier": 0.1916,
+   "baseline_ece": 0.0889,
+   "baseline_brier": 0.1909,
+   "beats_baseline_on_brier": false,
+   "ece_within_bar": true,
+   "passed": false,
+   "in_sample_oracle_brier": 0.1789,
+   "in_sample_oracle_note": "not a fair baseline -- estimated from the test outcomes; reported because the first run used it",
+   "reliability": [
+    {
+     "bucket": [
+      0.0,
+      0.1
+     ],
+     "n": 0,
+     "predicted": null,
+     "observed": null
+    },
+    {
+     "bucket": [
+      0.1,
+      0.2
+     ],
+     "n": 0,
+     "predicted": null,
+     "observed": null
+    },
+    {
+     "bucket": [
+      0.2,
+      0.3
+     ],
+     "n": 40,
+     "predicted": 0.2447,
+     "observed": 0.125
+    },
+    {
+     "bucket": [
+      0.3,
+      0.4
+     ],
+     "n": 36,
+     "predicted": 0.3535,
+     "observed": 0.1667
+    },
+    {
+     "bucket": [
+      0.4,
+      0.5
+     ],
+     "n": 47,
+     "predicted": 0.4434,
+     "observed": 0.2979
+    },
+    {
+     "bucket": [
+      0.5,
+      0.6
+     ],
+     "n": 48,
+     "predicted": 0.5497,
+     "observed": 0.4375
+    },
+    {
+     "bucket": [
+      0.6,
+      0.7
+     ],
+     "n": 76,
+     "predicted": 0.6516,
+     "observed": 0.6579
+    },
+    {
+     "bucket": [
+      0.7,
+      0.8
+     ],
+     "n": 44,
+     "predicted": 0.7477,
+     "observed": 0.75
+    },
+    {
+     "bucket": [
+      0.8,
+      0.9
+     ],
+     "n": 33,
+     "predicted": 0.8404,
+     "observed": 0.8182
+    },
+    {
+     "bucket": [
+      0.9,
+      1.0
+     ],
+     "n": 12,
+     "predicted": 0.9292,
+     "observed": 1.0
+    }
+   ]
+  },
+  {
+   "label": "exponential intervals (assumption HOLDS)",
+   "n_chains": 300,
+   "n_forecasts": 1800,
+   "ece": 0.0593,
+   "brier": 0.1704,
+   "baseline_ece": 0.0452,
+   "baseline_brier": 0.1779,
+   "beats_baseline_on_brier": true,
+   "ece_within_bar": true,
+   "passed": true,
+   "in_sample_oracle_brier": 0.1753,
+   "in_sample_oracle_note": "not a fair baseline -- estimated from the test outcomes; reported because the first run used it",
+   "reliability": [
+    {
+     "bucket": [
+      0.0,
+      0.1
+     ],
+     "n": 159,
+     "predicted": 0.0614,
+     "observed": 0.0692
+    },
+    {
+     "bucket": [
+      0.1,
+      0.2
+     ],
+     "n": 185,
+     "predicted": 0.15,
+     "observed": 0.1297
+    },
+    {
+     "bucket": [
+      0.2,
+      0.3
+     ],
+     "n": 180,
+     "predicted": 0.2459,
+     "observed": 0.2056
+    },
+    {
+     "bucket": [
+      0.3,
+      0.4
+     ],
+     "n": 157,
+     "predicted": 0.3534,
+     "observed": 0.3312
+    },
+    {
+     "bucket": [
+      0.4,
+      0.5
+     ],
+     "n": 127,
+     "predicted": 0.4481,
+     "observed": 0.4016
+    },
+    {
+     "bucket": [
+      0.5,
+      0.6
+     ],
+     "n": 152,
+     "predicted": 0.5458,
+     "observed": 0.5132
+    },
+    {
+     "bucket": [
+      0.6,
+      0.7
+     ],
+     "n": 113,
+     "predicted": 0.648,
+     "observed": 0.5664
+    },
+    {
+     "bucket": [
+      0.7,
+      0.8
+     ],
+     "n": 170,
+     "predicted": 0.7525,
+     "observed": 0.6353
+    },
+    {
+     "bucket": [
+      0.8,
+      0.9
+     ],
+     "n": 140,
+     "predicted": 0.8581,
+     "observed": 0.75
+    },
+    {
+     "bucket": [
+      0.9,
+      1.0
+     ],
+     "n": 417,
+     "predicted": 0.9734,
+     "observed": 0.8873
+    }
+   ]
+  }
+ ],
+ "all_passed": false
+}

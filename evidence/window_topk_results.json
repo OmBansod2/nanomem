@@ -1,0 +1,56 @@
+{
+ "gate": "G1 _top_k_stable exactness",
+ "date": "2026-09-17",
+ "rule": "identical to np.argsort(-v, kind='stable')[:k], element for element",
+ "cases": 21200,
+ "mismatches_by_profile": {
+  "continuous": 0,
+  "heavy_ties_3": 0,
+  "heavy_ties_2": 0,
+  "all_identical": 0,
+  "cosine_like": 0,
+  "few_distinct": 0,
+  "with_negatives": 0,
+  "large_5k_to_80k": 0
+ },
+ "total_mismatches": 0,
+ "examples": [],
+ "passed": true,
+ "G2_speed": {
+  "bar": "_resolve_revisions p50 at 70,000 rows must fall by >= 30%",
+  "corpus_rows": 70000,
+  "personal_rows": 1400,
+  "paired_runs": 4,
+  "resolve_p50_ms": {
+   "old": [
+    1.9101,
+    1.924,
+    1.903,
+    1.935
+   ],
+   "new": [
+    0.1921,
+    0.193,
+    0.21,
+    0.195
+   ],
+   "old_median": 1.917,
+   "new_median": 0.194,
+   "delta_pct": -89.9
+  },
+  "search_p50_ms": {
+   "old_median": 3.899,
+   "new_median": 2.0497,
+   "delta_pct": -47.4
+  },
+  "passed": true
+ },
+ "G3_suite": {
+  "tests": 486,
+  "failures": 0,
+  "baseline_520_queries": "bitwise identical",
+  "passed": true
+ },
+ "correction": "Earlier notes in this project claimed that fixing _resolve_revisions would 're-enable the PCA screen for personal-memory workloads'. That is WRONG and is not claimed here. The screen is gated by _ranking_is_inert, which asks whether the entity/temporal layer CAN FIRE -- a pruned row cannot be brought back by a boost -- so on a personal corpus the screen stays off however fast revision resolution is. The two are unrelated.",
+ "scope": "This is a sorting change inside _cosine_window with a provably identical result. It is NOT the 'O(top_k) rewrite of _resolve_revisions' earlier notes described: no group formation changes and no candidate pool is narrowed, so that rewrite's accuracy risk does not apply."
+}

@@ -1,0 +1,320 @@
+{
+ "experiment": "floor drops the current value: F1 and F3",
+ "spec": "design/floor_current_value_spec.md (pre-registered, amendments 1 and 2)",
+ "date": "2026-09-17",
+ "bar": "A >= +10.0 AND B,C,D,E,F >= -1.0 AND repro fixed; arms E,F added by amendment 1; F3 sweep fixed by amendment 2",
+ "arms": [
+  {
+   "arm": "0.6.4",
+   "A_drifting": 52.0,
+   "B_canonical": 89.0,
+   "C_siblings": 68.6,
+   "D_chat": 97.2,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 100.0,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 91.7
+   },
+   "repro_top1": "I moved jobs, I now work at Initech.",
+   "repro_rank_of_current": 3
+  },
+  {
+   "arm": "F1",
+   "A_drifting": 71.0,
+   "B_canonical": 90.0,
+   "C_siblings": 69.3,
+   "D_chat": 77.8,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 66.7,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 66.7
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 19.0,
+    "B_canonical": 1.0,
+    "C_siblings": 0.7,
+    "D_chat": -19.4,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": true,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": false,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false
+  },
+  {
+   "arm": "F3@0.40",
+   "A_drifting": 71.0,
+   "B_canonical": 90.0,
+   "C_siblings": 69.3,
+   "D_chat": 77.8,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 66.7,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 66.7
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 19.0,
+    "B_canonical": 1.0,
+    "C_siblings": 0.7,
+    "D_chat": -19.4,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": true,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": false,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false,
+   "threshold": 0.4
+  },
+  {
+   "arm": "F3@0.50",
+   "A_drifting": 69.0,
+   "B_canonical": 90.0,
+   "C_siblings": 69.3,
+   "D_chat": 77.8,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 66.7,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 66.7
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 17.0,
+    "B_canonical": 1.0,
+    "C_siblings": 0.7,
+    "D_chat": -19.4,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": true,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": false,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false,
+   "threshold": 0.5
+  },
+  {
+   "arm": "F3@0.60",
+   "A_drifting": 58.0,
+   "B_canonical": 90.0,
+   "C_siblings": 69.3,
+   "D_chat": 88.9,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 83.3,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 83.3
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 6.0,
+    "B_canonical": 1.0,
+    "C_siblings": 0.7,
+    "D_chat": -8.3,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": false,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": false,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false,
+   "threshold": 0.6
+  },
+  {
+   "arm": "F3@0.70",
+   "A_drifting": 52.0,
+   "B_canonical": 89.0,
+   "C_siblings": 68.6,
+   "D_chat": 97.2,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 100.0,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 91.7
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 0.0,
+    "B_canonical": 0.0,
+    "C_siblings": 0.0,
+    "D_chat": 0.0,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": false,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": true,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false,
+   "threshold": 0.7
+  },
+  {
+   "arm": "F3@0.80",
+   "A_drifting": 52.0,
+   "B_canonical": 89.0,
+   "C_siblings": 68.6,
+   "D_chat": 97.2,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 100.0,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 91.7
+   },
+   "repro_top1": "I moved jobs, I now work at Initech.",
+   "repro_rank_of_current": 3,
+   "deltas": {
+    "A_drifting": 0.0,
+    "B_canonical": 0.0,
+    "C_siblings": 0.0,
+    "D_chat": 0.0,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": false,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": true,
+    "5 repro answers Globex": false,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": false,
+   "threshold": 0.8
+  },
+  {
+   "arm": "F2",
+   "A_drifting": 71.0,
+   "B_canonical": 90.0,
+   "C_siblings": 69.3,
+   "D_chat": 97.2,
+   "E_historical": 64.0,
+   "F_previous": 92.9,
+   "n_A": 100,
+   "n_B": 100,
+   "n_C": 140,
+   "n_D": 36,
+   "n_E": 100,
+   "n_F": 56,
+   "chat_per_persona": {
+    "nurse-lagos": 100.0,
+    "retired-osaka": 100.0,
+    "gradstudent-saopaulo": 91.7
+   },
+   "repro_top1": "I switched again, I work at Globex now.",
+   "repro_rank_of_current": 1,
+   "deltas": {
+    "A_drifting": 19.0,
+    "B_canonical": 1.0,
+    "C_siblings": 0.7,
+    "D_chat": 0.0,
+    "E_historical": 0.0,
+    "F_previous": 0.0
+   },
+   "clauses": {
+    "1 A >= +10.0": true,
+    "2 B >= -1.0": true,
+    "3 C >= -1.0": true,
+    "4 D >= -1.0": true,
+    "5 repro answers Globex": true,
+    "6 E >= -1.0": true,
+    "7 F >= -1.0": true
+   },
+   "eligible": true
+  }
+ ],
+ "eligible": [
+  "F2"
+ ],
+ "chosen": "F2",
+ "verdict": "F2 clears all seven -- ships as the default"
+}

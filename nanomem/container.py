@@ -992,7 +992,7 @@ class Container:
         # it is never trusted for anything (the scan below still authenticates
         # every block and the sink still grows if the hint was short), it only
         # decides an allocation size. Measured at 71,433 rows: 643.6 MB of reopen
-        # RSS becomes 286.0 MB (scratch/refound/memory_results.json,
+        # RSS becomes 286.0 MB (evidence/memory_results.json,
         # `summary.reopen_only.n71433`; the second run in `replicate` reads
         # 643.0 -> 285.3).
         reserve = getattr(sink, "reserve", None)
@@ -1293,7 +1293,7 @@ class Container:
         tag, exactly as a scan does, and skips only the decode, the record parse
         and the per-row interning that a scan also pays. It is O(bytes) and it
         is not the default; measured cost at each corpus size is in
-        scratch/refound/reopen_results.json.
+        evidence/reopen_results.json.
 
         THE NAME OVERSTATES IT and is kept only because it is called from
         another module. With a passphrase the tag is an HMAC and this really is

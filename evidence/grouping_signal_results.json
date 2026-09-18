@@ -1,0 +1,69 @@
+{
+ "experiment": "vocabulary-free grouping of drifting restatements",
+ "spec": "design/grouping_signal_spec.md (pre-registered)",
+ "date": "2026-09-17",
+ "bar": "AUC >= 0.80 AND TPR >= 0.60 at sibling-FPR <= 5%",
+ "corpus": "drifting arm, 10 users",
+ "signals": {
+  "S1": {
+   "auc_all_negatives": 0.8909,
+   "auc_sibling_only": 0.4563,
+   "tpr_at_5pct_sibling_fpr": 0.0681,
+   "threshold": 0.727,
+   "n_pos": 279,
+   "n_neg": 4710,
+   "n_sibling": 115,
+   "meets_prereg_bar": false,
+   "what": "direct cosine (what WINDOW_SIM uses today)"
+  },
+  "S2": {
+   "auc_all_negatives": 0.2301,
+   "auc_sibling_only": 0.5115,
+   "tpr_at_5pct_sibling_fpr": 0.0215,
+   "threshold": 0.9555,
+   "n_pos": 279,
+   "n_neg": 4710,
+   "n_sibling": 115,
+   "meets_prereg_bar": false,
+   "what": "second-order similarity profile"
+  },
+  "S3": {
+   "auc_all_negatives": 0.8996,
+   "auc_sibling_only": 0.8797,
+   "tpr_at_5pct_sibling_fpr": 0.043,
+   "threshold": 0.5881,
+   "n_pos": 279,
+   "n_neg": 4710,
+   "n_sibling": 115,
+   "meets_prereg_bar": false,
+   "what": "co-answering the attribute's own question"
+  },
+  "S4": {
+   "auc_all_negatives": 0.6796,
+   "auc_sibling_only": 0.4256,
+   "tpr_at_5pct_sibling_fpr": 0.0717,
+   "threshold": 0.4982,
+   "n_pos": 279,
+   "n_neg": 4710,
+   "n_sibling": 115,
+   "meets_prereg_bar": false,
+   "what": "top-8 neighbour-set Jaccard"
+  },
+  "S5": {
+   "auc_all_negatives": 0.7406,
+   "auc_sibling_only": 0.5169,
+   "tpr_at_5pct_sibling_fpr": 0.0,
+   "threshold": 1.0,
+   "n_pos": 279,
+   "n_neg": 4710,
+   "n_sibling": 115,
+   "meets_prereg_bar": false,
+   "what": "VALUE SHAPE (typographic class match)"
+  }
+ },
+ "any_signal_meets_bar": false,
+ "quarantine": {
+  "barrier": "enforce() first action",
+  "proven": "by construction"
+ }
+}

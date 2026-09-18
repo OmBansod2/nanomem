@@ -18,7 +18,7 @@ fully deterministic given a seed. Two routers live here:
 
 Measured facts that motivate the split. EVERY ROW BELOW IS THE **ABLATION**
 (``PageLandmarkRouter``), not the shipped ``GlobalCellRouter``; source:
-``scratch/refound/design/core_spec.md`` table at line 473, from the orchestrator's
+``evidence/design/core_spec.md`` table at line 473, from the orchestrator's
 own sweep over 71,433 HotpotQA paragraphs, 2,000 questions, exhaustive
 recall@4 = 62.1:
 
@@ -31,8 +31,8 @@ recall@4 = 62.1:
     (FAISS IVFFlat at a matched scan fraction: 58.1 @5%, 61.1 @15%, 61.8 @25%)
 
 DECISIONS #3, SETTLED. The sweep the earlier rounds kept deferring has been run
-end to end: ``scratch/refound/sweep_router_gate.py`` ->
-``scratch/refound/router_gate_results.json``. 71,433 HotpotQA paragraphs,
+end to end: ``evidence/sweep_router_gate.py`` ->
+``evidence/router_gate_results.json``. 71,433 HotpotQA paragraphs,
 inserted in a random order (``default_rng(0).permutation``) and then put through
 the engine's own ``compact(recluster=True)``, 1,000 questions drawn with
 ``default_rng(11)``, 30 (cell_target x beam_frac) budgets, 95% CIs from a paired
@@ -294,7 +294,7 @@ def _nearest_centroid(A: np.ndarray, M: np.ndarray, chunk: int = _ASSIGN_CHUNK):
     matrix is 816 MB at n = 71,433 / k = 2,858 and was allocated ten times per
     fit; it is the single largest term in the 3,363 MB peak RSS the standard
     competitor run recorded for the routed arm
-    (``scratch/refound/competitors_standard_results.json``).
+    (``evidence/competitors_standard_results.json``).
     """
     n = A.shape[0]
     assign = np.empty(n, dtype=np.int32)
@@ -320,7 +320,7 @@ def _cluster_sums(A: np.ndarray, assign: np.ndarray, k: int):
     ``reduceat`` accumulates sequentially where ``ndarray.sum`` pairwise-reduces,
     so centroids can differ in the last float32 ulp from 3.0.3's. Cluster
     membership is not affected at any scale measured
-    (``scratch/refound/router_gate_results.json``, ``kmeans_parity``).
+    (``evidence/router_gate_results.json``, ``kmeans_parity``).
     """
     counts = np.bincount(assign, minlength=k).astype(np.int64)
     sums = np.zeros((k, A.shape[1]), dtype=np.float32)
@@ -430,7 +430,7 @@ class GlobalCellRouter:
         whole file to restore the order. It is here because the sweep measures
         the slice path against the gather path and both must come from the
         shipped module, not from the benchmark
-        (``scratch/refound/router_gate_results.json``, phases B and D).
+        (``evidence/router_gate_results.json``, phases B and D).
         """
         r = cls(**kw)
         r.centroids = np.asarray(centroids, dtype=np.float32)
@@ -479,7 +479,7 @@ class GlobalCellRouter:
         slices instead of a fancy-index gather is the whole latency argument for
         the router: measured on the 71,433-document corpus at ``beam_frac`` 0.10,
         0.679 ms of contiguous slices against 1.383 ms of gather against 1.770 ms
-        for the full exact scan (``scratch/refound/router_gate_results.json``).
+        for the full exact scan (``evidence/router_gate_results.json``).
         """
         cells = self.route_cells(q, beam_frac=beam_frac)
         if cells.size == 0:

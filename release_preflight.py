@@ -329,6 +329,95 @@ def _pool_numbers(o, acc=None):
     return acc
 
 
+def check_citations():
+    """A CLAIM WHOSE EVIDENCE CANNOT BE OPENED IS NOT A CHECKED CLAIM.
+
+    Through 0.7.13 the docs and source cited ~80 paths under `scratch/refound/`,
+    a directory that has never been committed to either remote. A reader who
+    followed one found nothing, so every claim resting on it was unverifiable in
+    practice however true it was. The files are published under `evidence/` from
+    0.7.14; this keeps them reachable, because the failure mode is silent -- a
+    renamed or dropped results file breaks a citation with nothing to notice.
+    """
+    e = os.path.join(HERE, "evidence")
+    if not os.path.isdir(e):
+        bad("evidence/ is missing, but the documentation cites it")
+        return
+    import re as _r
+    cited, bad_refs = set(), []
+    srcs = [os.path.join(HERE, "nanomem", f)
+            for f in sorted(os.listdir(os.path.join(HERE, "nanomem")))
+            if f.endswith(".py")]
+    srcs += [os.path.join(HERE, f) for f in sorted(os.listdir(HERE))
+             if f.endswith(".md")]
+    for path in srcs:
+        for m in _r.findall(
+                r"evidence/(\{[^}]*\}[A-Za-z0-9_./*-]*|[A-Za-z0-9_./*-]+)",
+                read(os.path.relpath(path, HERE))):
+            rel = m.rstrip("/.,;)`")
+            cited.add(rel)
+            if "{" in rel and "}" in rel:
+                head, rest = rel.split("{", 1)
+                body, tail = rest.split("}", 1)
+                names = [head + x + tail for x in body.split(",")]
+            elif "*" in rel:
+                import glob as _g
+                names = [os.path.relpath(x, e) for x in _g.glob(os.path.join(e, rel))]
+                if not names:
+                    bad_refs.append(rel + " (matches nothing)")
+                    continue
+            else:
+                names = [rel]
+            for n in names:
+                if not os.path.exists(os.path.join(e, n)):
+                    bad_refs.append(n)
+    # NOTHING QUARANTINED, AND NO CONTACT-SHAPED STRINGS, MAY APPEAR HERE.
+    # The first version of this check looked at FILENAMES in the top directory
+    # only. It passed, and 44 dev-persona results files were published carrying
+    # fabricated but realistic contact details -- an email at a real
+    # university's domain and a block of phone numbers -- inside their recorded
+    # query text. A name check cannot see that, so this reads the files.
+    import re as _rx
+    _CONTACT = _rx.compile(
+        r"[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}"
+        r"|\b\d{4}[ -]\d{2}[ -]\d{2}[ -]\d{2}\b"
+        r"|\+\d{1,3}[ -]?\d{7,}")
+    # Reserved test domains are the point of reserved test domains.
+    _SAFE = ("@mailbox.test", "@example.com", "@example.org", "@example.net",
+             "@test.invalid", "@localhost")
+    leaked, contacts = [], {}
+    for root, _dirs, files in os.walk(e):
+        for f in files:
+            full = os.path.join(root, f)
+            rel = os.path.relpath(full, e)
+            if any(k in rel.lower() for k in ("persona4", "heldout", "embeds")):
+                leaked.append(rel)
+                continue
+            if os.path.splitext(f)[1] not in (".json", ".md", ".py", ".txt"):
+                continue
+            try:
+                txt = open(full, encoding="utf-8", errors="ignore").read()
+            except Exception:
+                continue
+            found = {m for m in _CONTACT.findall(txt)
+                     if not any(d in m for d in _SAFE)}
+            if found:
+                contacts[rel] = sorted(found)[:3]
+    if leaked:
+        bad("evidence/ contains files derived from held-out fixtures: "
+            + ", ".join(sorted(leaked)[:8]))
+    if contacts:
+        bad(f"{len(contacts)} published evidence file(s) contain email- or "
+            f"phone-shaped strings, which do not belong in a public repository "
+            f"even when fabricated: "
+            + ", ".join(f"{k} {v}" for k, v in sorted(contacts.items())[:4]))
+    if bad_refs:
+        bad(f"{len(bad_refs)} citation(s) point at files that are not in "
+            f"evidence/: " + ", ".join(sorted(set(bad_refs))[:10]))
+    else:
+        NOTES.append(f"all {len(cited)} evidence citations resolve")
+
+
 def check_benchmarks():
     """Published evidence must describe the ENGINE being shipped.
 
@@ -447,6 +536,7 @@ def main():
     check_claims()
     check_wheel(ver)
     check_sdist(ver)
+    check_citations()
     check_benchmarks()
 
     for n in NOTES:

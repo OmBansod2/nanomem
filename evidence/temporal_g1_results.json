@@ -1,0 +1,61 @@
+{
+ "gates": "G1 (search unchanged) and the history relevance-floor measurement",
+ "date": "2026-09-17",
+ "G1_search_bitwise_unchanged": {
+  "rule": "with as_of=None, search() output is bitwise identical to the pre-change build",
+  "baseline": "baseline_before.json, captured on HEAD 9677619 before any edit",
+  "query_results_compared": 520,
+  "grid": "5 attributes x 6 question forms x top_k in (1,3,5,10) x 4 directions, plus 40 document queries",
+  "fields_compared": [
+   "id",
+   "score (repr)",
+   "cosine (repr)",
+   "timestamp (repr)",
+   "revision"
+  ],
+  "differences": 0,
+  "tolerance": "none, exact",
+  "suite": {
+   "before": 443,
+   "after": 467,
+   "new_tests": 24,
+   "failures": 0
+  },
+  "passed": true
+ },
+ "history_vs_the_relevance_floor": {
+  "rule": "applying the ranker's floor to history truncates the chain and mislabels a superseded value as current",
+  "restatements": 4,
+  "cosines_to_their_own_question": [
+   0.8,
+   0.77,
+   0.74,
+   0.7100000000000001
+  ],
+  "GROUP_COS_DELTA": 0.06,
+  "gap_of_the_newest_below_the_best": 0.09,
+  "tagged_group_with_floor": [
+   0,
+   1,
+   2
+  ],
+  "tagged_group_without_floor": [
+   0,
+   1,
+   2,
+   3
+  ],
+  "members_dropped_by_the_floor": [
+   3
+  ],
+  "with_floor_the_chain_would_end_at": "row 2, reported superseded=False while row 3 is newer",
+  "shipped_history_chain_len": 4,
+  "shipped_history_superseded_flags": [
+   true,
+   true,
+   true,
+   false
+  ],
+  "passed": true
+ }
+}

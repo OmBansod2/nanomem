@@ -12,7 +12,7 @@ duplicating the vault, so a cached 71,433-document vault occupies
 **153.05 MiB instead of 406.15**, below sqlite-vec's 258.0 — nanomem holds disk
 *and* reopen at the same time, which 0.4.0 could not. Axis 2's reopen column
 and Axis 3 were re-measured on the final tree by `bench_sidecar_size.py` and
-independently by `scratch/refound/quality_summary.json`, which also re-derives
+independently by `evidence/quality_summary.json`, which also re-derives
 Axis 1's recall from the same vault. **Axis 6 gains the largest single
 improvement in this document's history and it is not an engine change**: the
 write gate's decision point moved, worth **+13.3 pt of end-to-end top-1**,
@@ -92,8 +92,8 @@ that one threshold.
   queries. The temporal and chat tasks exercise that layer and nothing else.
   Neither task says anything about the other.
 * **Every competitor got its strongest reasonable configuration**, recorded per
-  arm in `scratch/refound/competitors_standard_results.json` and
-  `scratch/refound/temporal_bench_results.json`: Chroma at ef_construction 512 /
+  arm in `evidence/competitors_standard_results.json` and
+  `evidence/temporal_bench_results.json`: Chroma at ef_construction 512 /
   ef_search 512 / max_neighbors 64, Chroma's deprecated SegmentAPI brute-force
   path (which needs an undeclared wheel), sqlite-vec at float32 with WAL and a
   256 MB page cache, FAISS with 12 OMP threads, and on the temporal set the
@@ -109,13 +109,13 @@ that one threshold.
   sqlite-vec and Chroma figures are carried from
   `competitors_standard_results.json`, measured on another day at another machine
   load. Only nanomem's side of each axis was re-run
-  (`scratch/refound/quality_summary.json`, machine load 1.4-1.9).
+  (`evidence/quality_summary.json`, machine load 1.4-1.9).
 
 ---
 
 ## Axis 1 -- recall
 
-Source: `scratch/refound/competitors_standard_results.json`. Evidence recall@4
+Source: `evidence/competitors_standard_results.json`. Evidence recall@4
 is 1.0 only if *every* gold paragraph for the question is in the top 4. The CI
 is a paired bootstrap over questions, 10,000 resamples, against nanomem.
 
@@ -156,7 +156,7 @@ its Rust "brute force" path both lose significantly, and Chroma 1.5.9's Rust
 core exposes no exact index a stock user can reach -- `CreateCollectionConfiguration`
 offers only `hnsw` and `spann`.
 
-**Re-derived on the final 0.5.0 tree** (`scratch/refound/quality_summary.json`,
+**Re-derived on the final 0.5.0 tree** (`evidence/quality_summary.json`,
 same vault, same 500 queries, shipped defaults): **60.6% evidence recall@4** and
 **71.2% evidence recall@10**, identical with `arena_cache="off"`, **0 of 500**
 top-10 lists differing. The recall row is the control for every mechanism in
@@ -170,7 +170,7 @@ it means **evidence** recall@10 and the baseline is 71.2%.
 
 ### The one mechanism that beat this ceiling — and why it is not in the build
 
-Source: `scratch/refound/hybrid_results.json`
+Source: `evidence/hybrid_results.json`
 (`prime_4d_unified_engine_2026_09_13/hybrid_retrieval.py`). A BM25 inverted
 index written in numpy + stdlib — term-major CSR, Lucene's always-positive IDF,
 no stemmer, no stopword list, no external dependency — fused with the dense
@@ -225,8 +225,8 @@ about — exactly where a lexical arm could fail differently.
 
 ## Axis 2 -- query latency, ingest, reopen
 
-Sources: `scratch/refound/competitors_standard_results.json` for every arm, and
-`scratch/refound/quality_summary.json` (0.5.0, re-measured on the final tree at
+Sources: `evidence/competitors_standard_results.json` for every arm, and
+`evidence/quality_summary.json` (0.5.0, re-measured on the final tree at
 machine load 1.4-1.9, median of 9 in-process opens) for the two nanomem reopen
 cells marked †; `reopen_results.json` holds the 0.4.0 readings the before/after
 table cites. Every arm is built,
@@ -342,7 +342,7 @@ fp32 upcast lands on the first query instead) — after which every open is the
 
 ### `screen="pca"` — 1.718x on p50, opt-in, and it changes no answer
 
-Source: `scratch/refound/pca_screen_results.json`, re-run against this build
+Source: `evidence/pca_screen_results.json`, re-run against this build
 (read the `phase*` blocks; that file's `verdict` block is a carried-over copy of
 the previous run, see Known gaps).
 
@@ -393,8 +393,8 @@ before/after table.
 
 ## Where a turn's milliseconds actually go
 
-Source: `scratch/refound/turn_latency_results.json`
-(`scratch/refound/bench_turn_latency.py`), pre-registration hashed before any
+Source: `evidence/turn_latency_results.json`
+(`evidence/bench_turn_latency.py`), pre-registration hashed before any
 measurement, engine pinned to a pristine `88dfac9` checkout with every imported
 module hashed. 240 timed turns per corpus with the **real** Ollama
 `nomic-embed-text` embedder — verified against nanomem's own provider (cos
@@ -494,9 +494,9 @@ paired and interleaved. Quote the shares, not the milliseconds.
 **This axis moved the wrong way in 0.4.0 and moved back in 0.5.0. nanomem holds
 disk and reopen at the same time, which no revision has managed before.**
 
-Sources: `scratch/refound/competitors_standard_results.json`, `index_bytes`, as
+Sources: `evidence/competitors_standard_results.json`, `index_bytes`, as
 each engine left it (no VACUUM, no forced compaction); the nanomem rows are
-`scratch/refound/sidecar_size_results.json` and `quality_summary.json`, both of
+`evidence/sidecar_size_results.json` and `quality_summary.json`, both of
 which stat the files on disk rather than estimating them.
 
 | engine | index MiB @71,433 | stores the text? |
@@ -576,12 +576,12 @@ against 0.4.0's 318.4 in the same harness). Everything below is 0.3.2/0.4.0
 measurement and is **not** re-run for 0.5.0; read it with that sentence in
 front of it.
 
-Sources: `scratch/refound/ingest_ram_results.json` (competitor-comparable
+Sources: `evidence/ingest_ram_results.json` (competitor-comparable
 harness, four runs per arm plus two post-report checks; **not** re-run for
 0.4.0),
-`scratch/refound/memory_results.json` and `scratch/refound/reopen_results.json`
+`evidence/memory_results.json` and `evidence/reopen_results.json`
 (both re-run against engine 3.1.0 in this session), and
-`scratch/refound/competitors_standard_results.json` (the published competitor
+`evidence/competitors_standard_results.json` (the published competitor
 column). Metric throughout: `ru_maxrss` high-water mark minus a baseline taken
 after the shared vectors are resident.
 
@@ -737,7 +737,7 @@ baseline**; the before-column above comes from a real checkout instead. A test i
 
 ## Axis 5 -- temporal supersession (top-1 by question type)
 
-Source: `scratch/refound/temporal_bench_results.json` (10 synthetic users, 456
+Source: `evidence/temporal_bench_results.json` (10 synthetic users, 456
 documents, 326 questions, vocabulary audited clean against every persona fixture
 in the tree). All arms rank identical vectors; Chroma and sqlite-vec return the
 same top-3 as exhaustive cosine on 326/326, so no competitor is losing recall to
@@ -759,7 +759,7 @@ delta=0.08).
 | nanomem + documented metadata['entity'] | 59.2 | 89.0 | 64.0 | 23.2 | 17.5 | 66.7 | 66.7 | 59.0 |
 
 Paired bootstrap, 10,000 resamples, question-level (source:
-`scratch/refound/final_scorecard.json` -> `temporal.extra_paired_tests`, whose
+`evidence/final_scorecard.json` -> `temporal.extra_paired_tests`, whose
 per-question digits are embedded so any interval can be recomputed):
 
 | comparison | delta | 95% CI | verdict |
@@ -783,7 +783,7 @@ nanomem at shipped defaults
 
 ## Axis 6 -- personal-memory chat (the product shape)
 
-Source: `scratch/refound/clean_chat_results_persona4_v3r5.json`,
+Source: `clean_chat_results_persona4_v3r5.json` — derived from a fixture held out of development so a score against it means something, and therefore not published,
 `clean_chat_results_heldout_v3r5.json`, `clean_chat_results_r5_3p.json`,
 `clean_chat_results_v3r4_engine*.json`. Gold-store top-1: the labelled turns are
 written, the vault is **closed and reopened**, the question is asked at top_k=3.
@@ -847,7 +847,7 @@ against looks like.
 
 ### The 80% target was not reachable, and the number that replaces it
 
-Source: `scratch/refound/chat_target_decision.json`, `restated_target`.
+Source: `evidence/chat_target_decision.json`, `restated_target`.
 
 **43.3%** of the questions on the chat benchmark never name the attribute they
 are asking about — "what was it again?", "and the other one?" — so no amount
@@ -875,7 +875,7 @@ stated rather than implied:
 
 ### Four mechanisms that tried to break that ceiling. All negative.
 
-Source: `scratch/refound/context_lever_results.json` (91 audited arms,
+Source: `evidence/context_lever_results.json` (91 audited arms,
 `audit_summary.all_clean = true`), pre-registered before measurement
 (`preregistration_sha256` 07864f187f066e11), scored on the 300-question **test**
 split of `chat_bench_v2.json`, which is split **by persona** so dev and test
@@ -926,13 +926,13 @@ unthresholded priors, and any arm that overrides a confident tagger.
 
 ### The largest loss on this task was at WRITE time, and 0.5.0 fixes it
 
-Source: `scratch/refound/write_policy_results.json`
+Source: `evidence/write_policy_results.json`
 (`prime_4d_unified_engine_2026_09_13/write_policy.py`), pre-registered and
 sha256-verified before any number, swept on a 120-question dev split, scored
 **once** on a disjoint 300-question test split, with a mechanical leak audit
 that counts every oracle read per arm and raises on a non-zero count.
 Reproduced end to end through the shipped classifier in
-`scratch/refound/quality_summary.json`.
+`evidence/quality_summary.json`.
 
 Everything above this line is about *retrieval*. The biggest number on this task
 was never there. The shipped write gate ran at **100.0% precision and 64.6%
@@ -989,7 +989,7 @@ neither is any other sharding scheme in this engine.**
 
 ### Selection without an LLM: the bar was cleared, and it still does not ship
 
-Source: `scratch/refound/selection_results.json`
+Source: `evidence/selection_results.json`
 (`prime_4d_unified_engine_2026_09_13/selection.py`). Six mechanisms replacing
 exactly one function — `entities.query_intents`, the engine's own selection hook
 — each seeing only the vault's interned entity names and record texts, never a
@@ -1242,7 +1242,7 @@ Not softened. Each item cites the file it comes from.
     of peak RSS and 13.8--25.6 s
     to every open, and never breaks even
     (`break_even_queries_per_open` is null for both budgets).
-    (`scratch/refound/router_gate_results.json`.)
+    (`evidence/router_gate_results.json`.)
 17. **On the shape nanomem is FOR, ranking is O(all rows) and it switches the
     screen off.** Put 45 personal records into a 71,433-document vault and
     search goes 2.494 -> 6.857 ms, 36.9% of the turn; 5.564 ms of that is
@@ -1341,8 +1341,8 @@ implemented and measured against nanomem's two decision points -- **routing**
 about the same fact wins). **Nothing from this study shipped.** This section
 exists so the next round does not pay for the same answers twice.
 
-Sources: `scratch/refound/exotic_routing_results.json`,
-`scratch/refound/exotic_ranking_results.json`, and for the kernel result
+Sources: `evidence/exotic_routing_results.json`,
+`evidence/exotic_ranking_results.json`, and for the kernel result
 `prime_4d_unified_engine_2026_09_13/prime_routing_results.json`. Both studies
 wrote a binding decision rule -- win = 95% CI lower bound above zero on a paired
 bootstrap, plus a regression guard on the chat set -- before any number existed.
@@ -1466,7 +1466,7 @@ its cost is now published rather than only its existence.
 ## Before and after
 
 Both harnesses were re-run against the improved build in this session; the
-pre-improvement values are embedded in `scratch/refound/final_scorecard.json`
+pre-improvement values are embedded in `evidence/final_scorecard.json`
 (the harnesses write their results in place).
 
 | measure | before | after |
@@ -1621,10 +1621,10 @@ price of the disk row directly above it.
 ---
 
 *Axes 1-6 and "Before and after" through 0.4.0 are generated from
-`scratch/refound/final_scorecard.json`, itself assembled by script from the
+`evidence/final_scorecard.json`, itself assembled by script from the
 results files named above. The 0.5.0 rows, the turn-latency section and the two
 "not shipped" subsections are written against
-`scratch/refound/quality_summary.json`, `sidecar_size_results.json`,
+`evidence/quality_summary.json`, `sidecar_size_results.json`,
 `write_policy_results.json`, `hybrid_results.json`, `selection_results.json` and
 `turn_latency_results.json`. **If a number here disagrees with the file it
 cites, the file is right.**

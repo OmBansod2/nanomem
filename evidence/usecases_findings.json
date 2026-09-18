@@ -1,0 +1,93 @@
+{
+ "source_experiments": [
+  "new_usecases_results.json",
+  "usecases_gate_results.json"
+ ],
+ "spec": "design/new_usecases_spec.md",
+ "embedder": "nomic-embed-text via local ollama, dim 768",
+ "findings": [
+  {
+   "id": "F1",
+   "title": "The revision layer is gated on the QUERY's wording, not the data",
+   "severity": "high",
+   "status": "reported, not fixed -- changing it is a ranking change",
+   "location": "nanomem/entities.py temporal_question()",
+   "condition": "intent is not None or is_personal_query(q) or has_temporal_cue(q)",
+   "effect": "a third-person query never engages the entity/revision layer, so search falls back to raw cosine over the revision chain and can return a superseded value as current, with no error",
+   "single_chain_probe": {
+    "chain": [
+     "10 seconds",
+     "30 seconds",
+     "60 seconds",
+     "90 seconds"
+    ],
+    "correct_current": "90 seconds",
+    "cosine_scores_by_revision": [
+     0.91207,
+     0.91836,
+     0.91734,
+     0.90618
+    ],
+    "note": "the correct answer has the LOWEST cosine of the four",
+    "what is the checkout timeout": "30 seconds (WRONG)",
+    "what is my checkout timeout": "90 seconds (ok)",
+    "what is the checkout timeout now": "90 seconds (ok)",
+    "what is the current checkout timeout": "90 seconds (ok)",
+    "as_of_without_cue": "2/4",
+    "as_of_with_cue": "4/4"
+   },
+   "measured_at_corpus_scale": {
+    "A1_config_drift_200_entities": {
+     "without_cue_pct": 54.5,
+     "with_cue_pct": 100.0
+    },
+    "E1_policy_versioning": {
+     "without_cue_pct": 53.3,
+     "with_cue_pct": 100.0
+    },
+    "F2_fleet_1000_entities": {
+     "without_cue_pct": 64.0,
+     "with_cue_pct": 100.0
+    }
+   },
+   "workaround": "include a temporal cue ('current', 'now', 'latest') or set intent"
+  },
+  {
+   "id": "F2",
+   "title": "Retention treats the chunks of one long value as separate revisions",
+   "severity": "high -- silent data loss",
+   "status": "FIXED in 0.7.3",
+   "location": "nanomem/vault.py _current_value_ids(), forget_superseded()",
+   "cause": "add() splits a long record into {parent}_chunk_N and every chunk inherits `entity`, so N chunks of one version looked like N revisions",
+   "before": {
+    "forget_superseded_keep1": "3-version refund policy: 12 records -> 1; survivor was boilerplate; 'eligibility window is 90 days' GONE",
+    "prune_older_than_365_keep_current_true": "9 records -> 1; answer GONE",
+    "never_revised_document": "a policy written ONCE, never revised: forget_superseded(keep=1, min_revisions=2) deleted 2 of its 3 chunks"
+   },
+   "after": {
+    "forget_superseded_keep1": "12 records -> 4; current version intact",
+    "prune_older_than_365_keep_current_true": "9 records -> 3; answer intact",
+    "never_revised_document": "deleted 0"
+   }
+  }
+ ],
+ "use_case_verdicts": {
+  "A_config_drift": "viable with the cue; sibling retrieval 100% top-1 (bar 80)",
+  "B_price_tracking": "viable; SKU top-1 100% (bar 70) -- prediction of failure was WRONG",
+  "C_multi_tenant": "viable WITH filter=; 0 leaks in 30 probes. Without filter, 100 of 150 returned rows belonged to other tenants",
+  "D_agent_task_state": "viable as shipped; 2-second revisions ordered correctly, rate rendered '2s'",
+  "E_policy_versioning": "viable with the cue AND 0.7.3; was destroying documents before",
+  "F_entity_scale": "5,000 entities / 15,000 records: as_of 100% with cue; median filtered search 39.23 ms, p95 53.35 ms -- MISSES the 25 ms bar"
+ },
+ "predictions_scored": {
+  "correct": [
+   "A1/B1/D1/E1 are sort-and-filter (right that they are mechanical, wrong that they pass as shipped)",
+   "C1 passes, C2 is the finding"
+  ],
+  "wrong": [
+   "B2 predicted to FAIL at 70% -- measured 100%. nomic-embed-text separates 200 template-identical SKUs cleanly",
+   "A2 predicted marginal -- measured 100%",
+   "A1/E1/F1 predicted to pass -- measured 52-67%, and the cause was named by no prediction"
+  ]
+ }
+}

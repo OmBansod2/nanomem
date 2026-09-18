@@ -1,0 +1,91 @@
+{
+ "label": "v3r3",
+ "shape": "ingest -> close -> re-open -> search (the deployed shape)",
+ "config": "router=off, routing_mode=exhaustive, n_exhaustive=50000, vector_dtype_on_disk=float16, random insertion order",
+ "10000": {
+  "N": 10000,
+  "questions": 500,
+  "ingest_s": 0.2,
+  "index_MB": 22.0,
+  "reopen_ms": 21.3,
+  "engine_same_instance": {
+   "p50_ms": 0.347,
+   "p95_ms": 0.389,
+   "recall_pct": 70.4,
+   "arm": "same instance that ingested"
+  },
+  "engine_reopened": {
+   "p50_ms": 0.344,
+   "p95_ms": 0.383,
+   "recall_pct": 70.4,
+   "arm": "re-opened vault"
+  },
+  "engine_p50_ms": 0.344,
+  "engine_p95_ms": 0.383,
+  "engine_recall_pct": 70.4,
+  "write_path_reopened": {
+   "mean_us": 20.6,
+   "p50_us": 9.8,
+   "p95_us": 15.0
+  },
+  "exhaustive_numpy_p50_ms": 0.272,
+  "exhaustive_recall_pct": 70.4,
+  "faiss_flat_p50_ms": 0.391,
+  "faiss_flat_recall_pct": 70.4,
+  "active_heap_ram_kb": 57088.0,
+  "resident_arena_mb": 48.0,
+  "process_rss_kb": 974864,
+  "peak_rss_MB": 1030.0,
+  "rss_delta_MB": 103.0,
+  "modified_on_reopen": "same",
+  "full_reloads_during_500_searches": 0
+ },
+ "71433": {
+  "N": 71433,
+  "questions": 500,
+  "ingest_s": 1.2,
+  "index_MB": 155.9,
+  "reopen_ms": 156.8,
+  "engine_same_instance": {
+   "p50_ms": 1.814,
+   "p95_ms": 2.062,
+   "recall_pct": 60.6,
+   "arm": "same instance that ingested"
+  },
+  "engine_reopened": {
+   "p50_ms": 1.809,
+   "p95_ms": 2.069,
+   "recall_pct": 60.6,
+   "arm": "re-opened vault"
+  },
+  "engine_p50_ms": 1.809,
+  "engine_p95_ms": 2.069,
+  "engine_recall_pct": 60.6,
+  "write_path_reopened": {
+   "mean_us": 16.6,
+   "p50_us": 6.2,
+   "p95_us": 10.6
+  },
+  "exhaustive_numpy_p50_ms": 1.464,
+  "exhaustive_recall_pct": 60.6,
+  "faiss_flat_p50_ms": 1.095,
+  "faiss_flat_recall_pct": 60.6,
+  "active_heap_ram_kb": 449574.8,
+  "resident_arena_mb": 384.0,
+  "process_rss_kb": 1925984,
+  "peak_rss_MB": 2193.0,
+  "rss_delta_MB": 1163.0,
+  "modified_on_reopen": "same",
+  "full_reloads_during_500_searches": 0
+ },
+ "password_mode": {
+  "docs": 5000,
+  "encrypted_open_ms_median": 119.42,
+  "plaintext_open_ms_median": 10.74,
+  "open_overhead_ms": 108.69,
+  "encrypted_search_p50_ms": 0.169,
+  "plaintext_search_p50_ms": 0.17,
+  "search_overhead_p50_ms": -0.001,
+  "note": "scrypt n=2^16 r=8 p=1 is paid ONCE per open, not per query"
+ }
+}

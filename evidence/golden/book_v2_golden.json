@@ -1,0 +1,476 @@
+{
+ "queries": [
+  "what is a transformer attention head",
+  "how does tokenization work",
+  "explain retrieval augmented generation",
+  "what is fine-tuning",
+  "prompt engineering techniques",
+  "semantic search with embeddings",
+  "text classification with LLMs",
+  "multimodal models",
+  "what is a decoder-only model",
+  "how are embeddings trained",
+  "clustering documents by topic",
+  "instruction tuning",
+  "reward models and RLHF",
+  "quantization of model weights",
+  "vector database indexing",
+  "named entity recognition",
+  "chain of thought prompting",
+  "evaluating language models",
+  "context window limits",
+  "byte pair encoding"
+ ],
+ "results": {
+  "what is a transformer attention head": [
+   {
+    "id": "doc_aab02bef7a",
+    "text": "More Efficient Attention The area that gets the most focus from the research community is the attention layer of the Tra",
+    "score": 0.4453
+   },
+   {
+    "id": "doc_69abe865d9",
+    "text": "So the Transformer blocks alternate between full attention (e.g., blocks 1 and 3) and sparse attention (e.g., blocks 2 a",
+    "score": 0.4414
+   },
+   {
+    "id": "doc_df1b9f321f",
+    "text": "we don\u2019t duplicate the processing effort (these results are stored as various matrices within the layers). The majority ",
+    "score": 0.4406
+   },
+   {
+    "id": "doc_36f7c840a6",
+    "text": "Figure 1-16. The Transformer is a combination of stacked encoder and decoder blocks where the input flows through each e",
+    "score": 0.4244
+   }
+  ],
+  "how does tokenization work": [
+   {
+    "id": "doc_8ba78965d3",
+    "text": "There are three major groups of design choices that determine how the tokenizer will break down text: the tokenization m",
+    "score": 0.4674
+   },
+   {
+    "id": "doc_f109e5d7e5",
+    "text": "Third, the tokenizer needs to be trained on a specific dataset to establish the best vocabulary it can use to represent ",
+    "score": 0.4486
+   },
+   {
+    "id": "doc_70f58e1047",
+    "text": "If you want to go deeper into tokenizers, they are discussed in more detail in Designing Large Language Model Applicatio",
+    "score": 0.4451
+   },
+   {
+    "id": "doc_4e6f4bab54",
+    "text": "This shows us the model generated the token 3323, 'Sub', followed by token 622, 'ject'. Together they formed the word 'S",
+    "score": 0.4421
+   }
+  ],
+  "explain retrieval augmented generation": [
+   {
+    "id": "doc_e5a6ba27e0",
+    "text": "Retrieval-Augmented Generation (RAG) The mass adoption of LLMs quickly led to people asking them questions and expecting",
+    "score": 0.4377
+   },
+   {
+    "id": "doc_f27d10b63a",
+    "text": "Chapter 8. Semantic Search and Retrieval-Augmented Generation Search was one of the first language model applications to",
+    "score": 0.4136
+   },
+   {
+    "id": "doc_fef5e6de64",
+    "text": "text generation models, Semantic Search and Retrieval-Augmented Generation hard negatives, Multiple negatives ranking lo",
+    "score": 0.3956
+   },
+   {
+    "id": "doc_2d420df562",
+    "text": "relevance of a subset of results against the query; the order of results is then changed based on these scores. Figure 8",
+    "score": 0.3708
+   }
+  ],
+  "what is fine-tuning": [
+   {
+    "id": "doc_5fa38f3cd8",
+    "text": "In this chapter, we use a base model that was already trained on massive datasets and explore how we can fine-tune it us",
+    "score": 0.3882
+   },
+   {
+    "id": "doc_4b1a06b575",
+    "text": "Figure 12-6. Compared to language modeling (pretraining), full fine-tuning uses a smaller but labeled dataset. You can u",
+    "score": 0.386
+   },
+   {
+    "id": "doc_f7d5285b1d",
+    "text": "Chapter 12. Fine-Tuning Generation Models In this chapter, we will take a pretrained text generation model and go over t",
+    "score": 0.3733
+   },
+   {
+    "id": "doc_8482b60b88",
+    "text": "Figure 12-2. During supervised fine-tuning, the LLM aims to predict the next token based on an input that has additional",
+    "score": 0.3727
+   }
+  ],
+  "prompt engineering techniques": [
+   {
+    "id": "doc_2743df1e56",
+    "text": "Example use case Temperature top_p Description range of vocabulary, leading to outputs with linguistic variety. Intro to",
+    "score": 0.4624
+   },
+   {
+    "id": "doc_43800a4982",
+    "text": "Chapter 6. Prompt Engineering In the first chapters of this book, we took our first steps into the world of large langua",
+    "score": 0.405
+   },
+   {
+    "id": "doc_577adf293b",
+    "text": "Figure 6-6. A basic example of a prompt. No instruction is given so the LLM will simply try to complete the sentence. Ho",
+    "score": 0.399
+   },
+   {
+    "id": "doc_f9497e7a2e",
+    "text": "Like human conversations, without any specific instructions or additional context, it is difficult to derive what the ta",
+    "score": 0.3955
+   }
+  ],
+  "semantic search with embeddings": [
+   {
+    "id": "doc_3db4b9a4f7",
+    "text": "Figure 8-4. The intuition of embeddings: each text is a point and texts with similar meaning are close to each other. Th",
+    "score": 0.4811
+   },
+   {
+    "id": "doc_70033cf98f",
+    "text": "Overview of Semantic Search and RAG There\u2019s a lot of research on how to best use language models for search. Three broad",
+    "score": 0.4521
+   },
+   {
+    "id": "doc_74e8eb3fdc",
+    "text": "Embedding Documents The first step is to convert our textual data to embeddings, as illustrated in Figure 5-3. Recall fr",
+    "score": 0.4342
+   },
+   {
+    "id": "doc_8f59115be7",
+    "text": "Throughout the book, embeddings will take on a central role as they are utilized in many use cases, such as classificati",
+    "score": 0.4304
+   }
+  ],
+  "text classification with LLMs": [
+   {
+    "id": "doc_f1569ef144",
+    "text": "Figure 5-24. The top 20 topics visualized. Summary In this chapter, we explored how LLMs, both generative and representa",
+    "score": 0.4325
+   },
+   {
+    "id": "doc_39c0cd4711",
+    "text": "Methods like Flash Attention speed up the attention calculation by optimizing how the operation is done on the different",
+    "score": 0.4312
+   },
+   {
+    "id": "doc_0e06967de6",
+    "text": "language modeling head (LM head), The Components of the Forward Pass- The Components of the Forward Pass large language ",
+    "score": 0.4279
+   },
+   {
+    "id": "doc_a5174d2a9d",
+    "text": "Part II: Using Pretrained Language Models In Part II of the book, we explore how LLMs can be used through common use cas",
+    "score": 0.4274
+   }
+  ],
+  "multimodal models": [
+   {
+    "id": "doc_0504324bc5",
+    "text": "Chapter 9. Multimodal Large Language Models When you think about large language models (LLMs), multimodality might not b",
+    "score": 0.5021
+   },
+   {
+    "id": "doc_a1552caae6",
+    "text": "multi-query RAG, Multi-query RAG multilevel perceptrons, The Components of the Forward Pass (see also feedforward neural",
+    "score": 0.4451
+   },
+   {
+    "id": "doc_656246fca0",
+    "text": "Tower and ask when it was built or where it is located. This conversational ability is further illustrated in Figure 9-1",
+    "score": 0.4398
+   },
+   {
+    "id": "doc_38e2372751",
+    "text": "generating multimodal embeddings, How Can CLIP Generate Multimodal Embeddings?-How Can CLIP Generate Multimodal Embeddin",
+    "score": 0.4216
+   }
+  ],
+  "what is a decoder-only model": [
+   {
+    "id": "doc_f270d11adf",
+    "text": "Representation models are teal with a small vector icon (to indicate its focus on vectors and embeddings) whilst generat",
+    "score": 0.4336
+   },
+   {
+    "id": "doc_4d97016c40",
+    "text": "BERT models feature extraction machines without the need to fine-tune them on a specific task. Encoder-only models, like",
+    "score": 0.4166
+   },
+   {
+    "id": "doc_a5e1d0f0bc",
+    "text": "Figure 1-19. The decoder has an additional attention layer that attends to the output of the encoder. As shown in Figure",
+    "score": 0.3907
+   },
+   {
+    "id": "doc_e50520a3ff",
+    "text": "give such a model. Iteratively improving your prompt to get your preferred output is called prompt engineering. Figure 4",
+    "score": 0.386
+   }
+  ],
+  "how are embeddings trained": [
+   {
+    "id": "doc_d84b209785",
+    "text": "inner workings in Chapter 10 where we will create our own embedding model. Figure 9-10. In the second step of training C",
+    "score": 0.4626
+   },
+   {
+    "id": "doc_31e2f85c81",
+    "text": "In the first step, we convert our textual input to embeddings using the embedding model as shown in Figure 4-11. Note th",
+    "score": 0.4613
+   },
+   {
+    "id": "doc_919df170d3",
+    "text": "train_embeddings.shape (8530, 768) This shows that each of our 8,530 input documents has an embedding dimension of 768 a",
+    "score": 0.4494
+   },
+   {
+    "id": "doc_6c5867e86a",
+    "text": "The goal of fine-tuning this embedding model is that it can create embeddings that are tuned to the classification task.",
+    "score": 0.4459
+   }
+  ],
+  "clustering documents by topic": [
+   {
+    "id": "doc_f0d96738e5",
+    "text": "First, the documents that are inserted using the [DOCUMENTS] tag are a small subset of documents, typically four, that b",
+    "score": 0.4637
+   },
+   {
+    "id": "doc_4c6e76f5e1",
+    "text": "fig = topic_model.visualize_documents( titles, reduced_embeddings=reduced_embeddings, width=1200, hide_annotations=True ",
+    "score": 0.4532
+   },
+   {
+    "id": "doc_2755ac0388",
+    "text": "clustering, unbound by supervision, allows for creative solutions and diverse applications, such as finding outliers, sp",
+    "score": 0.4418
+   },
+   {
+    "id": "doc_7dad09501b",
+    "text": "('documents', 0.012383715497143821), ('modeling', 0.011978375291037142), ('dirichlet', 0.010078277589545706), ('word', 0",
+    "score": 0.4255
+   }
+  ],
+  "instruction tuning": [
+   {
+    "id": "doc_bc0fbc774e",
+    "text": "Figure 12-7. Instruction data with instructions by a user and corresponding answers. The instructions can contain many d",
+    "score": 0.3896
+   },
+   {
+    "id": "doc_2337361a6d",
+    "text": "Summary In this chapter, we explored different steps of fine-tuning pretrained LLMs. We performed fine-tuning by making ",
+    "score": 0.3887
+   },
+   {
+    "id": "doc_f7d5285b1d",
+    "text": "Chapter 12. Fine-Tuning Generation Models In this chapter, we will take a pretrained text generation model and go over t",
+    "score": 0.3856
+   },
+   {
+    "id": "doc_17230e1497",
+    "text": "NOTE This example demonstrates an efficient form of fine-tuning your model. If you want to perform full fine-tuning inst",
+    "score": 0.3766
+   }
+  ],
+  "reward models and RLHF": [
+   {
+    "id": "doc_3973bdaf6b",
+    "text": "Figure 12-24. We train a reward model before fine-tuning the LLM. Figure 12-25 shows that to create a reward model, we t",
+    "score": 0.4222
+   },
+   {
+    "id": "doc_c94ab34ab2",
+    "text": "3. Use the reward model to fine-tune the LLM (operating as the preference evaluator) Figure 12-30. The three stages of p",
+    "score": 0.4058
+   },
+   {
+    "id": "doc_ff8b057b6b",
+    "text": "Figure 12-26. Use a reward model trained on human preference to generate the completion quality score. Training a Reward",
+    "score": 0.3958
+   },
+   {
+    "id": "doc_5018dce421",
+    "text": "Figure 12-29. The reward model aims to evaluate the quality scores of generations in response to a prompt. When we combi",
+    "score": 0.3958
+   }
+  ],
+  "quantization of model weights": [
+   {
+    "id": "doc_2764a7c72c",
+    "text": "Compressing the model for (more) efficient training We can make LoRA even more efficient by reducing the memory requirem",
+    "score": 0.4255
+   },
+   {
+    "id": "doc_b53b54cd9f",
+    "text": "Figure 12-16. Quantizing weights that are close to one another results in the same reconstructed weights thereby removin",
+    "score": 0.4208
+   },
+   {
+    "id": "doc_590ca7461f",
+    "text": "\"Knock, knock. Who's there? Hike\"?</s> <|assistant|> Sure! Knock, knock. Who's there? Hike. Hike who? Hike up your pants",
+    "score": 0.4175
+   },
+   {
+    "id": "doc_001b5618d6",
+    "text": "model = AutoModelForCausalLM.from_pretrained( model_name, device_map=\"auto\", # Leave this out for regular SFT quantizati",
+    "score": 0.4156
+   }
+  ],
+  "vector database indexing": [
+   {
+    "id": "doc_267f37f808",
+    "text": "Figure 8-11. As we saw in Chapter 3, we can compare embeddings to quickly find the most similar documents to a query. As",
+    "score": 0.4264
+   },
+   {
+    "id": "doc_d65594ab4b",
+    "text": "There are several possible ways, and two possible approaches shown in Figure 8-7 include indexing one vector per documen",
+    "score": 0.4106
+   },
+   {
+    "id": "doc_efe1bef3b3",
+    "text": "Chunking the text into overlapping segments is one strategy to retain more of the context around different segments. Nea",
+    "score": 0.3951
+   },
+   {
+    "id": "doc_1e8c41b1e3",
+    "text": "Figure 8-6. Convert some external knowledge base to a vector database. We can then query this vector database for inform",
+    "score": 0.3924
+   }
+  ],
+  "named entity recognition": [
+   {
+    "id": "doc_0330effaff",
+    "text": "Named-Entity Recognition In this section, we will delve into the process of fine-tuning a pretrained BERT model specific",
+    "score": 0.4507
+   },
+   {
+    "id": "doc_6f176d9b33",
+    "text": "Finally, we looked at named-entity recognition, a task that involves identifying specific entities such as people and pl",
+    "score": 0.4107
+   },
+   {
+    "id": "doc_7b2da1666a",
+    "text": "Figure 11-19 provides a visual representation of this token-level classification. Figure 11-19. During the fine-tuning p",
+    "score": 0.4049
+   },
+   {
+    "id": "doc_541ce74575",
+    "text": "in named-entity recognition (NER). You can download specialized adapters from https://oreil.ly/XraXg. Figure 12-10. Adap",
+    "score": 0.3708
+   }
+  ],
+  "chain of thought prompting": [
+   {
+    "id": "doc_ca4811e375",
+    "text": "Chain-of-Thought: Think Before Answering The first and major step toward complex reasoning in generative models was thro",
+    "score": 0.4707
+   },
+   {
+    "id": "doc_bb93374a6d",
+    "text": "Figure 6-16. Chain-of-thought prompting without using examples. Instead, it uses the phrase \u201cLet\u2019s think step-by-step\u201d t",
+    "score": 0.4528
+   },
+   {
+    "id": "doc_169fe8ed51",
+    "text": "Figure 6-15. Chain-of-thought prompting uses reasoning examples to persuade the generative model to use reasoning in its",
+    "score": 0.4376
+   },
+   {
+    "id": "doc_e4bae88164",
+    "text": "been a successful attempt to convert the tree-of-thought framework into a simple prompting technique.11 Instead of calli",
+    "score": 0.4016
+   }
+  ],
+  "evaluating language models": [
+   {
+    "id": "doc_0e06967de6",
+    "text": "language modeling head (LM head), The Components of the Forward Pass- The Components of the Forward Pass large language ",
+    "score": 0.4363
+   },
+   {
+    "id": "doc_af2b9d70ef",
+    "text": "HellaSwag.16 These benchmarks give us information about basic language understanding but also complex analytical answeri",
+    "score": 0.4339
+   },
+   {
+    "id": "doc_b166259c36",
+    "text": "used for classifying text. As illustrated in Figure 4-2, we will examine both representation and language models and exp",
+    "score": 0.4269
+   },
+   {
+    "id": "doc_fa70695b59",
+    "text": "NOTE When you use a modern commercial LLM, the outputs you get are not the ones mentioned earlier in the strict meaning ",
+    "score": 0.4265
+   }
+  ],
+  "context window limits": [
+   {
+    "id": "doc_cb8d9cd860",
+    "text": "You could talk to it and it remembers the conversation you had thus far. However, as the size of the conversation grows,",
+    "score": 0.3533
+   },
+   {
+    "id": "doc_bef2458336",
+    "text": "We do not want to leave much room for interpretation. Context Additional information describing the context of the probl",
+    "score": 0.3308
+   },
+   {
+    "id": "doc_540d9f1bb4",
+    "text": "In-Context Learning: Providing Examples In the previous sections, we tried to accurately describe what the LLM should do",
+    "score": 0.3279
+   },
+   {
+    "id": "doc_daadabc741",
+    "text": "Current Transformer models have a limit for how many tokens they can process at once. That limit is called the model\u2019s c",
+    "score": 0.3265
+   }
+  ],
+  "byte pair encoding": [
+   {
+    "id": "doc_063eb3244a",
+    "text": "[SEP] stands for separator, as it\u2019s used to separate sentences in some applications that require passing two sentences t",
+    "score": 0.3805
+   },
+   {
+    "id": "doc_8ba78965d3",
+    "text": "There are three major groups of design choices that determine how the tokenizer will break down text: the tokenization m",
+    "score": 0.373
+   },
+   {
+    "id": "doc_0017b2affe",
+    "text": "tokenization than using character tokens (subword tokens often average three characters per token). Byte tokens One addi",
+    "score": 0.3725
+   },
+   {
+    "id": "doc_0e4e2018fb",
+    "text": "Tokenization method: Byte pair encoding (BPE) Vocabulary size: 32,000 Special tokens: <|endoftext|> Chat tokens: As chat",
+    "score": 0.3651
+   }
+  ]
+ },
+ "stats": {
+  "file_path": "<repo>/evidence/golden/book_v2.dat",
+  "file_size_mb": 6.059,
+  "total_documents": 845,
+  "compacted_blocks": 17,
+  "memtable_pending": 0,
+  "active_heap_ram_kb": 160.0,
+  "encrypted_at_rest": true,
+  "cipher": "256-bit Projected Stream Cipher"
+ }
+}

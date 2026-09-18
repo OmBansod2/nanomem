@@ -1,0 +1,3543 @@
+{
+ "title": "nanomem v3 vs sqlite-vec / Chroma / FAISS -- standardised head-to-head",
+ "generated_at": "2026-09-17T21:36:13+0530",
+ "script": "<repo>/evidence/bench_competitors.py",
+ "machine": {
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "Apple M4 Pro",
+  "model": "Mac16,11",
+  "logical_cpus": 12,
+  "ram_bytes": 25769803776,
+  "load_avg_at_start": [
+   1.19,
+   1.26,
+   1.6
+  ]
+ },
+ "versions": {
+  "python": "3.12.12",
+  "executable": "<repo>/venv_bench/bin/python",
+  "numpy": "2.5.3",
+  "faiss": "1.15.0",
+  "chromadb": "1.5.9",
+  "sqlite_vec": "0.1.9",
+  "hnswlib": "installed (no __version__)",
+  "sqlite3_library": "3.53.4",
+  "vec_version": "v0.1.9",
+  "faiss_omp_max_threads": 12,
+  "OMP_NUM_THREADS": "<unset: engine default>",
+  "VECLIB_MAXIMUM_THREADS": "<unset: engine default>",
+  "OPENBLAS_NUM_THREADS": "<unset: engine default>",
+  "nanomem": "0.7.9",
+  "nanomem_engine_version": "3.4.1",
+  "nanomem_path": "<repo>/nanomem/__init__.py"
+ },
+ "protocol": {
+  "top_k_queried": 10,
+  "recall_ks": [
+   4,
+   10
+  ],
+  "evidence_recall_at_k": "1.0 only if EVERY gold paragraph for the question is inside the top-k",
+  "per_doc_recall_at_k": "fraction of the question's gold paragraphs inside the top-k, averaged over questions",
+  "recall_at_4_is_a_prefix_of_the_top_10": "every arm is queried once at k=10 and recall@4 is the first four of that ranked list. For the exact arms this is identical to querying k=4. For the HNSW arms it is a small ADVANTAGE, because they search a k=10 beam and are then scored at 4.",
+  "embeddings": "nomic-embed-text, pre-computed and cached; L2-normalised ONCE by --prep and loaded from the same .npy by every arm",
+  "insertion_order": "numpy default_rng(0).permutation(N), identical for every arm, materialised before the ingest clock starts",
+  "reopen": "every arm is built, closed, and reopened from disk before it is timed; latency is warm (>=20 warm-up queries first)",
+  "latency": "single query, no batching; >= 200 timed queries per arm per corpus (query set repeated when the corpus ships fewer unique questions)",
+  "threads": "no arm is thread-pinned; each engine keeps its own default thread policy (this is the 'strongest reasonable config' rule)",
+  "payload": "nanomem, sqlite-vec and Chroma all store the document TEXT alongside the vector. FAISS IndexFlatIP stores vectors only, so its on-disk figure is not comparable.",
+  "isolation": "one subprocess per (arm, corpus) so ru_maxrss is clean"
+ },
+ "corpora": {
+  "val1190": {
+   "corpus_file": "<repo>/corpora/hotpotqa_scaled_1k.json",
+   "embeddings_file": "<repo>/evidence/embeds_val.npz",
+   "gold_rule": "all supporting-fact paragraphs, located by the first 80 chars of the fact text (same rule as headtohead_v3.py)",
+   "questions_dropped_unresolvable_gold": 0,
+   "n_docs": 1190,
+   "n_queries": 120,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999999403953552,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 661953
+  },
+  "n10000": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 10000,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 5443456
+  },
+  "n71433": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 71433,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 37711496
+  }
+ },
+ "arms": {
+  "faiss_flat_ip": {
+   "val1190": {
+    "arm": "faiss_flat_ip",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661173.876539,
+    "wall_s": 0.04,
+    "latency_ms": {
+     "p50": 0.0539,
+     "p95": 0.0554,
+     "p99": 0.0606,
+     "mean": 0.052,
+     "min": 0.0469,
+     "max": 0.0727,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0018,
+    "ingest_s": 0.002,
+    "reopen_s": 0.0007,
+    "index_bytes": 3655725,
+    "index_stores_text": false,
+    "config": {
+     "index": "faiss.IndexFlatIP",
+     "metric": "inner product",
+     "vectors": "float32, pre-L2-normalised (so IP == cosine)",
+     "faiss_omp_max_threads": 12,
+     "note": "exactness reference; stores VECTORS ONLY -- no document text, so its index_bytes is not comparable to the stores that do"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48480256,
+     "peak_bytes": 71811072,
+     "peak_delta_bytes": 23330816,
+     "peak_delta_mb": 22.2,
+     "baseline_rss_bytes": 48480256,
+     "rss_bytes": 71811072,
+     "rss_delta_mb": 22.2
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.1,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "faiss_flat_ip",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "started_at": 1789661187.0070632,
+    "wall_s": 0.255,
+    "latency_ms": {
+     "p50": 0.4265,
+     "p95": 0.4657,
+     "p99": 0.5649,
+     "mean": 0.4303,
+     "min": 0.3663,
+     "max": 0.7378,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0015,
+    "ingest_s": 0.006,
+    "reopen_s": 0.0022,
+    "index_bytes": 30720045,
+    "index_stores_text": false,
+    "config": {
+     "index": "faiss.IndexFlatIP",
+     "metric": "inner product",
+     "vectors": "float32, pre-L2-normalised (so IP == cosine)",
+     "faiss_omp_max_threads": 12,
+     "note": "exactness reference; stores VECTORS ONLY -- no document text, so its index_bytes is not comparable to the stores that do"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122912768,
+     "peak_bytes": 174915584,
+     "peak_delta_bytes": 52002816,
+     "peak_delta_mb": 49.6,
+     "baseline_rss_bytes": 122912768,
+     "rss_bytes": 174964736,
+     "rss_delta_mb": 49.6
+    },
+    "load_avg_end": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "subprocess_wall_s": 0.4,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "faiss_flat_ip",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "started_at": 1789661250.780998,
+    "wall_s": 0.741,
+    "latency_ms": {
+     "p50": 1.1665,
+     "p95": 1.6259,
+     "p99": 1.6749,
+     "mean": 1.2245,
+     "min": 1.0198,
+     "max": 1.7348,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0032,
+    "ingest_s": 0.062,
+    "reopen_s": 0.0149,
+    "index_bytes": 219442221,
+    "index_stores_text": false,
+    "config": {
+     "index": "faiss.IndexFlatIP",
+     "metric": "inner product",
+     "vectors": "float32, pre-L2-normalised (so IP == cosine)",
+     "faiss_omp_max_threads": 12,
+     "note": "exactness reference; stores VECTORS ONLY -- no document text, so its index_bytes is not comparable to the stores that do"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 626966528,
+     "peak_bytes": 867663872,
+     "peak_delta_bytes": 240697344,
+     "peak_delta_mb": 229.5,
+     "baseline_rss_bytes": 626982912,
+     "rss_bytes": 867663872,
+     "rss_delta_mb": 229.5
+    },
+    "load_avg_end": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "subprocess_wall_s": 1.0,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  },
+  "nanomem_v3_exact": {
+   "val1190": {
+    "arm": "nanomem_v3_exact",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661174.003566,
+    "wall_s": 0.074,
+    "latency_ms": {
+     "p50": 0.0842,
+     "p95": 0.092,
+     "p99": 0.1035,
+     "mean": 0.0849,
+     "min": 0.0743,
+     "max": 0.1177,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0004,
+    "ingest_s": 0.023,
+    "reopen_s": 0.0046,
+    "index_bytes": 2628355,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 4494.2,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 3655680,
+     "arena_cache": "map",
+     "arena_cache_bytes": 122880,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__val1190/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 3655680,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 1190,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 3655680,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 47600,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 24,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__val1190/vault.dat",
+     "file_size_mb": 2.507,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 102192,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 60192,
+     "process_rss_kb": 60192,
+     "read_only": false,
+     "record_bytes": 796577,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 3.486,
+     "resident_arena_used_mb": 3.486,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 1190,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "dd0d362c650e237eb38cd242ef9dd828",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48775168,
+     "peak_bytes": 61636608,
+     "peak_delta_bytes": 12861440,
+     "peak_delta_mb": 12.3,
+     "baseline_rss_bytes": 48775168,
+     "rss_bytes": 61636608,
+     "rss_delta_mb": 12.3
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.2,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "nanomem_v3_exact",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "started_at": 1789661187.3875809,
+    "wall_s": 0.469,
+    "latency_ms": {
+     "p50": 0.4257,
+     "p95": 0.4858,
+     "p99": 0.5137,
+     "mean": 0.4243,
+     "min": 0.2601,
+     "max": 0.6472,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0008,
+    "ingest_s": 0.186,
+    "reopen_s": 0.0348,
+    "index_bytes": 21978441,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 37650.3,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 30720000,
+     "arena_cache": "map",
+     "arena_cache_bytes": 671744,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n10000/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 30720000,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 10000,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 30720000,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 400000,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 200,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n10000/vault.dat",
+     "file_size_mb": 20.96,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 847616,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 169792,
+     "process_rss_kb": 169792,
+     "read_only": false,
+     "record_bytes": 6586287,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 29.297,
+     "resident_arena_used_mb": 29.297,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 10000,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "1af3d966789c9631c336de50c759761a",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122978304,
+     "peak_bytes": 173867008,
+     "peak_delta_bytes": 50888704,
+     "peak_delta_mb": 48.5,
+     "baseline_rss_bytes": 122978304,
+     "rss_bytes": 173867008,
+     "rss_delta_mb": 48.5
+    },
+    "load_avg_end": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "subprocess_wall_s": 0.6,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "nanomem_v3_exact",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "started_at": 1789661251.773707,
+    "wall_s": 2.8,
+    "latency_ms": {
+     "p50": 2.135,
+     "p95": 2.7536,
+     "p99": 2.9413,
+     "mean": 2.1959,
+     "min": 1.6875,
+     "max": 4.3463,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0079,
+    "ingest_s": 1.353,
+    "reopen_s": 0.2605,
+    "index_bytes": 155886408,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 268291.8,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 219442176,
+     "arena_cache": "map",
+     "arena_cache_bytes": 4595712,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n71433/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 219442176,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 71433,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 219442176,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 2857320,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 1429,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n71433/vault.dat",
+     "file_size_mb": 148.665,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 6494192,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 945520,
+     "process_rss_kb": 945520,
+     "read_only": false,
+     "record_bytes": 45937108,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 209.276,
+     "resident_arena_used_mb": 209.276,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 71433,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "189849f5393fe7dac14eb01f9795db49",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 627081216,
+     "peak_bytes": 968212480,
+     "peak_delta_bytes": 341131264,
+     "peak_delta_mb": 325.3,
+     "baseline_rss_bytes": 627097600,
+     "rss_bytes": 968212480,
+     "rss_delta_mb": 325.3
+    },
+    "load_avg_end": [
+     5.34,
+     2.59,
+     2.07
+    ],
+    "subprocess_wall_s": 3.0,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  },
+  "nanomem_v3_router_auto": {
+   "val1190": {
+    "arm": "nanomem_v3_router_auto",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661174.159225,
+    "wall_s": 0.205,
+    "latency_ms": {
+     "p50": 0.1357,
+     "p95": 0.1446,
+     "p99": 0.1476,
+     "mean": 0.1357,
+     "min": 0.1123,
+     "max": 0.15,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0006,
+    "ingest_s": 0.069,
+    "reopen_s": 0.0227,
+    "index_bytes": 2628337,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 3570.0,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 3655680,
+     "arena_cache": "map",
+     "arena_cache_bytes": 122880,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__val1190/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": true,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 3655680,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 1190,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "cache",
+     "arena_used_bytes": 3655680,
+     "arena_vault_blocks_checked": "none",
+     "arena_vectors_mapped": false,
+     "beam_cells": 12,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 0,
+     "column_mapped_bytes": 47600,
+     "compacted_blocks": 24,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__val1190/vault.dat",
+     "file_size_mb": 2.507,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 16660,
+     "index_bytes_estimated": 0,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 860837,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 1000,
+     "process_peak_rss_kb": 81872,
+     "process_rss_kb": 81872,
+     "read_only": false,
+     "record_bytes": 0,
+     "record_mapped_bytes": 796577,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 3.486,
+     "resident_arena_used_mb": 3.486,
+     "revision_lead": 0.2,
+     "router": "auto",
+     "routing_mode": "cells",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 1190,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "09a49f92bb6466b82ac18cd9e7310be9",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "compact_recluster": {
+      "records": 1190,
+      "blocks_before": 24,
+      "blocks_after": 24,
+      "reclustered": true,
+      "elapsed_s": 0.037
+     },
+     "compact_recluster_s": 0.042,
+     "layout_gate": {
+      "coverage": 0.9921875,
+      "passed": true,
+      "checked_at_rows": 1190
+     },
+     "search_mode_at_query_time": "cells"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "auto",
+     "n_exhaustive": 1000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "lowered from the shipped 50,000 to 1000 so the router is actually exercised at every corpus size; at shipped defaults this arm is byte-identical to nanomem_v3_exact below 50k docs"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48250880,
+     "peak_bytes": 83886080,
+     "peak_delta_bytes": 35635200,
+     "peak_delta_mb": 34.0,
+     "baseline_rss_bytes": 48267264,
+     "rss_bytes": 83886080,
+     "rss_delta_mb": 34.0
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.3,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.33,
+     "evidence_recall_at_10_pct": 92.5,
+     "per_doc_recall_at_10_pct": 95.83,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "nanomem_v3_router_auto",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "started_at": 1789661187.96325,
+    "wall_s": 2.132,
+    "latency_ms": {
+     "p50": 0.5523,
+     "p95": 0.6088,
+     "p99": 0.655,
+     "mean": 0.5536,
+     "min": 0.4437,
+     "max": 0.7092,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0009,
+    "ingest_s": 0.825,
+    "reopen_s": 0.2822,
+    "index_bytes": 21978535,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 30000.0,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 30720000,
+     "arena_cache": "map",
+     "arena_cache_bytes": 671744,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n10000/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": true,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 30720000,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 10000,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "cache",
+     "arena_used_bytes": 30720000,
+     "arena_vault_blocks_checked": "none",
+     "arena_vectors_mapped": false,
+     "beam_cells": 100,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 0,
+     "column_mapped_bytes": 400000,
+     "compacted_blocks": 200,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n10000/vault.dat",
+     "file_size_mb": 20.96,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 140000,
+     "index_bytes_estimated": 0,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 7126287,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 1000,
+     "process_peak_rss_kb": 371248,
+     "process_rss_kb": 347024,
+     "read_only": false,
+     "record_bytes": 0,
+     "record_mapped_bytes": 6586287,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 29.297,
+     "resident_arena_used_mb": 29.297,
+     "revision_lead": 0.2,
+     "router": "auto",
+     "routing_mode": "cells",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 10000,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "ba4f8f749e2f2309ecfd48b0728b1124",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "compact_recluster": {
+      "records": 10000,
+      "blocks_before": 200,
+      "blocks_after": 200,
+      "reclustered": true,
+      "elapsed_s": 0.57
+     },
+     "compact_recluster_s": 0.623,
+     "layout_gate": {
+      "coverage": 0.99609375,
+      "passed": true,
+      "checked_at_rows": 10000
+     },
+     "search_mode_at_query_time": "cells"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "auto",
+     "n_exhaustive": 1000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "lowered from the shipped 50,000 to 1000 so the router is actually exercised at every corpus size; at shipped defaults this arm is byte-identical to nanomem_v3_exact below 50k docs"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122732544,
+     "peak_bytes": 380157952,
+     "peak_delta_bytes": 257425408,
+     "peak_delta_mb": 245.5,
+     "baseline_rss_bytes": 122765312,
+     "rss_bytes": 355385344,
+     "rss_delta_mb": 221.8
+    },
+    "load_avg_end": [
+     1.65,
+     1.36,
+     1.62
+    ],
+    "subprocess_wall_s": 2.2,
+    "recall": {
+     "evidence_recall_at_4_pct": 69.6,
+     "per_doc_recall_at_4_pct": 83.8,
+     "evidence_recall_at_10_pct": 83.4,
+     "per_doc_recall_at_10_pct": 91.5,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "nanomem_v3_router_auto",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     5.34,
+     2.59,
+     2.07
+    ],
+    "started_at": 1789661254.812042,
+    "wall_s": 41.785,
+    "latency_ms": {
+     "p50": 3.8243,
+     "p95": 6.7302,
+     "p99": 6.9744,
+     "mean": 4.2747,
+     "min": 3.1837,
+     "max": 7.166,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0043,
+    "ingest_s": 16.094,
+    "reopen_s": 8.5593,
+    "index_bytes": 155885436,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 214299.0,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 219442176,
+     "arena_cache": "map",
+     "arena_cache_bytes": 4595712,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n71433/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": true,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 219442176,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 71433,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "cache",
+     "arena_used_bytes": 219442176,
+     "arena_vault_blocks_checked": "none",
+     "arena_vectors_mapped": false,
+     "beam_cells": 715,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 0,
+     "column_mapped_bytes": 2857320,
+     "compacted_blocks": 1429,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n71433/vault.dat",
+     "file_size_mb": 148.664,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 1000062,
+     "index_bytes_estimated": 0,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 49794490,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 1000,
+     "process_peak_rss_kb": 2439936,
+     "process_rss_kb": 2090096,
+     "read_only": false,
+     "record_bytes": 0,
+     "record_mapped_bytes": 45937108,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 209.276,
+     "resident_arena_used_mb": 209.276,
+     "revision_lead": 0.2,
+     "router": "auto",
+     "routing_mode": "cells",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 71433,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "b30fd2ce88316b4364e33073c18b6d15",
+     "vector_dtype": "float16",
+     "vector_dtype_on_disk": "float16",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "compact_recluster": {
+      "records": 71433,
+      "blocks_before": 1429,
+      "blocks_after": 1429,
+      "reclustered": true,
+      "elapsed_s": 13.929
+     },
+     "compact_recluster_s": 14.333,
+     "layout_gate": {
+      "coverage": 1.0,
+      "passed": true,
+      "checked_at_rows": 71433
+     },
+     "search_mode_at_query_time": "cells"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "auto",
+     "n_exhaustive": 1000,
+     "vector_dtype": "float16 on disk, float32 resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "lowered from the shipped 50,000 to 1000 so the router is actually exercised at every corpus size; at shipped defaults this arm is byte-identical to nanomem_v3_exact below 50k docs"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 626393088,
+     "peak_bytes": 2498494464,
+     "peak_delta_bytes": 1872101376,
+     "peak_delta_mb": 1785.4,
+     "baseline_rss_bytes": 626442240,
+     "rss_bytes": 2140291072,
+     "rss_delta_mb": 1443.7
+    },
+    "load_avg_end": [
+     5.56,
+     3.0,
+     2.24
+    ],
+    "subprocess_wall_s": 42.0,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.8,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.5,
+     "n_questions": 500
+    }
+   }
+  },
+  "sqlitevec_bruteforce": {
+   "val1190": {
+    "arm": "sqlitevec_bruteforce",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661174.448143,
+    "wall_s": 0.313,
+    "latency_ms": {
+     "p50": 1.0129,
+     "p95": 1.1559,
+     "p99": 1.2751,
+     "mean": 1.0274,
+     "min": 0.962,
+     "max": 1.7005,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0013,
+    "ingest_s": 0.031,
+    "reopen_s": 0.0011,
+    "index_bytes": 7221248,
+    "index_stores_text": true,
+    "config": {
+     "extension": "sqlite-vec",
+     "vec_version": "v0.1.9",
+     "table": "vec0(idx integer primary key, embedding float[768] distance_metric=cosine)",
+     "metric": "cosine distance over pre-L2-normalised float32",
+     "vectors": "float32 (NOT int8/bit quantised -- the highest-recall storage sqlite-vec offers)",
+     "pragmas": "journal_mode=WAL, synchronous=NORMAL, cache_size=-262144 (256MB)",
+     "query": "SELECT idx FROM v WHERE embedding MATCH ? AND k = ? ORDER BY distance",
+     "note": "sqlite-vec vec0 KNN is a full linear scan; this is its only exact mode and it has no ANN index to tune"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 49070080,
+     "peak_bytes": 65634304,
+     "peak_delta_bytes": 16564224,
+     "peak_delta_mb": 15.8,
+     "baseline_rss_bytes": 49086464,
+     "rss_bytes": 64946176,
+     "rss_delta_mb": 15.1
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.4,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "sqlitevec_bruteforce",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     1.65,
+     1.36,
+     1.62
+    ],
+    "started_at": 1789661190.206929,
+    "wall_s": 4.332,
+    "latency_ms": {
+     "p50": 7.8989,
+     "p95": 8.1371,
+     "p99": 8.2978,
+     "mean": 7.8812,
+     "min": 7.2823,
+     "max": 8.8689,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0083,
+    "ingest_s": 0.211,
+    "reopen_s": 0.0011,
+    "index_bytes": 38744064,
+    "index_stores_text": true,
+    "config": {
+     "extension": "sqlite-vec",
+     "vec_version": "v0.1.9",
+     "table": "vec0(idx integer primary key, embedding float[768] distance_metric=cosine)",
+     "metric": "cosine distance over pre-L2-normalised float32",
+     "vectors": "float32 (NOT int8/bit quantised -- the highest-recall storage sqlite-vec offers)",
+     "pragmas": "journal_mode=WAL, synchronous=NORMAL, cache_size=-262144 (256MB)",
+     "query": "SELECT idx FROM v WHERE embedding MATCH ? AND k = ? ORDER BY distance",
+     "note": "sqlite-vec vec0 KNN is a full linear scan; this is its only exact mode and it has no ANN index to tune"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 123305984,
+     "peak_bytes": 179568640,
+     "peak_delta_bytes": 56262656,
+     "peak_delta_mb": 53.7,
+     "baseline_rss_bytes": 123338752,
+     "rss_bytes": 178880512,
+     "rss_delta_mb": 53.0
+    },
+    "load_avg_end": [
+     1.91,
+     1.42,
+     1.64
+    ],
+    "subprocess_wall_s": 4.4,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "sqlitevec_bruteforce",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     5.56,
+     3.0,
+     2.24
+    ],
+    "started_at": 1789661296.8571389,
+    "wall_s": 30.828,
+    "latency_ms": {
+     "p50": 56.1655,
+     "p95": 56.9613,
+     "p99": 57.9296,
+     "mean": 56.2339,
+     "min": 55.1815,
+     "max": 61.665,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0568,
+    "ingest_s": 1.496,
+    "reopen_s": 0.0014,
+    "index_bytes": 270577664,
+    "index_stores_text": true,
+    "config": {
+     "extension": "sqlite-vec",
+     "vec_version": "v0.1.9",
+     "table": "vec0(idx integer primary key, embedding float[768] distance_metric=cosine)",
+     "metric": "cosine distance over pre-L2-normalised float32",
+     "vectors": "float32 (NOT int8/bit quantised -- the highest-recall storage sqlite-vec offers)",
+     "pragmas": "journal_mode=WAL, synchronous=NORMAL, cache_size=-262144 (256MB)",
+     "query": "SELECT idx FROM v WHERE embedding MATCH ? AND k = ? ORDER BY distance",
+     "note": "sqlite-vec vec0 KNN is a full linear scan; this is its only exact mode and it has no ANN index to tune"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 626720768,
+     "peak_bytes": 979140608,
+     "peak_delta_bytes": 352419840,
+     "peak_delta_mb": 336.1,
+     "baseline_rss_bytes": 626737152,
+     "rss_bytes": 906002432,
+     "rss_delta_mb": 266.3
+    },
+    "load_avg_end": [
+     5.99,
+     3.33,
+     2.39
+    ],
+    "subprocess_wall_s": 31.1,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  },
+  "chroma_hnsw_default": {
+   "val1190": {
+    "arm": "chroma_hnsw_default",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661174.841748,
+    "wall_s": 0.769,
+    "latency_ms": {
+     "p50": 0.6263,
+     "p95": 0.7365,
+     "p99": 0.7551,
+     "mean": 0.6335,
+     "min": 0.5325,
+     "max": 0.7785,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.001,
+    "ingest_s": 0.297,
+    "reopen_s": 0.0015,
+    "index_bytes": 12241742,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "default",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 1190,
+     "count_after_reopen": 1190,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine"
+      }
+     },
+     "note": "Chroma defaults; only the distance space is pinned to cosine",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48545792,
+     "peak_bytes": 149880832,
+     "peak_delta_bytes": 101335040,
+     "peak_delta_mb": 96.6,
+     "baseline_rss_bytes": 48562176,
+     "rss_bytes": 149880832,
+     "rss_delta_mb": 96.6
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.9,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "chroma_hnsw_default",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     1.91,
+     1.42,
+     1.64
+    ],
+    "started_at": 1789661194.646688,
+    "wall_s": 4.739,
+    "latency_ms": {
+     "p50": 1.0822,
+     "p95": 1.376,
+     "p99": 1.6839,
+     "mean": 1.0956,
+     "min": 0.6456,
+     "max": 2.0587,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0014,
+    "ingest_s": 3.865,
+    "reopen_s": 0.0017,
+    "index_bytes": 77560624,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "default",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 10000,
+     "count_after_reopen": 10000,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine"
+      }
+     },
+     "note": "Chroma defaults; only the distance space is pinned to cosine",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122732544,
+     "peak_bytes": 264306688,
+     "peak_delta_bytes": 141574144,
+     "peak_delta_mb": 135.0,
+     "baseline_rss_bytes": 122765312,
+     "rss_bytes": 264306688,
+     "rss_delta_mb": 135.0
+    },
+    "load_avg_end": [
+     2.56,
+     1.56,
+     1.69
+    ],
+    "subprocess_wall_s": 4.9,
+    "recall": {
+     "evidence_recall_at_4_pct": 69.6,
+     "per_doc_recall_at_4_pct": 83.4,
+     "evidence_recall_at_10_pct": 83.6,
+     "per_doc_recall_at_10_pct": 91.2,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "chroma_hnsw_default",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     5.99,
+     3.33,
+     2.39
+    ],
+    "started_at": 1789661327.926153,
+    "wall_s": 38.25,
+    "latency_ms": {
+     "p50": 1.3643,
+     "p95": 1.7192,
+     "p99": 1.834,
+     "mean": 1.3551,
+     "min": 0.8527,
+     "max": 1.944,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0017,
+    "ingest_s": 37.082,
+    "reopen_s": 0.0017,
+    "index_bytes": 512153316,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "default",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 71433,
+     "count_after_reopen": 71433,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine"
+      }
+     },
+     "note": "Chroma defaults; only the distance space is pinned to cosine",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 627048448,
+     "peak_bytes": 929464320,
+     "peak_delta_bytes": 302415872,
+     "peak_delta_mb": 288.4,
+     "baseline_rss_bytes": 627064832,
+     "rss_bytes": 927367168,
+     "rss_delta_mb": 286.4
+    },
+    "load_avg_end": [
+     8.21,
+     4.16,
+     2.73
+    ],
+    "subprocess_wall_s": 38.6,
+    "recall": {
+     "evidence_recall_at_4_pct": 55.0,
+     "per_doc_recall_at_4_pct": 73.4,
+     "evidence_recall_at_10_pct": 64.8,
+     "per_doc_recall_at_10_pct": 79.3,
+     "n_questions": 500
+    }
+   }
+  },
+  "chroma_hnsw_tuned": {
+   "val1190": {
+    "arm": "chroma_hnsw_tuned",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661175.7217689,
+    "wall_s": 0.872,
+    "latency_ms": {
+     "p50": 0.9502,
+     "p95": 1.0266,
+     "p99": 1.0759,
+     "mean": 0.9601,
+     "min": 0.9213,
+     "max": 1.1985,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0012,
+    "ingest_s": 0.36,
+    "reopen_s": 0.0015,
+    "index_bytes": 12626838,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "tuned",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 1190,
+     "count_after_reopen": 1190,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64
+      }
+     },
+     "note": "recall-tuned: ef_construction 512 (default 100), ef_search 512 (default 10..100), M/max_neighbors 64 (default 16)",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48267264,
+     "peak_bytes": 154370048,
+     "peak_delta_bytes": 106102784,
+     "peak_delta_mb": 101.2,
+     "baseline_rss_bytes": 48283648,
+     "rss_bytes": 154370048,
+     "rss_delta_mb": 101.2
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 1.0,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "chroma_hnsw_tuned",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     2.56,
+     1.56,
+     1.69
+    ],
+    "started_at": 1789661199.541733,
+    "wall_s": 9.506,
+    "latency_ms": {
+     "p50": 4.5585,
+     "p95": 5.2407,
+     "p99": 5.67,
+     "mean": 4.5577,
+     "min": 3.178,
+     "max": 6.2001,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0057,
+    "ingest_s": 6.825,
+    "reopen_s": 0.0016,
+    "index_bytes": 81400368,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "tuned",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 10000,
+     "count_after_reopen": 10000,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64
+      }
+     },
+     "note": "recall-tuned: ef_construction 512 (default 100), ef_search 512 (default 10..100), M/max_neighbors 64 (default 16)",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122585088,
+     "peak_bytes": 268599296,
+     "peak_delta_bytes": 146014208,
+     "peak_delta_mb": 139.2,
+     "baseline_rss_bytes": 122617856,
+     "rss_bytes": 268599296,
+     "rss_delta_mb": 139.2
+    },
+    "load_avg_end": [
+     4.19,
+     1.95,
+     1.83
+    ],
+    "subprocess_wall_s": 9.7,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "chroma_hnsw_tuned",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     8.21,
+     4.16,
+     2.73
+    ],
+    "started_at": 1789661366.4857652,
+    "wall_s": 87.14,
+    "latency_ms": {
+     "p50": 8.4527,
+     "p95": 10.8378,
+     "p99": 11.6928,
+     "mean": 8.4318,
+     "min": 3.5163,
+     "max": 12.6019,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0101,
+    "ingest_s": 82.437,
+    "reopen_s": 0.0017,
+    "index_bytes": 539394092,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "tuned",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 71433,
+     "count_after_reopen": 71433,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64,
+       "resize_factor": 1.2,
+       "sync_threshold": 1000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 512,
+       "ef_search": 512,
+       "max_neighbors": 64
+      }
+     },
+     "note": "recall-tuned: ef_construction 512 (default 100), ef_search 512 (default 10..100), M/max_neighbors 64 (default 16)",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 627097600,
+     "peak_bytes": 961626112,
+     "peak_delta_bytes": 334528512,
+     "peak_delta_mb": 319.0,
+     "baseline_rss_bytes": 627113984,
+     "rss_bytes": 959528960,
+     "rss_delta_mb": 317.0
+    },
+    "load_avg_end": [
+     12.33,
+     6.67,
+     3.83
+    ],
+    "subprocess_wall_s": 87.4,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  },
+  "chroma_bruteforce": {
+   "val1190": {
+    "arm": "chroma_bruteforce",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661176.7003222,
+    "wall_s": 0.711,
+    "latency_ms": {
+     "p50": 0.5909,
+     "p95": 0.648,
+     "p99": 0.707,
+     "mean": 0.592,
+     "min": 0.514,
+     "max": 0.7532,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0008,
+    "ingest_s": 0.289,
+    "reopen_s": 0.0015,
+    "index_bytes": 10848420,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 1190,
+     "count_after_reopen": 1190,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 21190
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "batch_size": 11190,
+       "sync_threshold": 21190
+      }
+     },
+     "note": "Chroma 1.5.9's PersistentClient is the Rust core (chromadb.api.rust.RustBindingsAPI) and CreateCollectionConfiguration exposes exactly two index types, 'hnsw' and 'spann' -- both approximate. There is no 'flat'/'exact' option. The Python BruteForceIndex still in the tree (chromadb/segment/impl/vector/brute_force_index.py) belongs to the deprecated SegmentAPI, which a stock 1.5.9 install cannot even instantiate (ModuleNotFoundError: hnswlib). This arm is the closest reachable approximation: batch_size and sync_threshold are pushed past the corpus size so records stay in the unsynced write buffer. See exactness_cross_check for whether that actually bought exactness.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48545792,
+     "peak_bytes": 150929408,
+     "peak_delta_bytes": 102383616,
+     "peak_delta_mb": 97.6,
+     "baseline_rss_bytes": 48562176,
+     "rss_bytes": 150929408,
+     "rss_delta_mb": 97.6
+    },
+    "load_avg_end": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "subprocess_wall_s": 0.8,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "chroma_bruteforce",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     4.19,
+     1.95,
+     1.83
+    ],
+    "started_at": 1789661209.200068,
+    "wall_s": 4.883,
+    "latency_ms": {
+     "p50": 1.0064,
+     "p95": 1.2067,
+     "p99": 1.3212,
+     "mean": 1.0033,
+     "min": 0.5859,
+     "max": 1.4375,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0013,
+    "ingest_s": 3.997,
+    "reopen_s": 0.0017,
+    "index_bytes": 84523172,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 10000,
+     "count_after_reopen": 10000,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 30000
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "batch_size": 20000,
+       "sync_threshold": 30000
+      }
+     },
+     "note": "Chroma 1.5.9's PersistentClient is the Rust core (chromadb.api.rust.RustBindingsAPI) and CreateCollectionConfiguration exposes exactly two index types, 'hnsw' and 'spann' -- both approximate. There is no 'flat'/'exact' option. The Python BruteForceIndex still in the tree (chromadb/segment/impl/vector/brute_force_index.py) belongs to the deprecated SegmentAPI, which a stock 1.5.9 install cannot even instantiate (ModuleNotFoundError: hnswlib). This arm is the closest reachable approximation: batch_size and sync_threshold are pushed past the corpus size so records stay in the unsynced write buffer. See exactness_cross_check for whether that actually bought exactness.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122404864,
+     "peak_bytes": 306069504,
+     "peak_delta_bytes": 183664640,
+     "peak_delta_mb": 175.2,
+     "baseline_rss_bytes": 122437632,
+     "rss_bytes": 306069504,
+     "rss_delta_mb": 175.1
+    },
+    "load_avg_end": [
+     4.65,
+     2.08,
+     1.87
+    ],
+    "subprocess_wall_s": 5.0,
+    "recall": {
+     "evidence_recall_at_4_pct": 69.8,
+     "per_doc_recall_at_4_pct": 83.5,
+     "evidence_recall_at_10_pct": 83.6,
+     "per_doc_recall_at_10_pct": 91.2,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "chroma_bruteforce",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     12.33,
+     6.67,
+     3.83
+    ],
+    "started_at": 1789661453.902004,
+    "wall_s": 45.798,
+    "latency_ms": {
+     "p50": 1.2098,
+     "p95": 1.4976,
+     "p99": 1.5888,
+     "mean": 1.2066,
+     "min": 0.795,
+     "max": 1.6805,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0015,
+    "ingest_s": 44.423,
+    "reopen_s": 0.0017,
+    "index_bytes": 587716772,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
+     "server_impl": "RustBindingsAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 5461,
+     "documents_stored": true,
+     "count_after_ingest": 71433,
+     "count_after_reopen": 71433,
+     "reopen_lost_records": false,
+     "applied_metadata": null,
+     "applied_configuration": {
+      "hnsw": {
+       "space": "cosine",
+       "ef_construction": 100,
+       "ef_search": 100,
+       "max_neighbors": 16,
+       "resize_factor": 1.2,
+       "sync_threshold": 91433
+      },
+      "spann": null,
+      "embedding_function": {
+       "type": "known",
+       "name": "default",
+       "config": {}
+      }
+     },
+     "set_via": "configuration",
+     "requested": {
+      "hnsw": {
+       "space": "cosine",
+       "batch_size": 81433,
+       "sync_threshold": 91433
+      }
+     },
+     "note": "Chroma 1.5.9's PersistentClient is the Rust core (chromadb.api.rust.RustBindingsAPI) and CreateCollectionConfiguration exposes exactly two index types, 'hnsw' and 'spann' -- both approximate. There is no 'flat'/'exact' option. The Python BruteForceIndex still in the tree (chromadb/segment/impl/vector/brute_force_index.py) belongs to the deprecated SegmentAPI, which a stock 1.5.9 install cannot even instantiate (ModuleNotFoundError: hnswlib). This arm is the closest reachable approximation: batch_size and sync_threshold are pushed past the corpus size so records stay in the unsynced write buffer. See exactness_cross_check for whether that actually bought exactness.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 627064832,
+     "peak_bytes": 1553842176,
+     "peak_delta_bytes": 926777344,
+     "peak_delta_mb": 883.8,
+     "baseline_rss_bytes": 627081216,
+     "rss_bytes": 1550843904,
+     "rss_delta_mb": 881.0
+    },
+    "load_avg_end": [
+     6.76,
+     6.06,
+     3.77
+    ],
+    "subprocess_wall_s": 46.1,
+    "recall": {
+     "evidence_recall_at_4_pct": 54.4,
+     "per_doc_recall_at_4_pct": 73.0,
+     "evidence_recall_at_10_pct": 64.2,
+     "per_doc_recall_at_10_pct": 79.0,
+     "n_questions": 500
+    }
+   }
+  },
+  "chroma_legacy_segment_bruteforce": {
+   "val1190": {
+    "arm": "chroma_legacy_segment_bruteforce",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.18,
+     1.26,
+     1.59
+    ],
+    "started_at": 1789661177.517573,
+    "wall_s": 9.19,
+    "latency_ms": {
+     "p50": 32.8393,
+     "p95": 34.2458,
+     "p99": 35.2077,
+     "mean": 32.9779,
+     "min": 30.9591,
+     "max": 37.1043,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0363,
+    "ingest_s": 0.262,
+    "reopen_s": 0.0018,
+    "index_bytes": 13738724,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient + Settings(chroma_api_impl='chromadb.api.segment.SegmentAPI')",
+     "server_impl": "SegmentAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "legacy_bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 41666,
+     "documents_stored": true,
+     "count_after_ingest": 1190,
+     "count_after_reopen": 1190,
+     "reopen_lost_records": false,
+     "applied_metadata": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 11190,
+      "hnsw:sync_threshold": 21190
+     },
+     "applied_configuration": {
+      "hnsw": null,
+      "spann": null,
+      "embedding_function": {
+       "name": "default",
+       "type": "known",
+       "config": {}
+      }
+     },
+     "set_via": "metadata (legacy SegmentAPI)",
+     "requested": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 11190,
+      "hnsw:sync_threshold": 21190
+     },
+     "note": "Chroma's DEPRECATED Python SegmentAPI, whose PersistentLocalHnsw segment really does layer an exact BruteForceIndex in front of HNSW. Reaching it needs chroma_api_impl=chromadb.api.segment.SegmentAPI AND the chroma-hnswlib wheel, which chromadb 1.5.9 does NOT declare as a dependency -- this arm is Chroma given every possible benefit of the doubt, not a stock install.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 48545792,
+     "peak_bytes": 192266240,
+     "peak_delta_bytes": 143720448,
+     "peak_delta_mb": 137.1,
+     "baseline_rss_bytes": 48562176,
+     "rss_bytes": 192266240,
+     "rss_delta_mb": 137.0
+    },
+    "load_avg_end": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "subprocess_wall_s": 9.3,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "chroma_legacy_segment_bruteforce",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     4.65,
+     2.08,
+     1.87
+    ],
+    "started_at": 1789661214.225966,
+    "wall_s": 35.796,
+    "latency_ms": {
+     "p50": 62.8913,
+     "p95": 64.0168,
+     "p99": 64.9641,
+     "mean": 62.9204,
+     "min": 60.5644,
+     "max": 75.7433,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.07,
+    "ingest_s": 2.657,
+    "reopen_s": 0.0019,
+    "index_bytes": 87470820,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient + Settings(chroma_api_impl='chromadb.api.segment.SegmentAPI')",
+     "server_impl": "SegmentAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "legacy_bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 41666,
+     "documents_stored": true,
+     "count_after_ingest": 10000,
+     "count_after_reopen": 10000,
+     "reopen_lost_records": false,
+     "applied_metadata": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 20000,
+      "hnsw:sync_threshold": 30000
+     },
+     "applied_configuration": {
+      "hnsw": null,
+      "spann": null,
+      "embedding_function": {
+       "name": "default",
+       "type": "known",
+       "config": {}
+      }
+     },
+     "set_via": "metadata (legacy SegmentAPI)",
+     "requested": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 20000,
+      "hnsw:sync_threshold": 30000
+     },
+     "note": "Chroma's DEPRECATED Python SegmentAPI, whose PersistentLocalHnsw segment really does layer an exact BruteForceIndex in front of HNSW. Reaching it needs chroma_api_impl=chromadb.api.segment.SegmentAPI AND the chroma-hnswlib wheel, which chromadb 1.5.9 does NOT declare as a dependency -- this arm is Chroma given every possible benefit of the doubt, not a stock install.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122699776,
+     "peak_bytes": 332005376,
+     "peak_delta_bytes": 209305600,
+     "peak_delta_mb": 199.6,
+     "baseline_rss_bytes": 122748928,
+     "rss_bytes": 332005376,
+     "rss_delta_mb": 199.6
+    },
+    "load_avg_end": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "subprocess_wall_s": 35.9,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "chroma_legacy_segment_bruteforce",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     6.76,
+     6.06,
+     3.77
+    ],
+    "started_at": 1789661499.9716978,
+    "wall_s": 161.546,
+    "latency_ms": {
+     "p50": 267.823,
+     "p95": 272.4945,
+     "p99": 274.1736,
+     "mean": 267.9131,
+     "min": 260.3148,
+     "max": 278.8738,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.2733,
+    "ingest_s": 21.568,
+    "reopen_s": 0.0019,
+    "index_bytes": 591360740,
+    "index_stores_text": true,
+    "config": {
+     "client": "chromadb.PersistentClient + Settings(chroma_api_impl='chromadb.api.segment.SegmentAPI')",
+     "server_impl": "SegmentAPI",
+     "chromadb_version": "1.5.9",
+     "variant": "legacy_bruteforce",
+     "metric": "cosine over pre-L2-normalised float32 (Chroma is given the same normalised vectors as every other arm)",
+     "ingest_batch": 1000,
+     "max_batch_size": 41666,
+     "documents_stored": true,
+     "count_after_ingest": 71433,
+     "count_after_reopen": 71433,
+     "reopen_lost_records": false,
+     "applied_metadata": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 81433,
+      "hnsw:sync_threshold": 91433
+     },
+     "applied_configuration": {
+      "hnsw": null,
+      "spann": null,
+      "embedding_function": {
+       "name": "default",
+       "type": "known",
+       "config": {}
+      }
+     },
+     "set_via": "metadata (legacy SegmentAPI)",
+     "requested": {
+      "hnsw:space": "cosine",
+      "hnsw:batch_size": 81433,
+      "hnsw:sync_threshold": 91433
+     },
+     "note": "Chroma's DEPRECATED Python SegmentAPI, whose PersistentLocalHnsw segment really does layer an exact BruteForceIndex in front of HNSW. Reaching it needs chroma_api_impl=chromadb.api.segment.SegmentAPI AND the chroma-hnswlib wheel, which chromadb 1.5.9 does NOT declare as a dependency -- this arm is Chroma given every possible benefit of the doubt, not a stock install.",
+     "attempts_failed": []
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 626950144,
+     "peak_bytes": 1326219264,
+     "peak_delta_bytes": 699269120,
+     "peak_delta_mb": 666.9,
+     "baseline_rss_bytes": 626966528,
+     "rss_bytes": 1325170688,
+     "rss_delta_mb": 665.9
+    },
+    "load_avg_end": [
+     1.92,
+     4.23,
+     3.41
+    ],
+    "subprocess_wall_s": 161.8,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  },
+  "nanomem_v3_exact_fp32": {
+   "val1190": {
+    "arm": "nanomem_v3_exact_fp32",
+    "corpus": "val1190",
+    "ok": true,
+    "load_avg_start": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "started_at": 1789661186.837663,
+    "wall_s": 0.08,
+    "latency_ms": {
+     "p50": 0.0863,
+     "p95": 0.0949,
+     "p99": 0.1423,
+     "mean": 0.0874,
+     "min": 0.0683,
+     "max": 0.2036,
+     "n_timed_queries": 240,
+     "n_unique_queries": 120,
+     "passes": 2
+    },
+    "first_query_after_reopen_s": 0.0002,
+    "ingest_s": 0.025,
+    "reopen_s": 0.0056,
+    "index_bytes": 4456195,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 4494.2,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 3655680,
+     "arena_cache": "map",
+     "arena_cache_bytes": 122880,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__val1190/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 3655680,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 1190,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 3655680,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 47600,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 24,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__val1190/vault.dat",
+     "file_size_mb": 4.25,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 102192,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 59680,
+     "process_rss_kb": 59680,
+     "read_only": false,
+     "record_bytes": 796577,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 3.486,
+     "resident_arena_used_mb": 3.486,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 1190,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "e262955e5fd220e74ba77fede48ca54e",
+     "vector_dtype": "float32",
+     "vector_dtype_on_disk": "float32",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float32 on disk AND in the resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 49037312,
+     "peak_bytes": 61112320,
+     "peak_delta_bytes": 12075008,
+     "peak_delta_mb": 11.5,
+     "baseline_rss_bytes": 49037312,
+     "rss_bytes": 61112320,
+     "rss_delta_mb": 11.5
+    },
+    "load_avg_end": [
+     1.7,
+     1.36,
+     1.62
+    ],
+    "subprocess_wall_s": 0.2,
+    "recall": {
+     "evidence_recall_at_4_pct": 68.33,
+     "per_doc_recall_at_4_pct": 83.75,
+     "evidence_recall_at_10_pct": 93.33,
+     "per_doc_recall_at_10_pct": 96.25,
+     "n_questions": 120
+    }
+   },
+   "n10000": {
+    "arm": "nanomem_v3_exact_fp32",
+    "corpus": "n10000",
+    "ok": true,
+    "load_avg_start": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "started_at": 1789661250.183902,
+    "wall_s": 0.485,
+    "latency_ms": {
+     "p50": 0.4286,
+     "p95": 0.4867,
+     "p99": 0.5793,
+     "mean": 0.4232,
+     "min": 0.2305,
+     "max": 0.9245,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0012,
+    "ingest_s": 0.196,
+    "reopen_s": 0.0416,
+    "index_bytes": 37338441,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 37650.3,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 30720000,
+     "arena_cache": "map",
+     "arena_cache_bytes": 671744,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n10000/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 30720000,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 10000,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 30720000,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 400000,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 200,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n10000/vault.dat",
+     "file_size_mb": 35.609,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 847616,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 170304,
+     "process_rss_kb": 170304,
+     "read_only": false,
+     "record_bytes": 6586287,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 29.297,
+     "resident_arena_used_mb": 29.297,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 10000,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "2ecb643fc1f4e4f9e668191e64077002",
+     "vector_dtype": "float32",
+     "vector_dtype_on_disk": "float32",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float32 on disk AND in the resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 122830848,
+     "peak_bytes": 174391296,
+     "peak_delta_bytes": 51560448,
+     "peak_delta_mb": 49.2,
+     "baseline_rss_bytes": 122863616,
+     "rss_bytes": 174391296,
+     "rss_delta_mb": 49.1
+    },
+    "load_avg_end": [
+     5.11,
+     2.49,
+     2.03
+    ],
+    "subprocess_wall_s": 0.6,
+    "recall": {
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500
+    }
+   },
+   "n71433": {
+    "arm": "nanomem_v3_exact_fp32",
+    "corpus": "n71433",
+    "ok": true,
+    "load_avg_start": [
+     1.92,
+     4.23,
+     3.41
+    ],
+    "started_at": 1789661661.816931,
+    "wall_s": 2.618,
+    "latency_ms": {
+     "p50": 1.859,
+     "p95": 2.127,
+     "p99": 2.1946,
+     "mean": 1.8752,
+     "min": 1.5435,
+     "max": 2.2109,
+     "n_timed_queries": 500,
+     "n_unique_queries": 500,
+     "passes": 1
+    },
+    "first_query_after_reopen_s": 0.0027,
+    "ingest_s": 1.318,
+    "reopen_s": 0.2861,
+    "index_bytes": 265607496,
+    "index_stores_text": true,
+    "engine_stats": {
+     "active_heap_ram_kb": 268291.8,
+     "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure. A CACHED OPEN (`arena_source == 'cache'`) holds almost none of this in the heap at all: the vectors, the columns, the record sections and the id table are clean, evictable, file-backed pages of `<vault>.arena`, counted in 'mapped_bytes' instead. That is why this key can read ~0 on a 71,433-document vault -- the bytes did not vanish, they moved to a page the OS may drop.",
+     "arena_bytes": 219442176,
+     "arena_cache": "map",
+     "arena_cache_bytes": 4595712,
+     "arena_cache_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n71433/vault.dat.arena",
+     "arena_cache_records": "vault",
+     "arena_cache_vectors": "offsets_ram",
+     "arena_dtype": "float32",
+     "arena_from_cache": false,
+     "arena_growth_copies": 0,
+     "arena_reservation_bytes": 219442176,
+     "arena_reservation_is_mapped": true,
+     "arena_reserved_rows": 71433,
+     "arena_residency": "float32",
+     "arena_residency_exact": true,
+     "arena_source": "scan",
+     "arena_used_bytes": 219442176,
+     "arena_vault_blocks_checked": "all",
+     "arena_vectors_mapped": false,
+     "beam_cells": 0,
+     "beam_fraction": 0.25,
+     "block_capacity": 50,
+     "cipher": "none (plaintext)",
+     "column_bytes": 2857320,
+     "column_mapped_bytes": 0,
+     "compacted_blocks": 1429,
+     "durable": "fsync",
+     "embed_dim": 768,
+     "encrypted_at_rest": false,
+     "engine_version": "3.4.1",
+     "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n71433/vault.dat",
+     "file_size_mb": 253.303,
+     "format_version": 3,
+     "group_cos_delta": 0.06,
+     "group_hoist": 0.25,
+     "id_table_mapped_bytes": 0,
+     "index_bytes_estimated": 6494192,
+     "intent_boost": 0.25,
+     "kdf": null,
+     "landmark_bytes": 0,
+     "landmarks_per_block": 0,
+     "mapped_bytes": 0,
+     "max_boost": 0.7,
+     "memtable_bytes": 0,
+     "memtable_pending": 0,
+     "n_exhaustive": 50000,
+     "process_peak_rss_kb": 912592,
+     "process_rss_kb": 912592,
+     "read_only": false,
+     "record_bytes": 45937108,
+     "record_mapped_bytes": 0,
+     "resident_arena_mapped_mb": 0.0,
+     "resident_arena_mb": 209.276,
+     "resident_arena_used_mb": 209.276,
+     "revision_lead": 0.2,
+     "router": "off",
+     "routing_mode": "exhaustive",
+     "score_scale": "cosine",
+     "screen": "off",
+     "screen_built": false,
+     "screen_dims": 256,
+     "screen_exact": true,
+     "screen_min_rows": 20000,
+     "screen_resident_mb": 0.0,
+     "total_documents": 71433,
+     "tracemalloc_current_kb": null,
+     "truncated_tail_bytes": 0,
+     "vault_uuid": "e5691494ccc4605a6ad26a60be47786f",
+     "vector_dtype": "float32",
+     "vector_dtype_on_disk": "float32",
+     "window_delta": 0.16
+    },
+    "extra": {
+     "search_mode_at_query_time": "exhaustive"
+    },
+    "config": {
+     "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
+     "nanomem_version": "0.7.9",
+     "engine_version": "3.4.1",
+     "router": "off",
+     "n_exhaustive": 50000,
+     "vector_dtype": "float32 on disk AND in the resident arena",
+     "metric": "exact cosine over pre-L2-normalised vectors (engine re-normalises internally; a no-op here)",
+     "source": "wiki (NOT in nanomem.entities.PERSONAL_SOURCES), so the entity/temporal boost layer is inert -- verified by max_boost in engine_stats",
+     "password": null,
+     "n_exhaustive_note": "shipped default"
+    },
+    "memory": {
+     "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
+     "baseline_peak_bytes": 626835456,
+     "peak_bytes": 934494208,
+     "peak_delta_bytes": 307658752,
+     "peak_delta_mb": 293.4,
+     "baseline_rss_bytes": 626851840,
+     "rss_bytes": 934494208,
+     "rss_delta_mb": 293.4
+    },
+    "load_avg_end": [
+     1.92,
+     4.23,
+     3.41
+    ],
+    "subprocess_wall_s": 2.8,
+    "recall": {
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500
+    }
+   }
+  }
+ },
+ "exactness_cross_check": {
+  "val1190": {
+   "reference": "faiss_flat_ip",
+   "arms_that_claim_exactness": [
+    "nanomem_v3_exact",
+    "nanomem_v3_exact_fp32",
+    "sqlitevec_bruteforce",
+    "chroma_bruteforce",
+    "chroma_legacy_segment_bruteforce"
+   ],
+   "per_arm": {
+    "nanomem_v3_exact": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "nanomem_v3_router_auto": {
+     "top10_set_identical_pct": 80.83,
+     "top4_set_identical_pct": 96.67,
+     "top10_mean_overlap_pct": 95.52
+    },
+    "sqlitevec_bruteforce": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_hnsw_default": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_hnsw_tuned": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_bruteforce": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_legacy_segment_bruteforce": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "nanomem_v3_exact_fp32": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    }
+   },
+   "tie_analysis": {
+    "fp16_cosine_perturbation_max_over_25_sampled_queries": 3.153e-05,
+    "how": "for each query whose top-10 set differs from faiss_flat_ip, gap = min(fp32 cosine of the docs FAISS kept and the arm lost) - max(fp32 cosine of the docs the arm took instead). A positive gap is real score the arm gave up; a gap below the fp16 perturbation above is a quantisation tie.",
+    "per_arm": {
+     "nanomem_v3_exact": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "nanomem_v3_router_auto": {
+      "queries_disagreeing_with_faiss": 23,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.09888,
+      "median_cosine_given_up": 0.009453,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "sqlitevec_bruteforce": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_hnsw_default": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_hnsw_tuned": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_bruteforce": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_legacy_segment_bruteforce": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "nanomem_v3_exact_fp32": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 120,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     }
+    }
+   }
+  },
+  "n10000": {
+   "reference": "faiss_flat_ip",
+   "arms_that_claim_exactness": [
+    "nanomem_v3_exact",
+    "nanomem_v3_exact_fp32",
+    "sqlitevec_bruteforce",
+    "chroma_bruteforce",
+    "chroma_legacy_segment_bruteforce"
+   ],
+   "per_arm": {
+    "nanomem_v3_exact": {
+     "top10_set_identical_pct": 99.8,
+     "top4_set_identical_pct": 99.6,
+     "top10_mean_overlap_pct": 99.96
+    },
+    "nanomem_v3_router_auto": {
+     "top10_set_identical_pct": 94.0,
+     "top4_set_identical_pct": 96.8,
+     "top10_mean_overlap_pct": 98.76
+    },
+    "sqlitevec_bruteforce": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_hnsw_default": {
+     "top10_set_identical_pct": 95.0,
+     "top4_set_identical_pct": 97.8,
+     "top10_mean_overlap_pct": 98.88
+    },
+    "chroma_hnsw_tuned": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "chroma_bruteforce": {
+     "top10_set_identical_pct": 95.4,
+     "top4_set_identical_pct": 98.6,
+     "top10_mean_overlap_pct": 98.9
+    },
+    "chroma_legacy_segment_bruteforce": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    },
+    "nanomem_v3_exact_fp32": {
+     "top10_set_identical_pct": 100.0,
+     "top4_set_identical_pct": 100.0,
+     "top10_mean_overlap_pct": 100.0
+    }
+   },
+   "tie_analysis": {
+    "fp16_cosine_perturbation_max_over_25_sampled_queries": 3.511e-05,
+    "how": "for each query whose top-10 set differs from faiss_flat_ip, gap = min(fp32 cosine of the docs FAISS kept and the arm lost) - max(fp32 cosine of the docs the arm took instead). A positive gap is real score the arm gave up; a gap below the fp16 perturbation above is a quantisation tie.",
+    "per_arm": {
+     "nanomem_v3_exact": {
+      "queries_disagreeing_with_faiss": 1,
+      "queries_total": 500,
+      "max_cosine_given_up": 4.172e-06,
+      "median_cosine_given_up": 4.172e-06,
+      "all_gaps_within_fp16_perturbation": true
+     },
+     "nanomem_v3_router_auto": {
+      "queries_disagreeing_with_faiss": 30,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1009,
+      "median_cosine_given_up": 0.01122,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "sqlitevec_bruteforce": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_hnsw_default": {
+      "queries_disagreeing_with_faiss": 25,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1064,
+      "median_cosine_given_up": 0.01046,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_hnsw_tuned": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_bruteforce": {
+      "queries_disagreeing_with_faiss": 23,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1064,
+      "median_cosine_given_up": 0.007184,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_legacy_segment_bruteforce": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "nanomem_v3_exact_fp32": {
+      "queries_disagreeing_with_faiss": 0,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": false
+     }
+    }
+   }
+  },
+  "n71433": {
+   "reference": "faiss_flat_ip",
+   "arms_that_claim_exactness": [
+    "nanomem_v3_exact",
+    "nanomem_v3_exact_fp32",
+    "sqlitevec_bruteforce",
+    "chroma_bruteforce",
+    "chroma_legacy_segment_bruteforce"
+   ],
+   "per_arm": {
+    "nanomem_v3_exact": {
+     "top10_set_identical_pct": 99.6,
+     "top4_set_identical_pct": 98.8,
+     "top10_mean_overlap_pct": 99.93
+    },
+    "nanomem_v3_router_auto": {
+     "top10_set_identical_pct": 97.2,
+     "top4_set_identical_pct": 97.2,
+     "top10_mean_overlap_pct": 99.46
+    },
+    "sqlitevec_bruteforce": {
+     "top10_set_identical_pct": 99.8,
+     "top4_set_identical_pct": 99.4,
+     "top10_mean_overlap_pct": 99.96
+    },
+    "chroma_hnsw_default": {
+     "top10_set_identical_pct": 76.4,
+     "top4_set_identical_pct": 86.8,
+     "top10_mean_overlap_pct": 93.84
+    },
+    "chroma_hnsw_tuned": {
+     "top10_set_identical_pct": 99.8,
+     "top4_set_identical_pct": 99.4,
+     "top10_mean_overlap_pct": 99.96
+    },
+    "chroma_bruteforce": {
+     "top10_set_identical_pct": 76.6,
+     "top4_set_identical_pct": 86.0,
+     "top10_mean_overlap_pct": 93.6
+    },
+    "chroma_legacy_segment_bruteforce": {
+     "top10_set_identical_pct": 99.8,
+     "top4_set_identical_pct": 99.8,
+     "top10_mean_overlap_pct": 99.96
+    },
+    "nanomem_v3_exact_fp32": {
+     "top10_set_identical_pct": 99.8,
+     "top4_set_identical_pct": 99.4,
+     "top10_mean_overlap_pct": 99.96
+    }
+   },
+   "tie_analysis": {
+    "fp16_cosine_perturbation_max_over_25_sampled_queries": 3.517e-05,
+    "how": "for each query whose top-10 set differs from faiss_flat_ip, gap = min(fp32 cosine of the docs FAISS kept and the arm lost) - max(fp32 cosine of the docs the arm took instead). A positive gap is real score the arm gave up; a gap below the fp16 perturbation above is a quantisation tie.",
+    "per_arm": {
+     "nanomem_v3_exact": {
+      "queries_disagreeing_with_faiss": 2,
+      "queries_total": 500,
+      "max_cosine_given_up": 1.234e-05,
+      "median_cosine_given_up": 6.169e-06,
+      "all_gaps_within_fp16_perturbation": true
+     },
+     "nanomem_v3_router_auto": {
+      "queries_disagreeing_with_faiss": 14,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1147,
+      "median_cosine_given_up": 0.01692,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "sqlitevec_bruteforce": {
+      "queries_disagreeing_with_faiss": 1,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": true
+     },
+     "chroma_hnsw_default": {
+      "queries_disagreeing_with_faiss": 118,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1565,
+      "median_cosine_given_up": 0.007305,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_hnsw_tuned": {
+      "queries_disagreeing_with_faiss": 1,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": true
+     },
+     "chroma_bruteforce": {
+      "queries_disagreeing_with_faiss": 117,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.1565,
+      "median_cosine_given_up": 0.007091,
+      "all_gaps_within_fp16_perturbation": false
+     },
+     "chroma_legacy_segment_bruteforce": {
+      "queries_disagreeing_with_faiss": 1,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": true
+     },
+     "nanomem_v3_exact_fp32": {
+      "queries_disagreeing_with_faiss": 1,
+      "queries_total": 500,
+      "max_cosine_given_up": 0.0,
+      "median_cosine_given_up": 0.0,
+      "all_gaps_within_fp16_perturbation": true
+     }
+    }
+   }
+  }
+ },
+ "winners": {
+  "val1190": {
+   "evidence_recall_at_4_pct": {
+    "winner": "faiss_flat_ip",
+    "value": 68.33,
+    "all": {
+     "faiss_flat_ip": 68.33,
+     "nanomem_v3_exact": 68.33,
+     "nanomem_v3_router_auto": 68.33,
+     "sqlitevec_bruteforce": 68.33,
+     "chroma_hnsw_default": 68.33,
+     "chroma_hnsw_tuned": 68.33,
+     "chroma_bruteforce": 68.33,
+     "chroma_legacy_segment_bruteforce": 68.33
+    }
+   },
+   "per_doc_recall_at_10_pct": {
+    "winner": "faiss_flat_ip",
+    "value": 96.25,
+    "all": {
+     "faiss_flat_ip": 96.25,
+     "nanomem_v3_exact": 96.25,
+     "nanomem_v3_router_auto": 95.83,
+     "sqlitevec_bruteforce": 96.25,
+     "chroma_hnsw_default": 96.25,
+     "chroma_hnsw_tuned": 96.25,
+     "chroma_bruteforce": 96.25,
+     "chroma_legacy_segment_bruteforce": 96.25
+    }
+   },
+   "p50_query_ms": {
+    "winner": "faiss_flat_ip",
+    "value": 0.0539,
+    "all": {
+     "faiss_flat_ip": 0.0539,
+     "nanomem_v3_exact": 0.0842,
+     "nanomem_v3_router_auto": 0.1357,
+     "sqlitevec_bruteforce": 1.0129,
+     "chroma_hnsw_default": 0.6263,
+     "chroma_hnsw_tuned": 0.9502,
+     "chroma_bruteforce": 0.5909,
+     "chroma_legacy_segment_bruteforce": 32.8393
+    }
+   },
+   "p95_query_ms": {
+    "winner": "faiss_flat_ip",
+    "value": 0.0554,
+    "all": {
+     "faiss_flat_ip": 0.0554,
+     "nanomem_v3_exact": 0.092,
+     "nanomem_v3_router_auto": 0.1446,
+     "sqlitevec_bruteforce": 1.1559,
+     "chroma_hnsw_default": 0.7365,
+     "chroma_hnsw_tuned": 1.0266,
+     "chroma_bruteforce": 0.648,
+     "chroma_legacy_segment_bruteforce": 34.2458
+    }
+   },
+   "ingest_s": {
+    "winner": "faiss_flat_ip",
+    "value": 0.002,
+    "all": {
+     "faiss_flat_ip": 0.002,
+     "nanomem_v3_exact": 0.023,
+     "nanomem_v3_router_auto": 0.069,
+     "sqlitevec_bruteforce": 0.031,
+     "chroma_hnsw_default": 0.297,
+     "chroma_hnsw_tuned": 0.36,
+     "chroma_bruteforce": 0.289,
+     "chroma_legacy_segment_bruteforce": 0.262
+    }
+   },
+   "index_bytes": {
+    "winner": "nanomem_v3_router_auto",
+    "value": 2628337,
+    "all": {
+     "faiss_flat_ip": 3655725,
+     "nanomem_v3_exact": 2628355,
+     "nanomem_v3_router_auto": 2628337,
+     "sqlitevec_bruteforce": 7221248,
+     "chroma_hnsw_default": 12241742,
+     "chroma_hnsw_tuned": 12626838,
+     "chroma_bruteforce": 10848420,
+     "chroma_legacy_segment_bruteforce": 13738724
+    }
+   },
+   "peak_rss_delta_mb": {
+    "winner": "nanomem_v3_exact",
+    "value": 12.3,
+    "all": {
+     "faiss_flat_ip": 22.2,
+     "nanomem_v3_exact": 12.3,
+     "nanomem_v3_router_auto": 34.0,
+     "sqlitevec_bruteforce": 15.8,
+     "chroma_hnsw_default": 96.6,
+     "chroma_hnsw_tuned": 101.2,
+     "chroma_bruteforce": 97.6,
+     "chroma_legacy_segment_bruteforce": 137.1
+    }
+   },
+   "reopen_s": {
+    "winner": "faiss_flat_ip",
+    "value": 0.0007,
+    "all": {
+     "faiss_flat_ip": 0.0007,
+     "nanomem_v3_exact": 0.0046,
+     "nanomem_v3_router_auto": 0.0227,
+     "sqlitevec_bruteforce": 0.0011,
+     "chroma_hnsw_default": 0.0015,
+     "chroma_hnsw_tuned": 0.0015,
+     "chroma_bruteforce": 0.0015,
+     "chroma_legacy_segment_bruteforce": 0.0018
+    }
+   }
+  },
+  "n10000": {
+   "evidence_recall_at_4_pct": {
+    "winner": "faiss_flat_ip",
+    "value": 70.4,
+    "all": {
+     "faiss_flat_ip": 70.4,
+     "nanomem_v3_exact": 70.4,
+     "nanomem_v3_router_auto": 69.6,
+     "sqlitevec_bruteforce": 70.4,
+     "chroma_hnsw_default": 69.6,
+     "chroma_hnsw_tuned": 70.4,
+     "chroma_bruteforce": 69.8,
+     "chroma_legacy_segment_bruteforce": 70.4
+    }
+   },
+   "per_doc_recall_at_10_pct": {
+    "winner": "faiss_flat_ip",
+    "value": 92.0,
+    "all": {
+     "faiss_flat_ip": 92.0,
+     "nanomem_v3_exact": 92.0,
+     "nanomem_v3_router_auto": 91.5,
+     "sqlitevec_bruteforce": 92.0,
+     "chroma_hnsw_default": 91.2,
+     "chroma_hnsw_tuned": 92.0,
+     "chroma_bruteforce": 91.2,
+     "chroma_legacy_segment_bruteforce": 92.0
+    }
+   },
+   "p50_query_ms": {
+    "winner": "nanomem_v3_exact",
+    "value": 0.4257,
+    "all": {
+     "faiss_flat_ip": 0.4265,
+     "nanomem_v3_exact": 0.4257,
+     "nanomem_v3_router_auto": 0.5523,
+     "sqlitevec_bruteforce": 7.8989,
+     "chroma_hnsw_default": 1.0822,
+     "chroma_hnsw_tuned": 4.5585,
+     "chroma_bruteforce": 1.0064,
+     "chroma_legacy_segment_bruteforce": 62.8913
+    }
+   },
+   "p95_query_ms": {
+    "winner": "faiss_flat_ip",
+    "value": 0.4657,
+    "all": {
+     "faiss_flat_ip": 0.4657,
+     "nanomem_v3_exact": 0.4858,
+     "nanomem_v3_router_auto": 0.6088,
+     "sqlitevec_bruteforce": 8.1371,
+     "chroma_hnsw_default": 1.376,
+     "chroma_hnsw_tuned": 5.2407,
+     "chroma_bruteforce": 1.2067,
+     "chroma_legacy_segment_bruteforce": 64.0168
+    }
+   },
+   "ingest_s": {
+    "winner": "faiss_flat_ip",
+    "value": 0.006,
+    "all": {
+     "faiss_flat_ip": 0.006,
+     "nanomem_v3_exact": 0.186,
+     "nanomem_v3_router_auto": 0.825,
+     "sqlitevec_bruteforce": 0.211,
+     "chroma_hnsw_default": 3.865,
+     "chroma_hnsw_tuned": 6.825,
+     "chroma_bruteforce": 3.997,
+     "chroma_legacy_segment_bruteforce": 2.657
+    }
+   },
+   "index_bytes": {
+    "winner": "nanomem_v3_exact",
+    "value": 21978441,
+    "all": {
+     "faiss_flat_ip": 30720045,
+     "nanomem_v3_exact": 21978441,
+     "nanomem_v3_router_auto": 21978535,
+     "sqlitevec_bruteforce": 38744064,
+     "chroma_hnsw_default": 77560624,
+     "chroma_hnsw_tuned": 81400368,
+     "chroma_bruteforce": 84523172,
+     "chroma_legacy_segment_bruteforce": 87470820
+    }
+   },
+   "peak_rss_delta_mb": {
+    "winner": "nanomem_v3_exact",
+    "value": 48.5,
+    "all": {
+     "faiss_flat_ip": 49.6,
+     "nanomem_v3_exact": 48.5,
+     "nanomem_v3_router_auto": 245.5,
+     "sqlitevec_bruteforce": 53.7,
+     "chroma_hnsw_default": 135.0,
+     "chroma_hnsw_tuned": 139.2,
+     "chroma_bruteforce": 175.2,
+     "chroma_legacy_segment_bruteforce": 199.6
+    }
+   },
+   "reopen_s": {
+    "winner": "sqlitevec_bruteforce",
+    "value": 0.0011,
+    "all": {
+     "faiss_flat_ip": 0.0022,
+     "nanomem_v3_exact": 0.0348,
+     "nanomem_v3_router_auto": 0.2822,
+     "sqlitevec_bruteforce": 0.0011,
+     "chroma_hnsw_default": 0.0017,
+     "chroma_hnsw_tuned": 0.0016,
+     "chroma_bruteforce": 0.0017,
+     "chroma_legacy_segment_bruteforce": 0.0019
+    }
+   }
+  },
+  "n71433": {
+   "evidence_recall_at_4_pct": {
+    "winner": "nanomem_v3_router_auto",
+    "value": 60.8,
+    "all": {
+     "faiss_flat_ip": 60.6,
+     "nanomem_v3_exact": 60.6,
+     "nanomem_v3_router_auto": 60.8,
+     "sqlitevec_bruteforce": 60.6,
+     "chroma_hnsw_default": 55.0,
+     "chroma_hnsw_tuned": 60.6,
+     "chroma_bruteforce": 54.4,
+     "chroma_legacy_segment_bruteforce": 60.6
+    }
+   },
+   "per_doc_recall_at_10_pct": {
+    "winner": "faiss_flat_ip",
+    "value": 84.6,
+    "all": {
+     "faiss_flat_ip": 84.6,
+     "nanomem_v3_exact": 84.6,
+     "nanomem_v3_router_auto": 84.5,
+     "sqlitevec_bruteforce": 84.6,
+     "chroma_hnsw_default": 79.3,
+     "chroma_hnsw_tuned": 84.6,
+     "chroma_bruteforce": 79.0,
+     "chroma_legacy_segment_bruteforce": 84.6
+    }
+   },
+   "p50_query_ms": {
+    "winner": "faiss_flat_ip",
+    "value": 1.1665,
+    "all": {
+     "faiss_flat_ip": 1.1665,
+     "nanomem_v3_exact": 2.135,
+     "nanomem_v3_router_auto": 3.8243,
+     "sqlitevec_bruteforce": 56.1655,
+     "chroma_hnsw_default": 1.3643,
+     "chroma_hnsw_tuned": 8.4527,
+     "chroma_bruteforce": 1.2098,
+     "chroma_legacy_segment_bruteforce": 267.823
+    }
+   },
+   "p95_query_ms": {
+    "winner": "chroma_bruteforce",
+    "value": 1.4976,
+    "all": {
+     "faiss_flat_ip": 1.6259,
+     "nanomem_v3_exact": 2.7536,
+     "nanomem_v3_router_auto": 6.7302,
+     "sqlitevec_bruteforce": 56.9613,
+     "chroma_hnsw_default": 1.7192,
+     "chroma_hnsw_tuned": 10.8378,
+     "chroma_bruteforce": 1.4976,
+     "chroma_legacy_segment_bruteforce": 272.4945
+    }
+   },
+   "ingest_s": {
+    "winner": "faiss_flat_ip",
+    "value": 0.062,
+    "all": {
+     "faiss_flat_ip": 0.062,
+     "nanomem_v3_exact": 1.353,
+     "nanomem_v3_router_auto": 16.094,
+     "sqlitevec_bruteforce": 1.496,
+     "chroma_hnsw_default": 37.082,
+     "chroma_hnsw_tuned": 82.437,
+     "chroma_bruteforce": 44.423,
+     "chroma_legacy_segment_bruteforce": 21.568
+    }
+   },
+   "index_bytes": {
+    "winner": "nanomem_v3_router_auto",
+    "value": 155885436,
+    "all": {
+     "faiss_flat_ip": 219442221,
+     "nanomem_v3_exact": 155886408,
+     "nanomem_v3_router_auto": 155885436,
+     "sqlitevec_bruteforce": 270577664,
+     "chroma_hnsw_default": 512153316,
+     "chroma_hnsw_tuned": 539394092,
+     "chroma_bruteforce": 587716772,
+     "chroma_legacy_segment_bruteforce": 591360740
+    }
+   },
+   "peak_rss_delta_mb": {
+    "winner": "faiss_flat_ip",
+    "value": 229.5,
+    "all": {
+     "faiss_flat_ip": 229.5,
+     "nanomem_v3_exact": 325.3,
+     "nanomem_v3_router_auto": 1785.4,
+     "sqlitevec_bruteforce": 336.1,
+     "chroma_hnsw_default": 288.4,
+     "chroma_hnsw_tuned": 319.0,
+     "chroma_bruteforce": 883.8,
+     "chroma_legacy_segment_bruteforce": 666.9
+    }
+   },
+   "reopen_s": {
+    "winner": "sqlitevec_bruteforce",
+    "value": 0.0014,
+    "all": {
+     "faiss_flat_ip": 0.0149,
+     "nanomem_v3_exact": 0.2605,
+     "nanomem_v3_router_auto": 8.5593,
+     "sqlitevec_bruteforce": 0.0014,
+     "chroma_hnsw_default": 0.0017,
+     "chroma_hnsw_tuned": 0.0017,
+     "chroma_bruteforce": 0.0017,
+     "chroma_legacy_segment_bruteforce": 0.0019
+    }
+   }
+  }
+ },
+ "failures": []
+}

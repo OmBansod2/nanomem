@@ -1,0 +1,3957 @@
+{
+ "title": "nanomem v3 -- ingest-path peak RSS before and after the reserved arena",
+ "generated_at": "2026-09-16T20:54:20+0530",
+ "script": "<repo>/evidence/bench_ingest_ram.py",
+ "machine": {
+  "platform": "macOS-26.5-arm64-arm-64bit",
+  "machine": "arm64",
+  "processor": "arm",
+  "logical_cpus": 12,
+  "load_avg_at_end": [
+   2.62,
+   4.83,
+   5.56
+  ]
+ },
+ "versions": {
+  "python": "3.12.12",
+  "numpy": "2.5.3",
+  "baseline_commit": "6aa6923",
+  "baseline_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+  "new_dir": "<repo>/nanomem_standalone"
+ },
+ "protocol": {
+  "cache": "/tmp/nanomem_bench_cache",
+  "cache_provenance": "built by scratch/refound/bench_competitors.py --prep; the SAME docs.npy / queries.npy / gold.json / rng(0) insertion order used by competitors_standard_results.json",
+  "top_k_queried": 10,
+  "phases": "build = ingest, flush, close, reopen, query (the shape bench_competitors.py charges as peak_rss_delta_mb). serve = a fresh process opening the file the build left behind.",
+  "isolation": "one subprocess per (arm, corpus, phase) so ru_maxrss is clean",
+  "recall": "computed in the driver from each arm's returned id matrix; an arm cannot score itself",
+  "exactness": "top-10 compared row by row against committed_baseline_loop, the engine exactly as committed at git 6aa6923",
+  "contention": "the machine was NOT quiesced; each arm records the load average at its start and end"
+ },
+ "arms_described": {
+  "committed_baseline_loop": {
+   "package": "baseline",
+   "feed": "add_fact",
+   "hint": null,
+   "what": "The committed engine, unchanged: add_fact() in a loop, nothing told to it. This is the arm competitors_standard_results.json calls nanomem_v3_exact, re-measured here on today's machine."
+  },
+  "committed_baseline_hint": {
+   "package": "baseline",
+   "feed": "add_fact",
+   "hint": "reserve_rows",
+   "what": "The committed engine plus the escape hatch that already existed and that nothing in the library called: VaultEngine.reserve_rows(n) before the loop."
+  },
+  "reserved_view_loop": {
+   "package": "new",
+   "feed": "add_fact",
+   "hint": null,
+   "what": "The reserved-view arena: add_fact() in a loop, still nothing told to the engine. This is the fix that needs no caller cooperation."
+  },
+  "reserved_view_hint": {
+   "package": "new",
+   "feed": "add_fact",
+   "hint": "reserve_rows",
+   "what": "The reserved-view arena plus the exact row count."
+  },
+  "vault_add_batch": {
+   "package": "new",
+   "feed": "add_batch",
+   "hint": "wired",
+   "what": "Through the public Vault.add_batch, which now hints the batch length for itself -- the wiring, end to end, with no benchmark-only call."
+  }
+ },
+ "corpora": {
+  "n10000": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 10000,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 5443456
+  },
+  "n71433": {
+   "corpus_file": "<repo>/evidence/hotpot_train_8k.json",
+   "embeddings_file": "<repo>/evidence/hotpot_train_8k_embeds.npz",
+   "gold_rule": "G[:, :2] gold paragraph indices shipped in hotpot_train_8k_embeds.npz; questions kept in file order, restricted to those whose gold indices are < n_docs, first 500",
+   "n_docs": 71433,
+   "n_queries": 500,
+   "dim": 768,
+   "doc_norm_min": 0.9999998807907104,
+   "doc_norm_max": 1.0000001192092896,
+   "query_norm_min": 0.9999998807907104,
+   "query_norm_max": 1.0000001192092896,
+   "gold_per_question": [
+    2
+   ],
+   "corpus_text_bytes": 37711496
+  }
+ },
+ "arms": {
+  "n10000": {
+   "committed_baseline_loop": {
+    "build": {
+     "arm": "committed_baseline_loop",
+     "corpus": "n10000",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 0.419,
+     "ingest_s": 0.175,
+     "ingest_peak_mb": 203.6,
+     "ingest_rss_mb": 203.6,
+     "after_close_rss_mb": 203.7,
+     "reopen_s": 0.0245,
+     "latency_ms": {
+      "p50": 0.3973,
+      "p95": 0.4372,
+      "p99": 0.4546,
+      "mean": 0.3955,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 21978441,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_loop/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 230464,
+      "process_rss_kb": 230480,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "4ce304ab234a25f66f5d1f9ed92c6a46",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 57051.7,
+      "arena_bytes": 50331648,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 0,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 48.0,
+      "resident_arena_used_mb": 29.297
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127254528,
+      "peak_bytes": 236011520,
+      "peak_delta_mb": 103.7,
+      "baseline_rss_bytes": 127254528,
+      "rss_bytes": 236011520,
+      "rss_delta_mb": 103.7
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_loop.n10000.build.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "committed_baseline_loop",
+     "corpus": "n10000",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 0.259,
+     "reopen_s": 0.0239,
+     "latency_ms": {
+      "p50": 0.401,
+      "p95": 0.437,
+      "p99": 0.4594,
+      "mean": 0.3981,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 163.6,
+     "server_peak_mb": 163.6,
+     "server_phys_footprint_mb": 0.1,
+     "engine_stats": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_loop/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 167616,
+      "process_rss_kb": 167632,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "4ce304ab234a25f66f5d1f9ed92c6a46",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 126992384,
+      "peak_bytes": 171655168,
+      "peak_delta_mb": 42.6,
+      "baseline_rss_bytes": 126992384,
+      "rss_bytes": 171671552,
+      "rss_delta_mb": 42.6
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_loop.n10000.serve.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "committed_baseline_hint": {
+    "build": {
+     "arm": "committed_baseline_hint",
+     "corpus": "n10000",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 0.41,
+     "ingest_s": 0.17,
+     "ingest_peak_mb": 161.6,
+     "ingest_rss_mb": 161.6,
+     "after_close_rss_mb": 161.7,
+     "reopen_s": 0.0234,
+     "latency_ms": {
+      "p50": 0.3923,
+      "p95": 0.4366,
+      "p99": 0.4548,
+      "mean": 0.3892,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 21978441,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_hint/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 168320,
+      "process_rss_kb": 168336,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "bf0514dd64a90df2486da8dff2196906",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 37650.3,
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 126976000,
+      "peak_bytes": 172376064,
+      "peak_delta_mb": 43.3,
+      "baseline_rss_bytes": 126976000,
+      "rss_bytes": 172392448,
+      "rss_delta_mb": 43.3
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_hint.n10000.build.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "committed_baseline_hint",
+     "corpus": "n10000",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 0.258,
+     "reopen_s": 0.0239,
+     "latency_ms": {
+      "p50": 0.3951,
+      "p95": 0.4375,
+      "p99": 0.448,
+      "mean": 0.3936,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 163.6,
+     "server_peak_mb": 163.6,
+     "server_phys_footprint_mb": 0.1,
+     "engine_stats": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_hint/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 167584,
+      "process_rss_kb": 167584,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "bf0514dd64a90df2486da8dff2196906",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 126926848,
+      "peak_bytes": 171622400,
+      "peak_delta_mb": 42.6,
+      "baseline_rss_bytes": 126926848,
+      "rss_bytes": 171622400,
+      "rss_delta_mb": 42.6
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_hint.n10000.serve.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "reserved_view_loop": {
+    "build": {
+     "arm": "reserved_view_loop",
+     "corpus": "n10000",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.432,
+     "ingest_s": 0.179,
+     "ingest_peak_mb": 162.5,
+     "ingest_rss_mb": 162.5,
+     "after_close_rss_mb": 133.3,
+     "reopen_s": 0.0242,
+     "latency_ms": {
+      "p50": 0.4108,
+      "p95": 0.4497,
+      "p99": 0.4736,
+      "mean": 0.4079,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 21978441,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_loop/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 168624,
+      "process_rss_kb": 168624,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "15f8ffca8f75e860e4683ef199b3436c",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 37899.7,
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 1,
+      "arena_reservation_bytes": 41779200,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 0,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127959040,
+      "peak_bytes": 172670976,
+      "peak_delta_mb": 42.6,
+      "baseline_rss_bytes": 127434752,
+      "rss_bytes": 172670976,
+      "rss_delta_mb": 43.1
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_loop.n10000.build.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "reserved_view_loop",
+     "corpus": "n10000",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.266,
+     "reopen_s": 0.0238,
+     "latency_ms": {
+      "p50": 0.4012,
+      "p95": 0.4472,
+      "p99": 0.5093,
+      "mean": 0.408,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 164.9,
+     "server_peak_mb": 164.9,
+     "server_phys_footprint_mb": 0.1,
+     "engine_stats": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_loop/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 168928,
+      "process_rss_kb": 168944,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "15f8ffca8f75e860e4683ef199b3436c",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127926272,
+      "peak_bytes": 172998656,
+      "peak_delta_mb": 43.0,
+      "baseline_rss_bytes": 127401984,
+      "rss_bytes": 172998656,
+      "rss_delta_mb": 43.5
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_loop.n10000.serve.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "reserved_view_hint": {
+    "build": {
+     "arm": "reserved_view_hint",
+     "corpus": "n10000",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.421,
+     "ingest_s": 0.174,
+     "ingest_peak_mb": 161.7,
+     "ingest_rss_mb": 161.7,
+     "after_close_rss_mb": 132.5,
+     "reopen_s": 0.0237,
+     "latency_ms": {
+      "p50": 0.4018,
+      "p95": 0.4448,
+      "p99": 0.4682,
+      "mean": 0.4003,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 21978441,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_hint/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 168336,
+      "process_rss_kb": 168336,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "b0c3a584a439accfa0e67e11bad567fe",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 37650.3,
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127844352,
+      "peak_bytes": 172376064,
+      "peak_delta_mb": 42.5,
+      "baseline_rss_bytes": 127320064,
+      "rss_bytes": 172376064,
+      "rss_delta_mb": 43.0
+     },
+     "load_avg_end": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_hint.n10000.build.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "reserved_view_hint",
+     "corpus": "n10000",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.39,
+      5.22,
+      5.72
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.262,
+     "reopen_s": 0.0243,
+     "latency_ms": {
+      "p50": 0.4034,
+      "p95": 0.4469,
+      "p99": 0.4681,
+      "mean": 0.4032,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 163.9,
+     "server_peak_mb": 163.9,
+     "server_phys_footprint_mb": 0.1,
+     "engine_stats": {
+      "active_heap_ram_kb": 37650.3,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_hint/n10000/vault.dat",
+      "file_size_mb": 20.96,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 167920,
+      "process_rss_kb": 167920,
+      "read_only": false,
+      "record_bytes": 6586287,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "b0c3a584a439accfa0e67e11bad567fe",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127696896,
+      "peak_bytes": 171950080,
+      "peak_delta_mb": 42.2,
+      "baseline_rss_bytes": 127172608,
+      "rss_bytes": 171950080,
+      "rss_delta_mb": 42.7
+     },
+     "load_avg_end": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_hint.n10000.serve.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "vault_add_batch": {
+    "build": {
+     "arm": "vault_add_batch",
+     "corpus": "n10000",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.413,
+     "records_built_peak_mb": 126.9,
+     "ingest_s": 0.164,
+     "ingest_peak_mb": 167.4,
+     "ingest_rss_mb": 164.4,
+     "after_close_rss_mb": 135.1,
+     "reopen_s": 0.0244,
+     "latency_ms": {
+      "p50": 0.403,
+      "p95": 0.4456,
+      "p99": 0.4626,
+      "mean": 0.4022,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 21855659,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 37530.9,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/vault_add_batch/n10000/vault.dat",
+      "file_size_mb": 20.843,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 171376,
+      "process_rss_kb": 170416,
+      "read_only": false,
+      "record_bytes": 6464057,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "e6571d771b80414595753d673f7f9ac6",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 37530.9,
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 491520000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127893504,
+      "peak_bytes": 175489024,
+      "peak_delta_mb": 45.4,
+      "baseline_rss_bytes": 127369216,
+      "rss_bytes": 174505984,
+      "rss_delta_mb": 45.0
+     },
+     "load_avg_end": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/vault_add_batch.n10000.build.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "vault_add_batch",
+     "corpus": "n10000",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 0.264,
+     "reopen_s": 0.0244,
+     "latency_ms": {
+      "p50": 0.4032,
+      "p95": 0.4484,
+      "p99": 0.4613,
+      "mean": 0.4025,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 163.8,
+     "server_peak_mb": 163.8,
+     "server_phys_footprint_mb": 0.1,
+     "engine_stats": {
+      "active_heap_ram_kb": 37530.9,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 30720000,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 30720000,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 10000,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 30720000,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 400000,
+      "compacted_blocks": 200,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/vault_add_batch/n10000/vault.dat",
+      "file_size_mb": 20.843,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 847616,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 167824,
+      "process_rss_kb": 167824,
+      "read_only": false,
+      "record_bytes": 6464057,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 29.297,
+      "resident_arena_used_mb": 29.297,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 10000,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "e6571d771b80414595753d673f7f9ac6",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 127713280,
+      "peak_bytes": 171851776,
+      "peak_delta_mb": 42.1,
+      "baseline_rss_bytes": 127188992,
+      "rss_bytes": 171851776,
+      "rss_delta_mb": 42.6
+     },
+     "load_avg_end": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/vault_add_batch.n10000.serve.topk.npy",
+     "evidence_recall_at_4_pct": 70.4,
+     "per_doc_recall_at_4_pct": 84.2,
+     "evidence_recall_at_10_pct": 84.4,
+     "per_doc_recall_at_10_pct": 92.0,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   }
+  },
+  "n71433": {
+   "committed_baseline_loop": {
+    "build": {
+     "arm": "committed_baseline_loop",
+     "corpus": "n71433",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 2.419,
+     "ingest_s": 1.228,
+     "ingest_peak_mb": 1235.8,
+     "ingest_rss_mb": 1235.8,
+     "after_close_rss_mb": 1235.9,
+     "reopen_s": 0.1813,
+     "latency_ms": {
+      "p50": 1.866,
+      "p95": 2.1499,
+      "p99": 2.2204,
+      "mean": 1.8934,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 155886408,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_loop/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 1459888,
+      "process_rss_kb": 1459888,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "6399e9e3205b59c12c3ddf08af71805d",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 449538.4,
+      "arena_bytes": 402653184,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 0,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 384.0,
+      "resident_arena_used_mb": 209.276
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631160832,
+      "peak_bytes": 1494925312,
+      "peak_delta_mb": 823.8,
+      "baseline_rss_bytes": 631160832,
+      "rss_bytes": 1494925312,
+      "rss_delta_mb": 823.8
+     },
+     "load_avg_end": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_loop.n71433.build.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "committed_baseline_loop",
+     "corpus": "n71433",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.19,
+      5.15,
+      5.7
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 1.203,
+     "reopen_s": 0.1692,
+     "latency_ms": {
+      "p50": 1.8841,
+      "p95": 2.1619,
+      "p99": 2.3668,
+      "mean": 1.9124,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 891.4,
+     "server_peak_mb": 891.4,
+     "server_phys_footprint_mb": 0.9,
+     "engine_stats": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_loop/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 912880,
+      "process_rss_kb": 912880,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "6399e9e3205b59c12c3ddf08af71805d",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631259136,
+      "peak_bytes": 934789120,
+      "peak_delta_mb": 289.5,
+      "baseline_rss_bytes": 631259136,
+      "rss_bytes": 934789120,
+      "rss_delta_mb": 289.5
+     },
+     "load_avg_end": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_loop.n71433.serve.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "committed_baseline_hint": {
+    "build": {
+     "arm": "committed_baseline_hint",
+     "corpus": "n71433",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 2.393,
+     "ingest_s": 1.211,
+     "ingest_peak_mb": 878.8,
+     "ingest_rss_mb": 878.8,
+     "after_close_rss_mb": 878.9,
+     "reopen_s": 0.1702,
+     "latency_ms": {
+      "p50": 1.8725,
+      "p95": 2.152,
+      "p99": 2.2008,
+      "mean": 1.8927,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 155886408,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_hint/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 918032,
+      "process_rss_kb": 918032,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "1e7dadefa9338384f6afdf0b8c03920b",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 268291.8,
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631144448,
+      "peak_bytes": 940064768,
+      "peak_delta_mb": 294.6,
+      "baseline_rss_bytes": 631144448,
+      "rss_bytes": 940081152,
+      "rss_delta_mb": 294.6
+     },
+     "load_avg_end": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_hint.n71433.build.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "committed_baseline_hint",
+     "corpus": "n71433",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone",
+     "load_avg_start": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem/__init__.py",
+     "wall_s": 1.195,
+     "reopen_s": 0.1696,
+     "latency_ms": {
+      "p50": 1.8959,
+      "p95": 2.1535,
+      "p99": 2.2161,
+      "mean": 1.9025,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 889.6,
+     "server_peak_mb": 889.6,
+     "server_phys_footprint_mb": 0.9,
+     "engine_stats": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/committed_baseline_hint/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 911040,
+      "process_rss_kb": 911056,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "1e7dadefa9338384f6afdf0b8c03920b",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631324672,
+      "peak_bytes": 932921344,
+      "peak_delta_mb": 287.6,
+      "baseline_rss_bytes": 631324672,
+      "rss_bytes": 932921344,
+      "rss_delta_mb": 287.6
+     },
+     "load_avg_end": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/committed_baseline_hint.n71433.serve.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "reserved_view_loop": {
+    "build": {
+     "arm": "reserved_view_loop",
+     "corpus": "n71433",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.18,
+      5.11,
+      5.68
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 2.47,
+     "ingest_s": 1.257,
+     "ingest_peak_mb": 882.3,
+     "ingest_rss_mb": 882.3,
+     "after_close_rss_mb": 673.1,
+     "reopen_s": 0.1738,
+     "latency_ms": {
+      "p50": 1.9277,
+      "p95": 2.2033,
+      "p99": 2.3038,
+      "mean": 1.941,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 155886408,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_loop/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 932400,
+      "process_rss_kb": 932400,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "c236611d099c1fa2cf43a7a17efecef8",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 270621.4,
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 2,
+      "arena_reservation_bytes": 578804736,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 0,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631783424,
+      "peak_bytes": 954777600,
+      "peak_delta_mb": 308.0,
+      "baseline_rss_bytes": 631308288,
+      "rss_bytes": 954777600,
+      "rss_delta_mb": 308.5
+     },
+     "load_avg_end": [
+      3.08,
+      5.06,
+      5.66
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_loop.n71433.build.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "reserved_view_loop",
+     "corpus": "n71433",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.08,
+      5.06,
+      5.66
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 1.208,
+     "reopen_s": 0.1749,
+     "latency_ms": {
+      "p50": 1.8963,
+      "p95": 2.1835,
+      "p99": 2.254,
+      "mean": 1.9144,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 889.6,
+     "server_peak_mb": 889.6,
+     "server_phys_footprint_mb": 0.9,
+     "engine_stats": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_loop/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 911072,
+      "process_rss_kb": 911072,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "c236611d099c1fa2cf43a7a17efecef8",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631799808,
+      "peak_bytes": 932937728,
+      "peak_delta_mb": 287.2,
+      "baseline_rss_bytes": 631341056,
+      "rss_bytes": 932937728,
+      "rss_delta_mb": 287.6
+     },
+     "load_avg_end": [
+      3.08,
+      5.06,
+      5.66
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_loop.n71433.serve.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "reserved_view_hint": {
+    "build": {
+     "arm": "reserved_view_hint",
+     "corpus": "n71433",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.08,
+      5.06,
+      5.66
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 2.351,
+     "ingest_s": 1.179,
+     "ingest_peak_mb": 879.5,
+     "ingest_rss_mb": 879.5,
+     "after_close_rss_mb": 670.3,
+     "reopen_s": 0.1683,
+     "latency_ms": {
+      "p50": 1.8785,
+      "p95": 2.122,
+      "p99": 2.1904,
+      "mean": 1.8777,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 155886408,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_hint/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 915280,
+      "process_rss_kb": 915296,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "8e163b2d497a17a1d2058fd7ddcf0ff3",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 268291.8,
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631783424,
+      "peak_bytes": 937263104,
+      "peak_delta_mb": 291.3,
+      "baseline_rss_bytes": 631275520,
+      "rss_bytes": 937263104,
+      "rss_delta_mb": 291.8
+     },
+     "load_avg_end": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_hint.n71433.build.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "reserved_view_hint",
+     "corpus": "n71433",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 1.181,
+     "reopen_s": 0.1689,
+     "latency_ms": {
+      "p50": 1.8592,
+      "p95": 2.1353,
+      "p99": 2.179,
+      "mean": 1.8738,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 889.7,
+     "server_peak_mb": 889.7,
+     "server_phys_footprint_mb": 0.9,
+     "engine_stats": {
+      "active_heap_ram_kb": 268291.8,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/reserved_view_hint/n71433/vault.dat",
+      "file_size_mb": 148.665,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 911216,
+      "process_rss_kb": 911216,
+      "read_only": false,
+      "record_bytes": 45937108,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "8e163b2d497a17a1d2058fd7ddcf0ff3",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631865344,
+      "peak_bytes": 933085184,
+      "peak_delta_mb": 287.3,
+      "baseline_rss_bytes": 631406592,
+      "rss_bytes": 933085184,
+      "rss_delta_mb": 287.7
+     },
+     "load_avg_end": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/reserved_view_hint.n71433.serve.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   },
+   "vault_add_batch": {
+    "build": {
+     "arm": "vault_add_batch",
+     "corpus": "n71433",
+     "phase": "build",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 2.277,
+     "records_built_peak_mb": 641.1,
+     "ingest_s": 1.105,
+     "ingest_peak_mb": 916.0,
+     "ingest_rss_mb": 882.0,
+     "after_close_rss_mb": 666.8,
+     "reopen_s": 0.1668,
+     "latency_ms": {
+      "p50": 1.8751,
+      "p95": 2.1355,
+      "p99": 2.186,
+      "mean": 1.8798,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "index_bytes": 155150202,
+     "engine_stats_reopened": {
+      "active_heap_ram_kb": 267572.4,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/vault_add_batch/n71433/vault.dat",
+      "file_size_mb": 147.963,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 938016,
+      "process_rss_kb": 911344,
+      "read_only": false,
+      "record_bytes": 45200479,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "230cd032e30bcf8b76be3a5d40606c78",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "engine_stats_after_ingest": {
+      "active_heap_ram_kb": 267572.4,
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 756314112,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631947264,
+      "peak_bytes": 960528384,
+      "peak_delta_mb": 313.4,
+      "baseline_rss_bytes": 631472128,
+      "rss_bytes": 933216256,
+      "rss_delta_mb": 287.8
+     },
+     "load_avg_end": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/vault_add_batch.n71433.build.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    },
+    "serve": {
+     "arm": "vault_add_batch",
+     "corpus": "n71433",
+     "phase": "serve",
+     "ok": true,
+     "package_dir": "<repo>/nanomem_standalone",
+     "load_avg_start": [
+      3.08,
+      5.03,
+      5.64
+     ],
+     "nanomem_version": "0.3.1",
+     "engine_version": "3.0.4",
+     "nanomem_file": "<repo>/nanomem/__init__.py",
+     "wall_s": 1.187,
+     "reopen_s": 0.1683,
+     "latency_ms": {
+      "p50": 1.8678,
+      "p95": 2.1381,
+      "p99": 2.2284,
+      "mean": 1.8875,
+      "n_timed_queries": 500,
+      "passes": 1
+     },
+     "server_rss_mb": 887.3,
+     "server_peak_mb": 887.3,
+     "server_phys_footprint_mb": 0.9,
+     "engine_stats": {
+      "active_heap_ram_kb": 267572.4,
+      "active_heap_ram_method": "sum of the numpy buffers this vault has ALLOCATED (capacity, not just the used slice) + record bytes + a 64 B/row index estimate; never a constant. It is what the VAULT holds, not what the PROCESS costs: the interpreter, numpy itself and transient copies are not in it. MEASURED GAP, in a process that does nothing but open a vault it did not write and read stats once: 1.10x at 71,433 docs (288.9 MB of RSS growth against 262.0 MB reported) and 1.38x at 10,000 (50.7 MB against 36.8 MB) -- scratch/refound/stats_rss_gap_v3r5.json. Both sides of that gap moved when Arena.reserve became the default: the older figure (1.52x, 612.3 MB against 401.6 MB, scratch/refound/rss_v3r4.json) was measured on an arena that grew by doubling. Use 'process_rss_kb' for the process figure.",
+      "arena_bytes": 219442176,
+      "arena_dtype": "float32",
+      "arena_growth_copies": 0,
+      "arena_reservation_bytes": 219442176,
+      "arena_reservation_is_mapped": true,
+      "arena_reserved_rows": 71433,
+      "arena_residency": "float32",
+      "arena_residency_exact": true,
+      "arena_used_bytes": 219442176,
+      "beam_cells": 0,
+      "beam_fraction": 0.25,
+      "block_capacity": 50,
+      "cipher": "none (plaintext)",
+      "column_bytes": 2857320,
+      "compacted_blocks": 1429,
+      "durable": "fsync",
+      "embed_dim": 768,
+      "encrypted_at_rest": false,
+      "engine_version": "3.0.4",
+      "file_path": "/tmp/nanomem_ingest_ram/vault_add_batch/n71433/vault.dat",
+      "file_size_mb": 147.963,
+      "format_version": 3,
+      "group_cos_delta": 0.06,
+      "group_hoist": 0.25,
+      "index_bytes_estimated": 6494192,
+      "intent_boost": 0.25,
+      "kdf": null,
+      "landmark_bytes": 0,
+      "landmarks_per_block": 0,
+      "max_boost": 0.7,
+      "memtable_bytes": 0,
+      "memtable_pending": 0,
+      "n_exhaustive": 50000,
+      "process_peak_rss_kb": 908736,
+      "process_rss_kb": 908736,
+      "read_only": false,
+      "record_bytes": 45200479,
+      "resident_arena_mapped_mb": 0.0,
+      "resident_arena_mb": 209.276,
+      "resident_arena_used_mb": 209.276,
+      "revision_lead": 0.2,
+      "router": "off",
+      "routing_mode": "exhaustive",
+      "score_scale": "cosine",
+      "total_documents": 71433,
+      "tracemalloc_current_kb": null,
+      "truncated_tail_bytes": 0,
+      "vault_uuid": "230cd032e30bcf8b76be3a5d40606c78",
+      "vector_dtype": "float16",
+      "vector_dtype_on_disk": "float16",
+      "window_delta": 0.16
+     },
+     "memory": {
+      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint. Identical to the accounting in bench_competitors.py.",
+      "baseline_peak_bytes": 631750656,
+      "peak_bytes": 930545664,
+      "peak_delta_mb": 285.0,
+      "baseline_rss_bytes": 631259136,
+      "rss_bytes": 930545664,
+      "rss_delta_mb": 285.4
+     },
+     "load_avg_end": [
+      2.91,
+      4.96,
+      5.62
+     ],
+     "topk_file": "/tmp/nanomem_ingest_ram/_json/vault_add_batch.n71433.serve.topk.npy",
+     "evidence_recall_at_4_pct": 60.6,
+     "per_doc_recall_at_4_pct": 78.1,
+     "evidence_recall_at_10_pct": 71.2,
+     "per_doc_recall_at_10_pct": 84.6,
+     "n_questions": 500,
+     "top10_rows_changed_vs_committed_baseline": 0,
+     "top4_rows_changed_vs_committed_baseline": 0,
+     "top10_identical_vs_committed_baseline": true
+    }
+   }
+  }
+ },
+ "summary": {
+  "n10000": {
+   "committed_baseline_loop": {
+    "loader_peak_rss_mb": 103.7,
+    "ingest_only_peak_mb": 82.2,
+    "server_rss_mb": 42.6,
+    "server_peak_rss_mb": 42.6,
+    "ingest_s": 0.175,
+    "reopen_s": 0.0245,
+    "p50_ms_build_phase": 0.3973,
+    "p50_ms_server_phase": 0.401,
+    "p95_ms_server_phase": 0.437,
+    "evidence_recall_at_4_pct": 70.4,
+    "per_doc_recall_at_10_pct": 92.0,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 21978441,
+    "arena_reservation_mb": 0.0,
+    "arena_growth_copies": null
+   },
+   "committed_baseline_hint": {
+    "loader_peak_rss_mb": 43.3,
+    "ingest_only_peak_mb": 40.5,
+    "server_rss_mb": 42.6,
+    "server_peak_rss_mb": 42.6,
+    "ingest_s": 0.17,
+    "reopen_s": 0.0234,
+    "p50_ms_build_phase": 0.3923,
+    "p50_ms_server_phase": 0.3951,
+    "p95_ms_server_phase": 0.4375,
+    "evidence_recall_at_4_pct": 70.4,
+    "per_doc_recall_at_10_pct": 92.0,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 21978441,
+    "arena_reservation_mb": 0.0,
+    "arena_growth_copies": null
+   },
+   "reserved_view_loop": {
+    "loader_peak_rss_mb": 42.6,
+    "ingest_only_peak_mb": 40.5,
+    "server_rss_mb": 43.5,
+    "server_peak_rss_mb": 43.0,
+    "ingest_s": 0.179,
+    "reopen_s": 0.0242,
+    "p50_ms_build_phase": 0.4108,
+    "p50_ms_server_phase": 0.4012,
+    "p95_ms_server_phase": 0.4472,
+    "evidence_recall_at_4_pct": 70.4,
+    "per_doc_recall_at_10_pct": 92.0,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 21978441,
+    "arena_reservation_mb": 39.8,
+    "arena_growth_copies": 1
+   },
+   "reserved_view_hint": {
+    "loader_peak_rss_mb": 42.5,
+    "ingest_only_peak_mb": 39.8,
+    "server_rss_mb": 42.7,
+    "server_peak_rss_mb": 42.2,
+    "ingest_s": 0.174,
+    "reopen_s": 0.0237,
+    "p50_ms_build_phase": 0.4018,
+    "p50_ms_server_phase": 0.4034,
+    "p95_ms_server_phase": 0.4469,
+    "evidence_recall_at_4_pct": 70.4,
+    "per_doc_recall_at_10_pct": 92.0,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 21978441,
+    "arena_reservation_mb": 29.3,
+    "arena_growth_copies": 0
+   },
+   "vault_add_batch": {
+    "loader_peak_rss_mb": 45.4,
+    "ingest_only_peak_mb": 45.4,
+    "server_rss_mb": 42.6,
+    "server_peak_rss_mb": 42.1,
+    "ingest_s": 0.164,
+    "reopen_s": 0.0244,
+    "p50_ms_build_phase": 0.403,
+    "p50_ms_server_phase": 0.4032,
+    "p95_ms_server_phase": 0.4484,
+    "evidence_recall_at_4_pct": 70.4,
+    "per_doc_recall_at_10_pct": 92.0,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 21855659,
+    "arena_reservation_mb": 468.8,
+    "arena_growth_copies": 0
+   }
+  },
+  "n71433": {
+   "committed_baseline_loop": {
+    "loader_peak_rss_mb": 823.8,
+    "ingest_only_peak_mb": 633.9,
+    "server_rss_mb": 289.5,
+    "server_peak_rss_mb": 289.5,
+    "ingest_s": 1.228,
+    "reopen_s": 0.1813,
+    "p50_ms_build_phase": 1.866,
+    "p50_ms_server_phase": 1.8841,
+    "p95_ms_server_phase": 2.1619,
+    "evidence_recall_at_4_pct": 60.6,
+    "per_doc_recall_at_10_pct": 84.6,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 155886408,
+    "arena_reservation_mb": 0.0,
+    "arena_growth_copies": null
+   },
+   "committed_baseline_hint": {
+    "loader_peak_rss_mb": 294.6,
+    "ingest_only_peak_mb": 276.9,
+    "server_rss_mb": 287.6,
+    "server_peak_rss_mb": 287.6,
+    "ingest_s": 1.211,
+    "reopen_s": 0.1702,
+    "p50_ms_build_phase": 1.8725,
+    "p50_ms_server_phase": 1.8959,
+    "p95_ms_server_phase": 2.1535,
+    "evidence_recall_at_4_pct": 60.6,
+    "per_doc_recall_at_10_pct": 84.6,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 155886408,
+    "arena_reservation_mb": 0.0,
+    "arena_growth_copies": null
+   },
+   "reserved_view_loop": {
+    "loader_peak_rss_mb": 308.0,
+    "ingest_only_peak_mb": 279.8,
+    "server_rss_mb": 287.6,
+    "server_peak_rss_mb": 287.2,
+    "ingest_s": 1.257,
+    "reopen_s": 0.1738,
+    "p50_ms_build_phase": 1.9277,
+    "p50_ms_server_phase": 1.8963,
+    "p95_ms_server_phase": 2.1835,
+    "evidence_recall_at_4_pct": 60.6,
+    "per_doc_recall_at_10_pct": 84.6,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 155886408,
+    "arena_reservation_mb": 552.0,
+    "arena_growth_copies": 2
+   },
+   "reserved_view_hint": {
+    "loader_peak_rss_mb": 291.3,
+    "ingest_only_peak_mb": 277.0,
+    "server_rss_mb": 287.7,
+    "server_peak_rss_mb": 287.3,
+    "ingest_s": 1.179,
+    "reopen_s": 0.1683,
+    "p50_ms_build_phase": 1.8785,
+    "p50_ms_server_phase": 1.8592,
+    "p95_ms_server_phase": 2.1353,
+    "evidence_recall_at_4_pct": 60.6,
+    "per_doc_recall_at_10_pct": 84.6,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 155886408,
+    "arena_reservation_mb": 209.3,
+    "arena_growth_copies": 0
+   },
+   "vault_add_batch": {
+    "loader_peak_rss_mb": 313.4,
+    "ingest_only_peak_mb": 313.3,
+    "server_rss_mb": 285.4,
+    "server_peak_rss_mb": 285.0,
+    "ingest_s": 1.105,
+    "reopen_s": 0.1668,
+    "p50_ms_build_phase": 1.8751,
+    "p50_ms_server_phase": 1.8678,
+    "p95_ms_server_phase": 2.1381,
+    "evidence_recall_at_4_pct": 60.6,
+    "per_doc_recall_at_10_pct": 84.6,
+    "top10_rows_changed_vs_committed_baseline": 0,
+    "top10_identical_vs_committed_baseline": true,
+    "index_bytes": 155150202,
+    "arena_reservation_mb": 721.3,
+    "arena_growth_copies": 0
+   }
+  }
+ },
+ "growth_policy": {
+  "what": "the allocator question with the engine taken out: a 768-d fp32 arena is grown to 71,433 rows in 50-row steps under each policy, one subprocess per policy so ru_maxrss is clean. Directly comparable to memory_results.json -> growth_policy.",
+  "rows": {
+   "double": {
+    "policy": "double",
+    "n_rows": 71433,
+    "ok": true,
+    "build_s": 0.029,
+    "final_capacity_rows": 131072,
+    "final_capacity_mb": 384.0,
+    "live_rows_mb": 209.3,
+    "bytes_freed_mb": 383.8,
+    "peak_rss_delta_mb": 591.8
+   },
+   "exact_fit": {
+    "policy": "exact_fit",
+    "n_rows": 71433,
+    "ok": true,
+    "build_s": 10.41,
+    "final_capacity_rows": 71433,
+    "final_capacity_mb": 209.3,
+    "live_rows_mb": 209.3,
+    "bytes_freed_mb": 149458.9,
+    "peak_rss_delta_mb": 13505.9
+   },
+   "reserved_view": {
+    "policy": "reserved_view",
+    "n_rows": 71433,
+    "ok": true,
+    "copies": 2,
+    "reservation_mb": 552.0,
+    "reservation_is_mapped": true,
+    "build_s": 0.013,
+    "final_capacity_rows": 71433,
+    "final_capacity_mb": 209.3,
+    "live_rows_mb": 209.3,
+    "bytes_freed_mb": 0.0,
+    "peak_rss_delta_mb": 208.9
+   },
+   "reserve": {
+    "policy": "reserve",
+    "n_rows": 71433,
+    "ok": true,
+    "copies": 0,
+    "reservation_mb": 209.3,
+    "reservation_is_mapped": true,
+    "build_s": 0.01,
+    "final_capacity_rows": 71433,
+    "final_capacity_mb": 209.3,
+    "live_rows_mb": 209.3,
+    "bytes_freed_mb": 0.0,
+    "peak_rss_delta_mb": 208.9
+   }
+  }
+ },
+ "directory_estimate": {
+  "constant_bytes_per_chunk": 2048,
+  "split": "the shipped ingest_file default: 50-line chunks, 10-line overlap",
+  "what": "the hint ingest_directory uses before it has read anything: total bytes / BYTES_PER_CHUNK_ESTIMATE. Rows are measured by running the real split over real trees.",
+  "rows": [
+   {
+    "tree": "<repo>/nanomem_standalone",
+    "files": 50,
+    "bytes": 935112,
+    "chunks": 533,
+    "bytes_per_chunk": 1754.4,
+    "estimated_chunks": 456,
+    "estimate_over_actual": 0.856
+   },
+   {
+    "tree": "<repo>/pure_latent_4d_mind",
+    "files": 23,
+    "bytes": 200145,
+    "chunks": 122,
+    "bytes_per_chunk": 1640.5,
+    "estimated_chunks": 97,
+    "estimate_over_actual": 0.795
+   },
+   {
+    "tree": "<repo>/evidence/design",
+    "files": 21,
+    "bytes": 708289,
+    "chunks": 73,
+    "bytes_per_chunk": 9702.6,
+    "estimated_chunks": 345,
+    "estimate_over_actual": 4.726
+   },
+   {
+    "tree": "<redacted local path> /4D llm",
+    "files": 15361,
+    "bytes": 463150938,
+    "chunks": 198006,
+    "bytes_per_chunk": 2339.1,
+    "estimated_chunks": 226147,
+    "estimate_over_actual": 1.142
+   }
+  ]
+ },
+ "reference_points": {
+  "source": "<repo>/evidence/competitors_standard_results.json",
+  "read_from": "winners.<corpus>.<metric>.all -- every arm that file reports, not a selection",
+  "n10000_peak_rss_delta_mb": {
+   "faiss_flat_ip": 50.3,
+   "nanomem_v3_exact": 108.4,
+   "nanomem_v3_router_auto": 267.9,
+   "sqlitevec_bruteforce": 53.5,
+   "chroma_hnsw_default": 126.7,
+   "chroma_hnsw_tuned": 140.9,
+   "chroma_bruteforce": 167.1,
+   "chroma_legacy_segment_bruteforce": 199.4
+  },
+  "n10000_p50_query_ms": {
+   "faiss_flat_ip": 0.3917,
+   "nanomem_v3_exact": 0.3641,
+   "nanomem_v3_router_auto": 0.444,
+   "sqlitevec_bruteforce": 6.814,
+   "chroma_hnsw_default": 0.8861,
+   "chroma_hnsw_tuned": 3.6715,
+   "chroma_bruteforce": 0.8944,
+   "chroma_legacy_segment_bruteforce": 61.6783
+  },
+  "n10000_evidence_recall_at_4_pct": {
+   "faiss_flat_ip": 70.4,
+   "nanomem_v3_exact": 70.4,
+   "nanomem_v3_router_auto": 69.6,
+   "sqlitevec_bruteforce": 70.4,
+   "chroma_hnsw_default": 69.6,
+   "chroma_hnsw_tuned": 70.4,
+   "chroma_bruteforce": 69.6,
+   "chroma_legacy_segment_bruteforce": 70.4
+  },
+  "n10000_index_bytes": {
+   "faiss_flat_ip": 30720045,
+   "nanomem_v3_exact": 21978441,
+   "nanomem_v3_router_auto": 21978535,
+   "sqlitevec_bruteforce": 38744064,
+   "chroma_hnsw_default": 77560624,
+   "chroma_hnsw_tuned": 81400368,
+   "chroma_bruteforce": 84523172,
+   "chroma_legacy_segment_bruteforce": 87470820
+  },
+  "n71433_peak_rss_delta_mb": {
+   "faiss_flat_ip": 230.6,
+   "nanomem_v3_exact": 826.4,
+   "nanomem_v3_router_auto": 1941.6,
+   "sqlitevec_bruteforce": 335.9,
+   "chroma_hnsw_default": 290.5,
+   "chroma_hnsw_tuned": 316.5,
+   "chroma_bruteforce": 885.3,
+   "chroma_legacy_segment_bruteforce": 667.0
+  },
+  "n71433_p50_query_ms": {
+   "faiss_flat_ip": 1.0657,
+   "nanomem_v3_exact": 1.774,
+   "nanomem_v3_router_auto": 3.3019,
+   "sqlitevec_bruteforce": 53.3531,
+   "chroma_hnsw_default": 1.1732,
+   "chroma_hnsw_tuned": 8.5267,
+   "chroma_bruteforce": 1.2584,
+   "chroma_legacy_segment_bruteforce": 279.148
+  },
+  "n71433_evidence_recall_at_4_pct": {
+   "faiss_flat_ip": 60.6,
+   "nanomem_v3_exact": 60.6,
+   "nanomem_v3_router_auto": 60.8,
+   "sqlitevec_bruteforce": 60.6,
+   "chroma_hnsw_default": 55.2,
+   "chroma_hnsw_tuned": 60.6,
+   "chroma_bruteforce": 54.4,
+   "chroma_legacy_segment_bruteforce": 60.6
+  },
+  "n71433_index_bytes": {
+   "faiss_flat_ip": 219442221,
+   "nanomem_v3_exact": 155886408,
+   "nanomem_v3_router_auto": 155885436,
+   "sqlitevec_bruteforce": 270577664,
+   "chroma_hnsw_default": 512153316,
+   "chroma_hnsw_tuned": 539394092,
+   "chroma_bruteforce": 587716772,
+   "chroma_legacy_segment_bruteforce": 591360740
+  }
+ },
+ "package_fingerprint": {
+  "what": "sha256[:16] of each module's executable code with docstrings stripped -- see _code_sha. Writing a measured number into a docstring does not move these; changing a line of code does.",
+  "new": {
+   "dir": "<repo>/nanomem",
+   "code_sha256_16": {
+    "__init__.py": "7c661d25a871a91e",
+    "arena.py": "9c4568b0658981b1",
+    "classifier.py": "24826d9bcccb9a3b",
+    "cli.py": "8fd22a0a3f26a0e3",
+    "container.py": "006ae0e5e1ed2ba1",
+    "crypto.py": "4a5d088848fb7239",
+    "embed.py": "fe3ed48533f59ae8",
+    "engine.py": "1d896de44e1b7cef",
+    "entities.py": "455c5c72468c2365",
+    "errors.py": "59264af7053fc408",
+    "legacy_v2.py": "da2601d69a839beb",
+    "proxy.py": "c098617b2a5af958",
+    "routing.py": "f21d03abfbe22dcd",
+    "users.py": "c9c765cbaabfdbdc",
+    "vault.py": "1dc6caf233c187d3"
+   }
+  },
+  "baseline_6aa6923": {
+   "dir": "/tmp/nanomem_baseline_6aa6923/nanomem_standalone/nanomem",
+   "code_sha256_16": {
+    "__init__.py": "7c661d25a871a91e",
+    "arena.py": "9789465616757d13",
+    "classifier.py": "24826d9bcccb9a3b",
+    "cli.py": "804992287c40fb0a",
+    "container.py": "006ae0e5e1ed2ba1",
+    "crypto.py": "4a5d088848fb7239",
+    "embed.py": "fe3ed48533f59ae8",
+    "engine.py": "236721beb374c65a",
+    "entities.py": "455c5c72468c2365",
+    "errors.py": "59264af7053fc408",
+    "legacy_v2.py": "da2601d69a839beb",
+    "proxy.py": "c098617b2a5af958",
+    "routing.py": "f21d03abfbe22dcd",
+    "users.py": "c9c765cbaabfdbdc",
+    "vault.py": "8ed9f2511be77297"
+   }
+  },
+  "harness": "6a9eff3df15d2dfd"
+ },
+ "failures": [],
+ "replicate": {
+  "what": "`runs_mb` is the loader peak of run 1 (the `summary` above) followed by 3 independent re-runs of the same build. Quote `median_mb` and `range_mb`, not a single reading.",
+  "extra_runs": 3,
+  "corpora": {
+   "n10000": {
+    "committed_baseline_loop": {
+     "runs_mb": [
+      103.7,
+      103.5,
+      104.0,
+      103.7
+     ],
+     "median_mb": 103.7,
+     "range_mb": [
+      103.5,
+      104.0
+     ],
+     "spread_pct": 0.48,
+     "p50_ms_per_run": [
+      0.3973,
+      0.3769,
+      0.378,
+      0.4004
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.18,
+       4.62,
+       5.47
+      ],
+      [
+       2.18,
+       4.62,
+       5.47
+      ],
+      [
+       2.18,
+       4.62,
+       5.47
+      ]
+     ]
+    },
+    "committed_baseline_hint": {
+     "runs_mb": [
+      43.3,
+      43.1,
+      42.5,
+      43.1
+     ],
+     "median_mb": 43.1,
+     "range_mb": [
+      42.5,
+      43.3
+     ],
+     "spread_pct": 1.88,
+     "p50_ms_per_run": [
+      0.3923,
+      0.3738,
+      0.3736,
+      0.3726
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.18,
+       4.62,
+       5.47
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ]
+     ]
+    },
+    "reserved_view_loop": {
+     "runs_mb": [
+      42.6,
+      42.2,
+      42.8,
+      42.9
+     ],
+     "median_mb": 42.7,
+     "range_mb": [
+      42.2,
+      42.9
+     ],
+     "spread_pct": 1.66,
+     "p50_ms_per_run": [
+      0.4108,
+      0.383,
+      0.3866,
+      0.3877
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ]
+     ]
+    },
+    "reserved_view_hint": {
+     "runs_mb": [
+      42.5,
+      43.0,
+      42.9,
+      42.8
+     ],
+     "median_mb": 42.8,
+     "range_mb": [
+      42.5,
+      43.0
+     ],
+     "spread_pct": 1.18,
+     "p50_ms_per_run": [
+      0.4018,
+      0.3942,
+      0.4046,
+      0.3989
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ]
+     ]
+    },
+    "vault_add_batch": {
+     "runs_mb": [
+      45.4,
+      45.0,
+      45.2,
+      45.1
+     ],
+     "median_mb": 45.2,
+     "range_mb": [
+      45.0,
+      45.4
+     ],
+     "spread_pct": 0.89,
+     "p50_ms_per_run": [
+      0.403,
+      0.3857,
+      0.3958,
+      0.3939
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.17,
+       4.58,
+       5.45
+      ],
+      [
+       2.15,
+       4.54,
+       5.43
+      ]
+     ]
+    }
+   },
+   "n71433": {
+    "committed_baseline_loop": {
+     "runs_mb": [
+      823.8,
+      820.6,
+      819.7,
+      820.4
+     ],
+     "median_mb": 820.5,
+     "range_mb": [
+      819.7,
+      823.8
+     ],
+     "spread_pct": 0.5,
+     "p50_ms_per_run": [
+      1.866,
+      1.8618,
+      1.8559,
+      1.8625
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.15,
+       4.54,
+       5.43
+      ],
+      [
+       2.15,
+       4.54,
+       5.43
+      ],
+      [
+       2.14,
+       4.5,
+       5.41
+      ]
+     ]
+    },
+    "committed_baseline_hint": {
+     "runs_mb": [
+      294.6,
+      288.0,
+      289.0,
+      288.0
+     ],
+     "median_mb": 288.5,
+     "range_mb": [
+      288.0,
+      294.6
+     ],
+     "spread_pct": 2.29,
+     "p50_ms_per_run": [
+      1.8725,
+      1.8653,
+      1.8605,
+      1.8641
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.14,
+       4.5,
+       5.41
+      ],
+      [
+       2.13,
+       4.45,
+       5.39
+      ],
+      [
+       2.13,
+       4.45,
+       5.39
+      ]
+     ]
+    },
+    "reserved_view_loop": {
+     "runs_mb": [
+      308.0,
+      288.7,
+      287.9,
+      308.3
+     ],
+     "median_mb": 298.4,
+     "range_mb": [
+      287.9,
+      308.3
+     ],
+     "spread_pct": 7.09,
+     "p50_ms_per_run": [
+      1.9277,
+      1.87,
+      1.8711,
+      1.8731
+     ],
+     "load_avg_per_rerun": [
+      [
+       2.12,
+       4.41,
+       5.37
+      ],
+      [
+       2.12,
+       4.41,
+       5.37
+      ],
+      [
+       1.95,
+       4.34,
+       5.34
+      ]
+     ]
+    },
+    "reserved_view_hint": {
+     "runs_mb": [
+      291.3,
+      287.6,
+      308.6,
+      287.6
+     ],
+     "median_mb": 289.5,
+     "range_mb": [
+      287.6,
+      308.6
+     ],
+     "spread_pct": 7.3,
+     "p50_ms_per_run": [
+      1.8785,
+      1.8596,
+      1.8705,
+      1.8716
+     ],
+     "load_avg_per_rerun": [
+      [
+       1.95,
+       4.34,
+       5.34
+      ],
+      [
+       1.79,
+       4.27,
+       5.31
+      ],
+      [
+       1.79,
+       4.27,
+       5.31
+      ]
+     ]
+    },
+    "vault_add_batch": {
+     "runs_mb": [
+      313.4,
+      314.0,
+      313.4,
+      314.6
+     ],
+     "median_mb": 313.7,
+     "range_mb": [
+      313.4,
+      314.6
+     ],
+     "spread_pct": 0.38,
+     "p50_ms_per_run": [
+      1.8751,
+      1.8752,
+      1.8634,
+      1.8646
+     ],
+     "load_avg_per_rerun": [
+      [
+       1.65,
+       4.2,
+       5.28
+      ],
+      [
+       1.65,
+       4.2,
+       5.28
+      ],
+      [
+       1.52,
+       4.13,
+       5.25
+      ]
+     ]
+    }
+   }
+  }
+ },
+ "exactness": {
+  "what": "SHA-256 over the concatenated fp32 score vectors of every query against every row -- the whole scan, not the top-10. Equal digests mean the reserved arena changed no number anywhere, which a latency measurement on a loaded machine cannot show.",
+  "corpora": {
+   "n10000": {
+    "scores_sha256": {
+     "committed_baseline_loop": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+     "committed_baseline_hint": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+     "reserved_view_loop": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+     "reserved_view_hint": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e",
+     "vault_add_batch": "9cdbc0e0ed3635bbba6fbb1bdf2d09ec5a569576cd48bb1a764ad99c1c7e517e"
+    },
+    "all_identical_to_committed_baseline": true
+   },
+   "n71433": {
+    "scores_sha256": {
+     "committed_baseline_loop": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+     "committed_baseline_hint": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+     "reserved_view_loop": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+     "reserved_view_hint": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539",
+     "vault_add_batch": "6134893ea4103a32199679e9931f4a96712e05fbabce31e80bdc7f342f5f5539"
+    },
+    "all_identical_to_committed_baseline": true
+   }
+  }
+ },
+ "latency_duel": {
+  "what": "the same vaults the build phase left on disk, re-opened and re-timed CYCLE BY CYCLE, arms always in the same order, with a bare numpy matvec measured in every cycle. The machine was NOT quiet (see load_avg): read the ratio column, not the milliseconds.",
+  "cycles": 7,
+  "corpora": {
+   "n10000": {
+    "per_cycle_p50_ms": {
+     "committed_baseline_loop": [
+      0.3842,
+      0.391,
+      0.3838,
+      0.3809,
+      0.3849,
+      0.395,
+      0.3848
+     ],
+     "reserved_view_loop": [
+      0.3843,
+      0.389,
+      0.4,
+      0.3844,
+      0.4015,
+      0.3823,
+      0.3846
+     ],
+     "reserved_view_hint": [
+      0.4023,
+      0.3982,
+      0.3829,
+      0.4095,
+      0.3828,
+      0.3863,
+      0.4019
+     ]
+    },
+    "per_cycle_numpy_floor_ms": [
+     0.2639,
+     0.2547,
+     0.2524,
+     0.2524,
+     0.2562,
+     0.2595,
+     0.2554
+    ],
+    "load_avg_per_cycle": [
+     [
+      1.4,
+      3.97,
+      5.17
+     ],
+     [
+      1.37,
+      3.92,
+      5.15
+     ],
+     [
+      1.37,
+      3.92,
+      5.15
+     ],
+     [
+      1.37,
+      3.92,
+      5.15
+     ],
+     [
+      1.37,
+      3.92,
+      5.15
+     ],
+     [
+      1.42,
+      3.89,
+      5.13
+     ],
+     [
+      1.42,
+      3.89,
+      5.13
+     ]
+    ],
+    "median_p50_ms": {
+     "committed_baseline_loop": 0.3848,
+     "reserved_view_loop": 0.3846,
+     "reserved_view_hint": 0.3982
+    },
+    "median_numpy_floor_ms": 0.2554,
+    "p50_as_multiple_of_floor": {
+     "committed_baseline_loop": 1.507,
+     "reserved_view_loop": 1.506,
+     "reserved_view_hint": 1.559
+    },
+    "paired_ratio_new_over_baseline": 1.0003
+   },
+   "n71433": {
+    "per_cycle_p50_ms": {
+     "committed_baseline_loop": [
+      1.8685,
+      1.8651,
+      1.8734,
+      1.867,
+      1.8803,
+      1.8702,
+      1.872
+     ],
+     "reserved_view_loop": [
+      1.8621,
+      1.8681,
+      1.8622,
+      1.8598,
+      1.8606,
+      1.8658,
+      1.8773
+     ],
+     "reserved_view_hint": [
+      1.872,
+      1.8611,
+      1.8636,
+      1.8586,
+      1.8721,
+      1.8773,
+      1.8718
+     ]
+    },
+    "per_cycle_numpy_floor_ms": [
+     1.5094,
+     1.4799,
+     1.4832,
+     1.4784,
+     1.4821,
+     1.4898,
+     1.5017
+    ],
+    "load_avg_per_cycle": [
+     [
+      1.42,
+      3.89,
+      5.13
+     ],
+     [
+      1.55,
+      3.88,
+      5.12
+     ],
+     [
+      1.58,
+      3.84,
+      5.1
+     ],
+     [
+      1.7,
+      3.83,
+      5.08
+     ],
+     [
+      1.64,
+      3.78,
+      5.06
+     ],
+     [
+      1.67,
+      3.75,
+      5.04
+     ],
+     [
+      1.62,
+      3.71,
+      5.02
+     ]
+    ],
+    "median_p50_ms": {
+     "committed_baseline_loop": 1.8702,
+     "reserved_view_loop": 1.8622,
+     "reserved_view_hint": 1.8718
+    },
+    "median_numpy_floor_ms": 1.4832,
+    "p50_as_multiple_of_floor": {
+     "committed_baseline_loop": 1.261,
+     "reserved_view_loop": 1.256,
+     "reserved_view_hint": 1.262
+    },
+    "paired_ratio_new_over_baseline": 0.9966
+   }
+  }
+ },
+ "headline": {
+  "what": "derived from `summary` and `replicate` in this same file and from the peak_rss_delta_mb of competitors_standard_results.json. Every nanomem figure is the pair of runs, not a single reading.",
+  "metric": "peak ru_maxrss delta over build + reopen + 500 queries, MB",
+  "corpora": {
+   "n10000": {
+    "nanomem": {
+     "committed_baseline_loop": {
+      "runs_mb": [
+       103.7,
+       103.5,
+       104.0,
+       103.7
+      ],
+      "median_mb": 103.7,
+      "range_mb": [
+       103.5,
+       104.0
+      ],
+      "vs_committed_baseline": 1.0
+     },
+     "committed_baseline_hint": {
+      "runs_mb": [
+       43.3,
+       43.1,
+       42.5,
+       43.1
+      ],
+      "median_mb": 43.1,
+      "range_mb": [
+       42.5,
+       43.3
+      ],
+      "vs_committed_baseline": 0.416
+     },
+     "reserved_view_loop": {
+      "runs_mb": [
+       42.6,
+       42.2,
+       42.8,
+       42.9
+      ],
+      "median_mb": 42.7,
+      "range_mb": [
+       42.2,
+       42.9
+      ],
+      "vs_committed_baseline": 0.412
+     },
+     "reserved_view_hint": {
+      "runs_mb": [
+       42.5,
+       43.0,
+       42.9,
+       42.8
+      ],
+      "median_mb": 42.8,
+      "range_mb": [
+       42.5,
+       43.0
+      ],
+      "vs_committed_baseline": 0.413
+     },
+     "vault_add_batch": {
+      "runs_mb": [
+       45.4,
+       45.0,
+       45.2,
+       45.1
+      ],
+      "median_mb": 45.2,
+      "range_mb": [
+       45.0,
+       45.4
+      ],
+      "vs_committed_baseline": 0.436
+     }
+    },
+    "competitors_from_competitors_standard_results": {
+     "faiss_flat_ip": 50.3,
+     "sqlitevec_bruteforce": 53.5,
+     "chroma_hnsw_default": 126.7,
+     "chroma_hnsw_tuned": 140.9,
+     "chroma_bruteforce": 167.1,
+     "chroma_legacy_segment_bruteforce": 199.4
+    },
+    "shipped_default_now": 42.7,
+    "nanomem_as_published": 108.4,
+    "vs_competitors": {
+     "faiss_flat_ip": 0.849,
+     "sqlitevec_bruteforce": 0.798,
+     "chroma_hnsw_default": 0.337,
+     "chroma_hnsw_tuned": 0.303,
+     "chroma_bruteforce": 0.256,
+     "chroma_legacy_segment_bruteforce": 0.214
+    },
+    "arms_now_beaten": [
+     "chroma_bruteforce",
+     "chroma_hnsw_default",
+     "chroma_hnsw_tuned",
+     "chroma_legacy_segment_bruteforce",
+     "faiss_flat_ip",
+     "sqlitevec_bruteforce"
+    ],
+    "arms_still_ahead": []
+   },
+   "n71433": {
+    "nanomem": {
+     "committed_baseline_loop": {
+      "runs_mb": [
+       823.8,
+       820.6,
+       819.7,
+       820.4
+      ],
+      "median_mb": 820.5,
+      "range_mb": [
+       819.7,
+       823.8
+      ],
+      "vs_committed_baseline": 1.0
+     },
+     "committed_baseline_hint": {
+      "runs_mb": [
+       294.6,
+       288.0,
+       289.0,
+       288.0
+      ],
+      "median_mb": 288.5,
+      "range_mb": [
+       288.0,
+       294.6
+      ],
+      "vs_committed_baseline": 0.352
+     },
+     "reserved_view_loop": {
+      "runs_mb": [
+       308.0,
+       288.7,
+       287.9,
+       308.3
+      ],
+      "median_mb": 298.4,
+      "range_mb": [
+       287.9,
+       308.3
+      ],
+      "vs_committed_baseline": 0.364
+     },
+     "reserved_view_hint": {
+      "runs_mb": [
+       291.3,
+       287.6,
+       308.6,
+       287.6
+      ],
+      "median_mb": 289.5,
+      "range_mb": [
+       287.6,
+       308.6
+      ],
+      "vs_committed_baseline": 0.353
+     },
+     "vault_add_batch": {
+      "runs_mb": [
+       313.4,
+       314.0,
+       313.4,
+       314.6
+      ],
+      "median_mb": 313.7,
+      "range_mb": [
+       313.4,
+       314.6
+      ],
+      "vs_committed_baseline": 0.382
+     }
+    },
+    "competitors_from_competitors_standard_results": {
+     "faiss_flat_ip": 230.6,
+     "sqlitevec_bruteforce": 335.9,
+     "chroma_hnsw_default": 290.5,
+     "chroma_hnsw_tuned": 316.5,
+     "chroma_bruteforce": 885.3,
+     "chroma_legacy_segment_bruteforce": 667.0
+    },
+    "shipped_default_now": 298.4,
+    "nanomem_as_published": 826.4,
+    "vs_competitors": {
+     "faiss_flat_ip": 1.294,
+     "sqlitevec_bruteforce": 0.888,
+     "chroma_hnsw_default": 1.027,
+     "chroma_hnsw_tuned": 0.943,
+     "chroma_bruteforce": 0.337,
+     "chroma_legacy_segment_bruteforce": 0.447
+    },
+    "arms_now_beaten": [
+     "chroma_bruteforce",
+     "chroma_hnsw_tuned",
+     "chroma_legacy_segment_bruteforce",
+     "sqlitevec_bruteforce"
+    ],
+    "arms_still_ahead": [
+     "chroma_hnsw_default",
+     "faiss_flat_ip"
+    ]
+   }
+  }
+ },
+ "post_report_verification": {
+  "what": "one more build of each end of the comparison, run AFTER the report and the docstrings were written, against the ranges recorded in `replicate`.",
+  "checks": [
+   {
+    "arm": "committed_baseline_loop",
+    "loader_peak_rss_mb": 823.3,
+    "recorded_range_mb": [
+     819.7,
+     823.8
+    ],
+    "inside_recorded_range": true,
+    "recall_at_4_pct": null,
+    "load_avg": [
+     2.44,
+     2.98,
+     4.46
+    ]
+   },
+   {
+    "arm": "reserved_view_loop",
+    "loader_peak_rss_mb": 310.0,
+    "recorded_range_mb": [
+     287.9,
+     308.3
+    ],
+    "inside_recorded_range": false,
+    "recall_at_4_pct": null,
+    "load_avg": [
+     2.41,
+     2.96,
+     4.44
+    ]
+   }
+  ]
+ },
+ "chunked_alternative": {
+  "what": "the design alternative the reserved view was chosen over: holding the arena as fixed-size chunks. Same RAM story (growth never copies), no reservation needed, and the scan pays for it. Measured on the same corpora, paired in cycles.",
+  "corpora": {
+   "n10000": {
+    "corpus": "n10000",
+    "ok": true,
+    "n_rows": 10000,
+    "dim": 768,
+    "p50_ms_median_of_3_cycles": {
+     "contiguous": 0.1921,
+     "4096": 0.1755,
+     "8192": 0.0987,
+     "16384": 0.1894,
+     "32768": 0.1901
+    },
+    "p50_ms_per_cycle": {
+     "contiguous": [
+      0.1837,
+      0.1921,
+      0.1931
+     ],
+     "4096": [
+      0.1814,
+      0.175,
+      0.1755
+     ],
+     "8192": [
+      0.0979,
+      0.0987,
+      0.2045
+     ],
+     "16384": [
+      0.1894,
+      0.1891,
+      0.1897
+     ],
+     "32768": [
+      0.1898,
+      0.1901,
+      0.1907
+     ]
+    },
+    "vs_contiguous": {
+     "4096": 0.914,
+     "8192": 0.514,
+     "16384": 0.986,
+     "32768": 0.99
+    },
+    "scores_bitwise_identical_to_contiguous": {
+     "4096": true,
+     "8192": true,
+     "16384": true,
+     "32768": true
+    },
+    "chunk_count": {
+     "4096": 3,
+     "8192": 2,
+     "16384": 1,
+     "32768": 1
+    },
+    "load_avg": [
+     1.39,
+     2.9,
+     4.49
+    ]
+   },
+   "n71433": {
+    "corpus": "n71433",
+    "ok": true,
+    "n_rows": 71433,
+    "dim": 768,
+    "p50_ms_median_of_3_cycles": {
+     "contiguous": 0.9634,
+     "4096": 1.5541,
+     "8192": 1.1915,
+     "16384": 1.0847,
+     "32768": 1.0207
+    },
+    "p50_ms_per_cycle": {
+     "contiguous": [
+      0.9771,
+      0.9631,
+      0.9634
+     ],
+     "4096": [
+      1.5794,
+      1.554,
+      1.5541
+     ],
+     "8192": [
+      1.1925,
+      1.1915,
+      1.1897
+     ],
+     "16384": [
+      1.0873,
+      1.0847,
+      1.0841
+     ],
+     "32768": [
+      1.0207,
+      1.0167,
+      1.0211
+     ]
+    },
+    "vs_contiguous": {
+     "4096": 1.613,
+     "8192": 1.237,
+     "16384": 1.126,
+     "32768": 1.059
+    },
+    "scores_bitwise_identical_to_contiguous": {
+     "4096": true,
+     "8192": true,
+     "16384": true,
+     "32768": true
+    },
+    "chunk_count": {
+     "4096": 18,
+     "8192": 9,
+     "16384": 5,
+     "32768": 3
+    },
+    "load_avg": [
+     1.39,
+     2.9,
+     4.49
+    ]
+   }
+  }
+ },
+ "competitors_same_harness": {
+  "why": "A verifier found the 10,000-document claim 'nanomem is now the LOWEST of every arm measured' to be a cross-harness comparison: nanomem's figure came from this file, the competitors' from competitors_standard_results.json, and this harness reads about 4.3% lower on the identical configuration. These arms remove the comparison from the argument by re-running the competitors HERE.",
+  "metric": "ru_maxrss delta over build + reopen + 500 queries, baseline after the shared vectors are resident -- the same metric, the same Ctx and the same insertion order as every nanomem arm in this file",
+  "runs": {
+   "faiss_flat_ip/n10000": {
+    "arm": "faiss_flat_ip",
+    "corpus": "n10000",
+    "repeats": 3,
+    "lib_version": "1.15.0",
+    "peak_rss_delta_mb_runs": [
+     50.2,
+     50.3,
+     50.3
+    ],
+    "peak_rss_delta_mb_median": 50.3,
+    "rss_delta_mb": [
+     50.2,
+     50.2,
+     50.2
+    ],
+    "p50_ms": [
+     0.3937,
+     0.3957,
+     0.3951
+    ],
+    "ingest_s": [
+     0.006,
+     0.005,
+     0.005
+    ],
+    "index_bytes": 30720045,
+    "index_stores_text": false
+   },
+   "sqlitevec_bruteforce/n10000": {
+    "arm": "sqlitevec_bruteforce",
+    "corpus": "n10000",
+    "repeats": 3,
+    "lib_version": "v0.1.9",
+    "peak_rss_delta_mb_runs": [
+     52.9,
+     53.0,
+     53.1
+    ],
+    "peak_rss_delta_mb_median": 53.0,
+    "rss_delta_mb": [
+     52.9,
+     53.0,
+     53.1
+    ],
+    "p50_ms": [
+     7.114,
+     7.1318,
+     7.0999
+    ],
+    "ingest_s": [
+     0.191,
+     0.2,
+     0.194
+    ],
+    "index_bytes": 38776832,
+    "index_stores_text": true
+   },
+   "faiss_flat_ip/n71433": {
+    "arm": "faiss_flat_ip",
+    "corpus": "n71433",
+    "repeats": 3,
+    "lib_version": "1.15.0",
+    "peak_rss_delta_mb_runs": [
+     230.2,
+     230.2,
+     230.5
+    ],
+    "peak_rss_delta_mb_median": 230.2,
+    "rss_delta_mb": [
+     230.2,
+     230.5,
+     230.2
+    ],
+    "p50_ms": [
+     1.0777,
+     1.078,
+     1.0708
+    ],
+    "ingest_s": [
+     0.033,
+     0.033,
+     0.032
+    ],
+    "index_bytes": 219442221,
+    "index_stores_text": false
+   },
+   "sqlitevec_bruteforce/n71433": {
+    "arm": "sqlitevec_bruteforce",
+    "corpus": "n71433",
+    "repeats": 3,
+    "lib_version": "v0.1.9",
+    "peak_rss_delta_mb_runs": [
+     335.8,
+     335.8,
+     336.0
+    ],
+    "peak_rss_delta_mb_median": 335.8,
+    "rss_delta_mb": [
+     266.2,
+     266.6,
+     266.2
+    ],
+    "p50_ms": [
+     52.612,
+     55.6021,
+     55.3687
+    ],
+    "ingest_s": [
+     1.298,
+     1.402,
+     1.376
+    ],
+    "index_bytes": 270610432,
+    "index_stores_text": true
+   }
+  },
+  "cross_harness_figures_being_replaced": {},
+  "generated_at": "2026-09-16T21:42:33",
+  "loadavg": [
+   4.87,
+   2.92,
+   2.39
+  ],
+  "verdict": {
+   "finding": "The cross-harness worry does not materialise. Re-run under THIS harness, the competitor arms land within 0.5 MB of their published figures at both sizes, so the ~4.3% offset seen on nanomem's own baseline arm is specific to that arm and does not contaminate the comparison.",
+   "per_corpus": {
+    "n10000": {
+     "nanomem_shipped_default_now_mb": 42.7,
+     "same_harness_competitors_mb": {
+      "faiss_flat_ip": 50.3,
+      "sqlitevec_bruteforce": 53.0
+     },
+     "cross_harness_published_mb": {
+      "faiss_flat_ip": 50.3,
+      "sqlitevec_bruteforce": 53.5
+     },
+     "harness_offset_mb": {
+      "faiss_flat_ip": 0.0,
+      "sqlitevec_bruteforce": -0.5
+     },
+     "nanomem_over_competitor_same_harness": {
+      "faiss_flat_ip": 0.849,
+      "sqlitevec_bruteforce": 0.806
+     },
+     "nanomem_beats_same_harness": [
+      "faiss_flat_ip",
+      "sqlitevec_bruteforce"
+     ],
+     "nanomem_loses_same_harness": [],
+     "not_re_run_here": [
+      "chroma_hnsw_default",
+      "chroma_hnsw_tuned",
+      "chroma_bruteforce",
+      "chroma_legacy_segment_bruteforce"
+     ]
+    },
+    "n71433": {
+     "nanomem_shipped_default_now_mb": 298.4,
+     "same_harness_competitors_mb": {
+      "faiss_flat_ip": 230.2,
+      "sqlitevec_bruteforce": 335.8
+     },
+     "cross_harness_published_mb": {
+      "faiss_flat_ip": 230.6,
+      "sqlitevec_bruteforce": 335.9
+     },
+     "harness_offset_mb": {
+      "faiss_flat_ip": -0.4,
+      "sqlitevec_bruteforce": -0.1
+     },
+     "nanomem_over_competitor_same_harness": {
+      "faiss_flat_ip": 1.296,
+      "sqlitevec_bruteforce": 0.889
+     },
+     "nanomem_beats_same_harness": [
+      "sqlitevec_bruteforce"
+     ],
+     "nanomem_loses_same_harness": [
+      "faiss_flat_ip"
+     ],
+     "not_re_run_here": [
+      "chroma_hnsw_default",
+      "chroma_hnsw_tuned",
+      "chroma_bruteforce",
+      "chroma_legacy_segment_bruteforce"
+     ]
+    }
+   },
+   "claim_at_10000": "STANDS, and is no longer cross-harness: nanomem 42.7 MB against FAISS 50.3 and sqlite-vec 53.0 measured in the same harness, same Ctx, same metric, 3 runs each with a spread of 0.1-0.2 MB.",
+   "claim_at_71433": "UNCHANGED: nanomem 298.4 MB against FAISS 230.2 in-harness (1.296x) and sqlite-vec 335.8 (0.889x). FAISS still wins this axis at scale.",
+   "what_was_NOT_re_run": "The four Chroma arms. nanomem is 0.21x-0.34x of them at 10,000 and 0.34x-0.45x at 71,433, margins far larger than any plausible harness offset, so those comparisons remain cross-harness by choice and are reported as such.",
+   "generated_at": "2026-09-16T21:43:09"
+  }
+ }
+}

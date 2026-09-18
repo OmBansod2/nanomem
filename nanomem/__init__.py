@@ -38,7 +38,7 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # where 0.3.1 peaked at 818.6-819.1 MB, `stats()["arena_bytes"]` stopped
 # overstating the arena by up to 1.83x, and `reserve_additional_rows()`,
 # `--expect-docs` and three `stats()` keys are new. See CHANGELOG.md 0.3.2 and
-# scratch/refound/{ingest_ram_results,memory_results}.json.
+# evidence/{ingest_ram_results,memory_results}.json.
 #
 # 0.4.0 (engine 3.1.0) is a MINOR bump, not a patch one, for three reasons that
 # a patch number would hide. (1) A second FILE now appears beside the vault by
@@ -50,7 +50,7 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # breaks ties on the row id instead of inheriting `np.argpartition`'s
 # unspecified order. Every changed position is a bitwise tie (max |score gap|
 # 0.0 over 8 of 500 lists at 71,433 rows, mechanically checked in
-# scratch/refound/reopen_results.json :: tie_forensics), so both orders were
+# evidence/reopen_results.json :: tie_forensics), so both orders were
 # always correct -- but a caller diffing top-10 output against 0.3.2 will see
 # the change, which is exactly what a version string is for. (3) Two new
 # constructor flags, `arena_cache=` and `screen=`.
@@ -82,7 +82,7 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # 0.6.0 (engine 3.3.0) is a MINOR bump for three ADDITIONS. Nothing existing
 # changes: `search()` with no `as_of` is bitwise identical to 0.5.0 on 520
 # recorded query results, and the whole 0.5.0 suite passes untouched
-# (scratch/refound/design/temporal_api_spec.md gate G1).
+# (evidence/design/temporal_api_spec.md gate G1).
 # (1) `VaultEngine.history()` / `Vault.history()` return the revision CHAIN for
 # a fact -- every value it has held, oldest first, with the current one last.
 # This is the group `_resolve_revisions` has always assembled in order to decide
@@ -95,12 +95,12 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # routed or screened shortlist would drop the very record the query wants.
 # Proven equal to a physically truncated vault: the admitted row set is exactly
 # {rows : ts <= t} over 705 checks, and 5,670 comparisons show 0 id differences,
-# 0 order differences and 0 leaks (scratch/refound/temporal_as_of_results.json).
+# 0 order differences and 0 leaks (evidence/temporal_as_of_results.json).
 # (3) `changes(since, until)` reports what was written in a window with no query
 # vector, reading the resident timestamp column.
 # Cost of the added branch, measured over 5 alternating paired runs at 20,000
 # rows: +0.21% on p50 against a pre-registered bar of +1.0%
-# (scratch/refound/temporal_cost_results.json).
+# (evidence/temporal_cost_results.json).
 # The CLI gains `nanomem history`, `nanomem changes`, and `--as-of` on search.
 # (4) `volatility()` reports how often each fact actually changes, measured off
 # the revision log; `staleness()` adds a modelled `p_superseded` that is
@@ -115,7 +115,7 @@ from .errors import (NanomemError, CorruptContainerError, IntegrityError,
 # DISTRIBUTION: at 0.6.0 the five bundled copies of this package -- which had
 # been left at 0.3.0 / engine 3.0.3 for four releases -- were resynced to this
 # source and all twelve wheels in the tree were rebuilt from it.
-__version__ = "0.7.13"
+__version__ = "0.7.14"
 __all__ = [
     "Vault", "TextHopBridge", "list_users", "create_user", "delete_user",
     "user_exists", "NanomemError", "CorruptContainerError", "IntegrityError",
