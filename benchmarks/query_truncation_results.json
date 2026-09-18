@@ -1,0 +1,190 @@
+{
+ "measured_on": {
+  "nanomem": "0.7.10",
+  "engine": "3.4.1",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
+ "T1": {
+  "bar": "median cosine(full, capped) >= 0.98",
+  "median_cos": 0.9739,
+  "min_cos": 0.9701,
+  "per_query_cos": [
+   0.9793,
+   0.9701,
+   0.9716,
+   0.9869,
+   0.9755,
+   0.9722
+  ],
+  "pass": false
+ },
+ "T2": {
+  "bar": "rank 1 identical capped vs uncapped, question-last shape",
+  "queries": [
+   {
+    "question": "which database engine does production run",
+    "words": 146,
+    "want": "d_postgres",
+    "rank1_bare": "d_postgres",
+    "rank1_uncapped": "d_postgres",
+    "rank1_capped": "d_redis",
+    "bare_correct": true,
+    "uncapped_correct": true,
+    "capped_correct": false
+   },
+   {
+    "question": "where is session state held",
+    "words": 145,
+    "want": "d_redis",
+    "rank1_bare": "d_redis",
+    "rank1_uncapped": "d_redis",
+    "rank1_capped": "d_redis",
+    "bare_correct": true,
+    "uncapped_correct": true,
+    "capped_correct": true
+   },
+   {
+    "question": "what topic are billing events published to",
+    "words": 147,
+    "want": "d_kafka",
+    "rank1_bare": "d_kafka",
+    "rank1_uncapped": "d_kafka",
+    "rank1_capped": "d_redis",
+    "bare_correct": true,
+    "uncapped_correct": true,
+    "capped_correct": false
+   },
+   {
+    "question": "which bucket holds the nightly backups",
+    "words": 146,
+    "want": "d_s3",
+    "rank1_bare": "d_s3",
+    "rank1_uncapped": "d_redis",
+    "rank1_capped": "d_redis",
+    "bare_correct": true,
+    "uncapped_correct": false,
+    "capped_correct": false
+   },
+   {
+    "question": "what runs the dashboards and alerting",
+    "words": 146,
+    "want": "d_grafana",
+    "rank1_bare": "d_grafana",
+    "rank1_uncapped": "d_redis",
+    "rank1_capped": "d_redis",
+    "bare_correct": true,
+    "uncapped_correct": false,
+    "capped_correct": false
+   }
+  ],
+  "n_rank1_changed": 2,
+  "correct_bare_control": 5,
+  "correct_uncapped": 3,
+  "correct_capped": 1,
+  "shared_preamble_caveat": "with a SHARED preamble, cap() leaves all five queries as identical text, so the capped arm is degenerate by construction; 1/5 is chance, not graded accuracy",
+  "distinct_preamble_arm": {
+   "queries": [
+    {
+     "question": "which database engine does production run",
+     "want": "d_postgres",
+     "rank1_uncapped": "d_postgres",
+     "rank1_capped": "d_grafana",
+     "uncapped_correct": true,
+     "capped_correct": false
+    },
+    {
+     "question": "where is session state held",
+     "want": "d_redis",
+     "rank1_uncapped": "d_redis",
+     "rank1_capped": "d_redis",
+     "uncapped_correct": true,
+     "capped_correct": true
+    },
+    {
+     "question": "what topic are billing events published to",
+     "want": "d_kafka",
+     "rank1_uncapped": "d_kafka",
+     "rank1_capped": "d_kafka",
+     "uncapped_correct": true,
+     "capped_correct": true
+    },
+    {
+     "question": "which bucket holds the nightly backups",
+     "want": "d_s3",
+     "rank1_uncapped": "d_s3",
+     "rank1_capped": "d_s3",
+     "uncapped_correct": true,
+     "capped_correct": true
+    },
+    {
+     "question": "what runs the dashboards and alerting",
+     "want": "d_grafana",
+     "rank1_uncapped": "d_kafka",
+     "rank1_capped": "d_kafka",
+     "uncapped_correct": false,
+     "capped_correct": false
+    }
+   ],
+   "n_rank1_changed": 1,
+   "correct_uncapped": 4,
+   "correct_capped": 3
+  },
+  "pass": false
+ },
+ "T3": {
+  "bar": "median embed(1000w) - embed(100w) < 250 ms",
+  "median_ms_by_words": {
+   "100": 11.57,
+   "500": 35.02,
+   "1000": 68.78
+  },
+  "delta_ms": 57.21,
+  "pass": true
+ },
+ "T4": {
+  "bar": "50k-word query: no crash, < 30 s, correct width",
+  "elapsed_s": 0.17,
+  "note": "returned in 0.17s, width 768",
+  "pass": true
+ },
+ "T5_fanout_basis": {
+  "note": "not a bar; this is the evidence for MAX_SUB_QUERIES",
+  "n_distinct_queries": 145051,
+  "n_corpora": 171,
+  "bound": 8,
+  "pct_within_bound": 99.95,
+  "largest_real_query_subqueries": 25,
+  "pasted_faq_subqueries": 400,
+  "pasted_faq_subqueries_when_capped": 22,
+  "distribution": {
+   "1": 100223,
+   "2": 32872,
+   "3": 8693,
+   "4": 2233,
+   "5": 620,
+   "6": 219,
+   "7": 91,
+   "8": 34,
+   "9": 13,
+   "10": 10,
+   "11": 9,
+   "12": 12,
+   "13": 3,
+   "14": 6,
+   "15": 3,
+   "16": 3,
+   "17": 2,
+   "18": 1,
+   "19": 1,
+   "20": 1,
+   "24": 1,
+   "25": 1
+  }
+ },
+ "measurement_setup": {
+  "model": "nomic-embed-text",
+  "dim": 768,
+  "cap_under_test": 100,
+  "note": "cosine and rank computed directly on provider embeddings; no vault involved, so the numbers isolate the cap itself"
+ }
+}

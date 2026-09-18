@@ -8,7 +8,7 @@ import numpy as np
 import pytest
 
 from conftest import D, unit_rows
-from nanomem.vault import Vault, TextHopBridge
+from nanomem.vault import Vault, TextHopBridge, MAX_SUB_QUERIES
 
 
 @pytest.fixture
@@ -1143,3 +1143,106 @@ def test_split_by_key_counts_every_record(tmp_path, offline_embedder):
     assert out == {"alice": 3, "bob": 6}, out
     v.close()
 
+
+
+# --- a question asked after word 100 -----------------------------------------
+
+def test_a_question_past_word_100_still_reaches_the_query(tmp_path, offline_embedder):
+    """`" ".join(words[:100])` discarded everything after the hundredth word.
+
+    The shape it ruined is the one people actually send: context pasted first,
+    the real question LAST. The assertion is on the TEXT the engine is asked
+    about, not on a rank, because the offline encoder here is lexical and the
+    measurement that motivated this is in query_truncation_results.json.
+    """
+    v = Vault(str(tmp_path / "trunc.dat"))
+    v.add("The production database runs PostgreSQL 16 on the primary cluster.")
+    v.flush()
+
+    preamble = " ".join(["meeting notes and scheduling filler"] * 40)   # 200 words
+    question = "which database engine does production run"
+    seen = []
+    real_search = v.engine.search
+
+    def spy(*a, **kw):
+        seen.append(kw.get("query_text", ""))
+        return real_search(*a, **kw)
+
+    v.engine.search = spy
+    v.search(preamble + " " + question, decompose=False)
+    v.engine.search = real_search
+
+    assert seen, "engine.search was never called"
+    assert question in seen[0], (
+        f"the question was dropped before it reached the engine: {seen[0][-80:]!r}")
+    v.close()
+
+
+def test_search_multihop_does_not_truncate_the_query_either(tmp_path, offline_embedder):
+    """The same two lines existed in `search_multihop`. Fixing one is half a fix."""
+    v = Vault(str(tmp_path / "trunc_mh.dat"))
+    v.add("Session state is held in Redis with a 30 minute expiry.")
+    v.flush()
+
+    preamble = " ".join(["unrelated preamble about parking and catering"] * 30)
+    question = "where is session state held"
+    seen = []
+    real_search = v.engine.search
+    v.engine.search = lambda *a, **kw: (seen.append(kw.get("query_text", "")),
+                                        real_search(*a, **kw))[1]
+    v.search_multihop(preamble + " " + question)
+    v.engine.search = real_search
+
+    assert seen, "engine.search was never called"
+    assert question in seen[0], "search_multihop still truncates at 100 words"
+    v.close()
+
+
+def test_a_pasted_document_is_not_decomposed_into_hundreds_of_scans(
+        tmp_path, offline_embedder):
+    """Every sub-query is its own full scan, so decomposition multiplies cost.
+
+    A pasted FAQ came back as 400 sub-queries. Lifting the 100-word cap would
+    have made that reachable on any paste, so the fan-out is bounded directly.
+    """
+    v = Vault(str(tmp_path / "fanout.dat"))
+    for i in range(5):
+        v.add(f"service number {i} runs on its own dedicated host")
+    v.flush()
+
+    faq = " ".join(f"What is item {i} and why does it matter?" for i in range(200))
+    assert len(Vault.decompose_query(faq)) > MAX_SUB_QUERIES, "corpus no longer provokes it"
+
+    calls = []
+    real_search = v.engine.search
+    v.engine.search = lambda *a, **kw: (calls.append(1), real_search(*a, **kw))[1]
+    v.search(faq, top_k=3)
+    v.engine.search = real_search
+
+    assert len(calls) == 1, (
+        f"a pasted document ran {len(calls)} scans; it should collapse to one query")
+    v.close()
+
+
+def test_a_genuine_composite_question_is_still_decomposed(tmp_path, offline_embedder):
+    """The bound must not cost the feature it is protecting.
+
+    99.95% of 145,051 real queries decompose to 8 or fewer, so anything in that
+    range must still fan out.
+    """
+    v = Vault(str(tmp_path / "composite.dat"))
+    v.add("BPE is a subword tokenisation algorithm.")
+    v.add("KV caching stores past attention keys and values.")
+    v.flush()
+
+    q = "What is BPE, and how does KV caching accelerate attention?"
+    assert 1 < len(Vault.decompose_query(q)) <= MAX_SUB_QUERIES
+
+    calls = []
+    real_search = v.engine.search
+    v.engine.search = lambda *a, **kw: (calls.append(1), real_search(*a, **kw))[1]
+    v.search(q, top_k=3)
+    v.engine.search = real_search
+
+    assert len(calls) > 1, "a real composite question stopped being decomposed"
+    v.close()

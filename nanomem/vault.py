@@ -79,6 +79,15 @@ class TextHopBridge:
 OPENAI_COMPATIBLE_PORTS = frozenset({1234, 8000, 8080, 5000, 4891, 11435})
 
 
+# The most sub-queries a composite question is allowed to become. Each one is a
+# separate full scan, so this is a ceiling on what a single `search` can cost.
+# Measured over 145,051 distinct queries from every non-quarantined corpus on
+# the development tree: 99.95% decompose to 8 or fewer, largest real one is 25,
+# and a pasted 1,800-word FAQ is 400. Past this the text is treated as one
+# query, which is both cheaper and more faithful to what it is.
+MAX_SUB_QUERIES = 8
+
+
 def _llm_endpoint(base_url: str):
     """Resolve a base URL to ``(flavour, url)``.
 
@@ -701,12 +710,46 @@ class Vault:
             safe_top_k = int(top_k)
             if safe_top_k <= 0:
                 return []
-        words = str(query).strip().split()
-        clean_query = " ".join(words[:100]) if len(words) > 100 else str(query).strip()
+        # A QUESTION ASKED AFTER WORD 100 USED TO BE THROWN AWAY.
+        # This was `" ".join(words[:100])`, which discarded everything past the
+        # hundredth word of a query and said nothing. It is the shape people
+        # actually send that this ruins: context pasted first and the real
+        # question LAST. Measured against nomic-embed-text over five such
+        # queries, rank 1 moved on 2 of 5 with a shared preamble and 1 of 5 with
+        # distinct ones, and in every case the surviving text contained none of
+        # the question -- so a correct answer there was the leftover filler
+        # landing near the right record, not retrieval. The bare questions
+        # scored 5/5. See benchmarks/query_truncation_results.json, which ships.
+        #
+        # There is no right number to put here. nanomem bundles no weights and
+        # embeds against whatever endpoint answers, so the real limit belongs to
+        # a model this library cannot interrogate -- nomic-embed-text carries
+        # 8192 tokens, far more than 100 words, and enforces that itself. A
+        # 50,000-word query returns in 0.18 s at the correct width. So the cap
+        # goes, and the model's own limit is the only one left.
+        clean_query = str(query).strip()
         if not clean_query:
             return []
 
         sub_queries = self.decompose_query(clean_query) if decompose else [clean_query]
+
+        # AND A PASTED DOCUMENT IS NOT A COMPOSITE QUESTION.
+        # Every sub-query costs its own full linear scan, so decomposition is a
+        # multiplier on search cost. `decompose_query` splits on `?` and `;`,
+        # which a pasted email thread or FAQ is full of: a 1,800-word FAQ came
+        # back as 400 sub-queries, i.e. 400 scans. The 100-word cap was
+        # incidentally holding this down and removing it would have turned a
+        # correctness fix into a latency cliff -- but the cliff was already
+        # reachable at 100 words, which yielded 22.
+        #
+        # 8 is measured, not chosen: over 145,051 distinct queries from every
+        # non-quarantined corpus on the development tree, 99.95% decompose to 8
+        # or fewer and the largest real one is 25. Past 8 this is not a question
+        # with parts, it is a document, and the whole text is the better query.
+        # It falls back to one query rather than keeping the first 8, because
+        # dropping sub-queries silently is the same defect as the one above.
+        if len(sub_queries) > MAX_SUB_QUERIES:
+            sub_queries = [clean_query]
 
         if len(sub_queries) == 1:
             q_vec = self.embedder.embed(clean_query)
@@ -857,8 +900,10 @@ class Vault:
             safe_top_k = int(top_k)
             if safe_top_k <= 0:
                 return []
-        words = str(query).strip().split()
-        clean_query = " ".join(words[:100]) if len(words) > 100 else str(query).strip()
+        # Same rule as `search`: the query is not truncated here either. The
+        # reasoning and the measurement are in `search`; this path never
+        # decomposed, so it needs no fan-out bound.
+        clean_query = str(query).strip()
         if not clean_query:
             return []
 

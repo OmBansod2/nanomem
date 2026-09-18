@@ -209,9 +209,15 @@ dependency.
 - **FAISS is faster, lighter and reopens quicker.** If you need an ANN index and
   nothing else, use it.
 - **Query decomposition costs 3.4×** end-to-end on short queries, on by default.
-- **A query over 100 words is silently truncated**, so a distinguishing term at
-  the end never reaches the embedder. A limit is defensible; this one is
-  undocumented and far below what `nomic-embed-text` accepts.
+- **A long query is no longer truncated, but it is still diluted.** The
+  100-word cap was removed in 0.7.10; what remains is the embedding model's own
+  behaviour, and it is not free. Five questions that scored 5/5 on their own
+  dropped to 4/5 when each was prefixed with 140 words of unrelated text — no
+  truncation involved, just a longer vector average. Put the question first if
+  you can. Measured in `benchmarks/query_truncation_results.json`.
+- **Decomposition is capped at 8 sub-queries.** Past that the whole text is used
+  as one query. 99.95% of 145,051 real queries decompose to 8 or fewer, but a
+  genuine question with nine parts will not fan out.
 - **Vocabulary-free fact grouping is impossible.** Five candidate signals were
   measured and all sat at chance against sibling attributes. Without declared
   entities, grouping falls back to a lexical tagger: 70/100 recall on canonical
@@ -244,6 +250,14 @@ an error:
 | 0.7.7 | retention deleted the record `search` called current |
 | 0.7.8 | a regression from 0.7.4 — the relevance floor stopped protecting the current value |
 | 0.7.9 | filtered search walked the entire corpus |
+
+One more came the following day, and not the same way. 0.7.10 was found by
+*measuring an item already on the weakness list above* — the 100-word query cap,
+which had been sitting there described as "defensible". It was not: it silently
+discarded the question in exactly the shape people send most, context first and
+the question last. Measuring it also surfaced a second defect nothing had
+noticed, a pasted document fanning out into 400 full scans. A known weakness is
+worth measuring; the list above is not decorative.
 
 `CHANGELOG.md` gives each one the wrong answer it produced and the measurement
 that caught it. Two of those were found by the fuzzer, and **one of those two was

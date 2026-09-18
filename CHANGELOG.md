@@ -5,6 +5,62 @@ number below is from one of those files.
 
 ---
 
+## 0.7.10 — engine 3.4.1 (unchanged)
+
+**A question asked after word 100 of a query was thrown away.** Both `search`
+and `search_multihop` did:
+
+```python
+clean_query = " ".join(words[:100]) if len(words) > 100 else str(query).strip()
+```
+
+Everything past the hundredth word was discarded, and nothing said so. The shape
+this ruins is the one people actually send: context pasted first, the real
+question LAST. Measured against `nomic-embed-text` over five such queries
+(`benchmarks/query_truncation_results.json`, which ships with the package):
+
+```
+                              rank 1 correct    rank 1 moved
+bare question, no preamble         5/5               --
+140-word shared preamble           3/5              2/5
+   the same, capped at 100         1/5
+140-word distinct preambles        4/5              1/5
+   the same, capped at 100         3/5
+```
+
+Those accuracy columns understate it. In every one of these queries the cap
+removes the question outright, so the text the engine sees contains none of what
+was asked — a correct answer there is leftover filler landing near the right
+record, not retrieval. With a SHARED preamble the capped queries are byte for
+byte identical to each other, so all five must return one document; 1/5 is
+chance.
+
+There is no right number to put there. nanomem bundles no weights and embeds
+against whatever endpoint answers, so the real limit belongs to a model this
+library cannot interrogate. The default `nomic-embed-text` carries 8192 tokens
+and enforces that itself: a 50,000-word query returns in 0.18 s at the correct
+width. The cap is gone and the model's own limit is the only one left. Embedding
+1,000 words rather than 100 costs 56 ms.
+
+**And a pasted document is no longer decomposed into hundreds of scans.** Each
+sub-query is its own full linear scan, so decomposition multiplies search cost,
+and `decompose_query` splits on `?` and `;` — which a pasted thread is full of.
+A 1,800-word FAQ came back as 400 sub-queries. The 100-word cap was incidentally
+holding this down, so removing it alone would have traded a correctness defect
+for a latency cliff; but the cliff was already reachable, since the same FAQ
+capped at 100 words still produced 22 scans. Fan-out is now bounded directly at
+`MAX_SUB_QUERIES = 8`, measured rather than chosen: across 145,051 distinct
+queries from every non-quarantined corpus on the development tree, 99.95%
+decompose to 8 or fewer and the largest real one is 25. Past the bound the whole
+text is used as one query rather than keeping the first 8 — dropping sub-queries
+silently is the same defect as the one above.
+
+Neither change moves an existing answer: the clean-chat benchmark is identical
+before and after apart from latency jitter. Four tests added, three of which
+fail against 0.7.9. Suite 576 -> 580.
+
+---
+
 ## 0.7.9 — engine 3.4.1 (unchanged)
 
 **Filtered search was 48x slower than unfiltered, and now is not.** The one open
@@ -337,6 +393,12 @@ embedder and the answer changes with no indication. A limit is defensible —
 `all-minilm` holds ~256 tokens — but 100 words is far under `nomic-embed-text`'s
 8,192 and the truncation is undocumented. Fixing it means choosing a limit per
 model, which needs its own measurement rather than a guess.
+
+> Fixed in 0.7.10, and that framing was the reason it sat here for five
+> releases. There is no limit to choose: nanomem embeds against whatever
+> endpoint answers, so a per-model word limit is not merely unknown here, it is
+> unknowable from inside the library. Removing the cap and letting the model
+> enforce its own was always available.
 
 Suite 552 -> 556.
 
