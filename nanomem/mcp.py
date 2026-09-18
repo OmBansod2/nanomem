@@ -32,6 +32,20 @@ TOOLS = [
             "properties": {
                 "text": {"type": "string", "description": "The information to remember."},
                 "source": {"type": "string", "description": "Source identifier (e.g. user_chat, doc.pdf)."},
+                "entity": {
+                    "type": "string",
+                    "description": (
+                        "The attribute this states, e.g. 'employer', 'home_address', "
+                        "'phone'. Pass the SAME value every time you write a new value "
+                        "of the same attribute -- that is what lets nanomem know which "
+                        "statement supersedes which. Omit it only if you genuinely do "
+                        "not know; a lexical tagger then guesses, and it guesses badly "
+                        "on narrative phrasing ('I moved jobs, I now work at ...')."),
+                },
+                "timestamp": {
+                    "type": "number",
+                    "description": "Unix seconds this was true. Defaults to now.",
+                },
             },
             "required": ["text"],
         },
@@ -51,7 +65,7 @@ TOOLS = [
     {
         "name": "nanomem_history",
         "description": (
-            "Every value a fact has EVER held, oldest first, with the date each was "
+            "Every value a fact has held, oldest first, with the current one marked. This is AUTHORITATIVE about what is current: nanomem_search is ranked by relevance and, on a chain whose attribute was not declared with `entity`, can put a superseded value first. If the two disagree, believe this one."
             "asserted. The last entry is the current value. Use this when the user asks "
             "what something used to be, when it changed, or whether it changed at all. "
             "A fact that never changed returns a single entry, which is an answer."),
@@ -200,9 +214,25 @@ def _fmt_span(seconds):
 def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
     """Run one tool and return the text an MCP client should see."""
     if tool_name == "nanomem_add":
+        # AN AGENT COULD NOT DECLARE AN ATTRIBUTE HERE UNTIL 0.7.12.
+        # The README's stated mitigation for the tagger -- "if your application
+        # knows its own attributes, declare them" -- was unreachable from MCP and
+        # the CLI, the two surfaces this module's own docstring calls "the only
+        # integration path most callers will ever use". Both were locked onto the
+        # tagger, which the README measures at 0 of 100 on narrative phrasing,
+        # and neither said so. `metadata` was accepted and silently dropped, so
+        # an agent that reasonably tried got `Stored: ...` and no entity.
         text = args.get("text", "")
-        vault.add(text, source=args.get("source", "mcp_client"))
-        return f"Stored: {text!r}"
+        meta = dict(args.get("metadata") or {})
+        entity = args.get("entity") or meta.get("entity")
+        if entity:
+            meta["entity"] = str(entity)
+        ts = args.get("timestamp")
+        vault.add(text, source=args.get("source", "mcp_client"),
+                  metadata=meta or None,
+                  timestamp=float(ts) if ts is not None else None)
+        return (f"Stored: {text!r}" if not entity
+                else f"Stored as {entity!r}: {text!r}")
 
     if tool_name == "nanomem_search":
         hits = vault.search(args.get("query", ""), top_k=int(args.get("top_k", 3)))

@@ -89,6 +89,12 @@ def _main():
     p_add = subparsers.add_parser("add", parents=[pw_parent], help="Add a fact or note to memory")
     p_add.add_argument("text", type=str, help="Text to store")
     p_add.add_argument("--source", type=str, default="cli", help="Source tag")
+    p_add.add_argument("--entity", type=str, default=None,
+                       help="The attribute this states (e.g. employer, home_address). "
+                            "Use the SAME value each time you record a new value of the "
+                            "same attribute: that is what tells nanomem which statement "
+                            "supersedes which. Without it a lexical tagger guesses, and "
+                            "it guesses badly on narrative phrasing.")
     p_add.add_argument("--vault", type=str, default="memory.dat", help="Path to memory vault")
     p_add.add_argument("--profile", "--user", dest="profile", type=str, default=None, help="User profile name (e.g. work, personal, alice)")
 
@@ -255,9 +261,15 @@ def _main():
     if args.command == "add":
         with Vault(v_path, password=pw) as v:
             t0 = time.perf_counter()
-            doc_id = v.add(args.text, source=args.source)
+            # `--entity` did not exist until 0.7.12, so the CLI -- like the MCP
+            # server -- could not apply the mitigation the README prescribes for
+            # the tagger, and did not say so.
+            meta = {"entity": args.entity} if getattr(args, "entity", None) else None
+            doc_id = v.add(args.text, source=args.source, metadata=meta)
             dt_us = (time.perf_counter() - t0) * 1e6
-            print(f"[nanomem] Stored fact {doc_id} in {dt_us:.1f} µs into '{v_path}' -> '{args.text}'")
+            as_ent = f" as '{args.entity}'" if getattr(args, "entity", None) else ""
+            print(f"[nanomem] Stored fact {doc_id}{as_ent} in {dt_us:.1f} µs "
+                  f"into '{v_path}' -> '{args.text}'")
 
     elif args.command == "search":
         with Vault(v_path, password=pw) as v:

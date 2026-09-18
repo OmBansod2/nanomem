@@ -270,3 +270,56 @@ def test_a_bad_time_value_still_explains_itself(monkeypatch, vault_path,
     assert "error" in reply
     assert "last week" in reply["error"]["message"]
 
+
+
+# --- an agent must be able to declare the attribute it is writing -----------
+
+_CHAIN = ["I work at Acme Corp.",
+          "I moved jobs, I now work at Initech.",
+          "I switched again, I work at Globex now."]
+
+
+def test_nanomem_add_advertises_entity(vault_path, offline_embedder):
+    """The README's mitigation for the tagger is `metadata={"entity": ...}`, and
+    an MCP client can only pass what the schema advertises. Through 0.7.11 the
+    schema offered `text` and `source` alone, so the mitigation was unreachable
+    from the surface this module calls the main integration path."""
+    from nanomem.mcp import TOOLS
+    props = [t for t in TOOLS if t["name"] == "nanomem_add"][0]["inputSchema"]["properties"]
+    assert "entity" in props
+    assert "narrative" in props["entity"]["description"], \
+        "it must warn that the tagger is what you get without it"
+
+
+def test_a_declared_chain_over_mcp_makes_search_and_history_agree(
+        vault_path, offline_embedder):
+    """The defect an outside reviewer found: two tools, one vault, one session,
+    opposite answers about which value is current, with nothing to say which to
+    believe. Declaring the attribute is what resolves it -- and until 0.7.12
+    there was no way to declare it here."""
+    from nanomem.mcp import dispatch
+    v = Vault(vault_path)
+    for t in _CHAIN:
+        out = dispatch(v, "nanomem_add", {"text": t, "entity": "employer"})
+        assert "employer" in out, "the reply must confirm what it recorded"
+    hist = dispatch(v, "nanomem_history", {"query": "where do I work"})
+    assert "This has held 3 values" in hist, hist
+    current = [ln for ln in hist.splitlines() if "[current]" in ln]
+    assert len(current) == 1 and "Globex" in current[0]
+    top = dispatch(v, "nanomem_search", {"query": "where do I work", "top_k": 3})
+    assert "Globex" in top.splitlines()[0], \
+        f"search disagrees with history about the current value:\n{top}"
+    v.close()
+
+
+def test_metadata_is_no_longer_accepted_and_dropped(vault_path, offline_embedder):
+    """`nanomem_add` took an undeclared `metadata` argument, ignored it, and
+    replied `Stored: ...`. An agent that reasonably tried to declare an entity
+    got a success message and no entity."""
+    from nanomem.mcp import dispatch
+    v = Vault(vault_path)
+    dispatch(v, "nanomem_add", {"text": _CHAIN[0], "metadata": {"entity": "employer"}})
+    v.flush()
+    rec = v.get_all_records()[0]
+    assert (rec.get("metadata") or {}).get("entity") == "employer"
+    v.close()

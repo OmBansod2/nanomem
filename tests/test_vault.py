@@ -1399,3 +1399,25 @@ def test_prune_documents_that_it_returns_bytes(tmp_path, offline_embedder):
     assert removed > 0 and freed > removed, \
         f"prune returned {freed} against {removed} records removed"
     v.close()
+
+
+def test_cli_add_can_declare_an_entity(tmp_path, offline_embedder, capsys):
+    """`nanomem add` had --source, --vault and --profile only, so the README's
+    own mitigation for the tagger could not be applied from the CLI either."""
+    from nanomem.cli import main
+    vp = str(tmp_path / "cli.dat")
+    chain = ["I work at Acme Corp.",
+             "I moved jobs, I now work at Initech.",
+             "I switched again, I work at Globex now."]
+    for t in chain:
+        sys.argv = ["nanomem", "add", t, "--entity", "employer", "--vault", vp]
+        main()
+    out = capsys.readouterr().out
+    assert "as 'employer'" in out, "the CLI must confirm what it recorded"
+
+    v = Vault(vp)
+    assert all((r.get("metadata") or {}).get("entity") == "employer"
+               for r in v.get_all_records())
+    cur = [e["text"] for e in v.history("where do I work") if not e.get("superseded")]
+    assert v.search("where do I work", top_k=1)[0]["text"] in cur
+    v.close()

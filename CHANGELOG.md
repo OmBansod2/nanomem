@@ -5,6 +5,70 @@ number below is from one of those files.
 
 ---
 
+## 0.7.12 — engine 3.4.1 (untouched)
+
+The black-box review's highest-ranked finding: `search` and `history` disagree
+about which value is current, on every chain written through MCP or the CLI.
+
+```
+nanomem_search('where do I work')  -> [1] I work at Acme Corp.       <- superseded
+nanomem_history('where do I work') -> [current] I switched again, ... Globex
+```
+
+**The fixable half: neither surface could declare an attribute.** The README's
+stated mitigation for the lexical tagger is `metadata={"entity": "employer"}`,
+and the tagger is the thing the README itself measures at 0 of 100 on narrative
+phrasing. But `nanomem_add`'s MCP schema offered `text` and `source` alone, and
+`nanomem add` had `--source`, `--vault`, `--profile`. So the two surfaces
+`mcp.py`'s own docstring calls "the only integration path most callers will ever
+use" were locked onto the tagger, and nothing said so. `nanomem_add` also
+accepted an undeclared `metadata` argument, dropped it, and replied `Stored:
+...`, so an agent that reasonably tried got a success message and no entity.
+
+`entity` and `timestamp` are now on the MCP tool, `--entity` on the CLI, and
+both confirm what they recorded rather than saying only `Stored`. With the
+attribute declared, the two tools agree — measured across three chains in two
+timestamp regimes, `benchmarks/entity_declaration_results.json`:
+
+```
+                                      search top-1 == history current
+declared / spread                              3/3
+declared / all-now                             3/3
+tagger   / spread                              2/3
+tagger   / all-now  (= MCP, CLI before)        2/3
+```
+
+**The half that is not a bug.** On a group the TAGGER inferred, the two can
+still disagree, and that is a measured trade rather than an oversight.
+`history` resolves the tagged chain and reads the revision counter; `search`
+also applies a relevance floor, which here drops the current value because
+0.593 - 0.532 = 0.0613 against a `GROUP_COS_DELTA` of 0.06. Exempting the newest
+member of an inferred group was measured and rejected at 0.6.5: **-19.4 points**
+on the 3-persona chat set, with a 0.40-0.80 sweep finding no threshold that
+bought one without paying the other. The README now states plainly that
+`history` is authoritative about what is current and `search` only usually
+agrees, and the MCP `nanomem_history` description says the same to the agent
+reading it.
+
+**A measured dead end, recorded rather than quietly dropped.** The reported
+mechanism -- `_widen_group` discarding the tagged group it was handed -- is a
+real thing that happens, and unioning instead of replacing does fix the reported
+case, 4/4 on the probe above. It was rejected: it re-admits records the cosine
+window's tag check had dropped, which is the check 3.0.2 added after measuring
+40/40 -> 30/40 on adjacent attributes. The adjacent-attribute corpus did not
+catch the regression; two unit tests did, a "desk phone" question answered with
+the mobile number and a colleague's number answered with my own.
+
+It is also not the root cause. The tagged group is cut to one member FIRST, by
+the relevance floor above -- that is what makes `group.size < 2` and triggers
+the replacement branch at all.
+
+**The engine is untouched.** This release changes `mcp.py`, `cli.py`, the README
+and tests. The 520-result ranking baseline is bitwise identical and no benchmark
+moved. Suite 591 -> 595.
+
+---
+
 ## 0.7.11 — engine 3.4.1 (unchanged)
 
 Five defects found by an **independent black-box review** — an agent given the

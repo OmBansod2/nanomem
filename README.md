@@ -100,7 +100,7 @@ to read what the assistant wrote.
 
 ---
 
-Package 0.7.11 · engine 3.4.1 · container format 3 · arena cache format 3.
+Package 0.7.12 · engine 3.4.1 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +131,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-591 tests, no network needed.
+595 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -244,6 +244,24 @@ own attributes, declare them** — pass `metadata={"entity": "employer"}` on wri
 — and set `group_floor_sim=0.45`, worth +19.0 points of top-1 on exactly the
 phrasing the tagger struggles with (`floor_retune_results.json`). Leave both
 alone if you are relying on the tagger; the same setting costs 13.9 points there.
+
+Declare it wherever you write from. `metadata={"entity": ...}` in Python,
+`entity` on the MCP `nanomem_add` tool, `--entity` on `nanomem add`. Until
+0.7.12 the last two did not exist, so the two surfaces most callers integrate
+through were locked onto the tagger with nothing saying so.
+
+**What it costs when you cannot declare one.** On a group the tagger inferred,
+`search` and `history` can disagree about which value is current: `history`
+resolves the tagged chain and reads the revision counter, while `search` also
+applies a relevance floor that can drop the newest value when it is phrased
+further from the question than an older one. Exempting the newest member of an
+inferred group was measured and rejected — it costs **-19.4 points** on the
+3-persona chat set, and a sweep from 0.40 to 0.80 found no threshold that bought
+the one without paying the other
+(`scratch/refound/floor_current_value_results.json`). So this is a deliberate
+trade, not an oversight, and the honest summary is: **`history` is authoritative
+about what is current; `search` is ranked by relevance and only usually agrees.**
+Declaring the entity removes the disagreement entirely.
 
 ---
 

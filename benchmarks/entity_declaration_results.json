@@ -1,0 +1,38 @@
+{
+ "measured_on": {
+  "nanomem": "0.7.11",
+  "engine": "3.4.1",
+  "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
+ },
+ "B1": {
+  "bar": "search top-1 == history's current value",
+  "cells": {
+   "declared / spread": {
+    "agree": 3,
+    "n": 3,
+    "pass": true
+   },
+   "declared / all-now": {
+    "agree": 3,
+    "n": 3,
+    "pass": true
+   },
+   "TAGGER   / spread": {
+    "agree": 2,
+    "n": 3,
+    "pass": false
+   },
+   "TAGGER   / all-now  (= MCP, CLI)": {
+    "agree": 2,
+    "n": 3,
+    "pass": false
+   }
+  }
+ },
+ "measured_dead_end": {
+  "tried": "_widen_group unioned at every group size instead of replacing the tagged group when it held fewer than 2 members",
+  "b1": "PASSED 4/4 -- it does fix the reported defect",
+  "why_rejected": "It re-admits records the cosine window's tag check had dropped, which is the check 3.0.2 added after measuring 40/40 -> 30/40 on adjacent attributes. The adjacent-attribute CORPUS did not catch the regression; two unit tests did: a 'desk phone' question answered with the mobile number, and a colleague's number answered with my own. Both are sibling attributes treated as revisions of one fact.",
+  "correction": "The reported symptom (_widen_group discarding its input) is not the root cause. The tagged group {Acme, Globex} is cut to one member FIRST, by the relevance floor: 0.593 - 0.532 = 0.0613 against GROUP_COS_DELTA 0.06, so the current value is dropped. That is what makes group.size < 2 and triggers the replacement branch. And the floor's behaviour is a measured trade, not an oversight -- exempting the newest member of an INFERRED group costs -19.4 points on the 3-persona chat set."
+ }
+}
