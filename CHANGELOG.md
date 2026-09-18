@@ -65,6 +65,22 @@ tag-check cost), the clean-chat set (97.2% / 100.0% top-3 / 94.4%) and the
 **Engine 3.4.2 -> 3.4.3** and every benchmark re-measured, because the shipped
 ranking default moved.
 
+**The evidence now ships with the source.** `evidence/`, `benchmarks/` and
+`BENCHMARKS.md` were in neither the wheel nor the sdist, so a downstream
+packager received a CHANGELOG citing roughly eighty files the tarball did not
+contain — the citations resolved on GitHub and nowhere else. They are in the
+sdist from this release (1.6 MB, up from 0.9) and stay out of the wheel, which
+is unchanged at 0.27 MB: `pip install` should not carry four megabytes of JSON.
+
+**And the claims registry is checked against the docs, not just against
+itself.** The first version of that guard verified only the claims already
+listed, so a NEW claim could be added to the README and go unchecked — the exact
+hole the mechanism exists to close. Preflight now re-extracts the claims from
+the shipped README and docstrings and fails if any is absent from the registry.
+It caught one on its first run: a sentence that entered the MCP
+`nanomem_history` description when that description was repaired earlier in this
+same release.
+
 The semantic cases cannot be asserted on the offline test encoder, which scores
 "where is my desk" NEARER to "Moved, my place is 8 Wexford Lane now." on shared
 words — there the intent legitimately agrees with the data and the rule must not

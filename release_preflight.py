@@ -378,10 +378,69 @@ def check_claims():
     if dangling:
         bad(f"{len(dangling)} claim(s) name a test or measurement that does not "
             f"exist: " + ", ".join(dangling[:6]))
-    if not unbacked and not dangling:
+    # ...AND THE REGISTRY MUST STILL DESCRIBE TODAY'S DOCS.
+    # Checking only the claims already listed would let a NEW claim be added to
+    # the README and go unchecked, which is the exact hole this whole mechanism
+    # exists to close. The extraction is repeated here, deliberately, so the
+    # check needs nothing outside the package to run.
+    _ASSERTS = _r.compile(
+        r"\b(returns?|raises?|refuses?|never|always|must|cannot|will not|"
+        r"does not|defaults? to|is the default|guarantee[sd]?|preserv\w+|"
+        r"survives?|exempt\w*|ignored|silently|by default)\b", _r.I)
+    _HISTORY = _r.compile(
+        r"\b(through \d|until \d|at 0\.\d|in 0\.\d|was |were |used to|"
+        r"previously|3\.0\.\d|measured|earlier|before this|reported|found by)\b",
+        _r.I)
+
+    def _sentences(text):
+        text = _r.sub(r"```.*?```", " ", text, flags=_r.S)
+        keep = []
+        for ln in text.splitlines():
+            t = ln.strip()
+            keep.append("" if (t.startswith("|") or t.startswith("#")
+                               or t.startswith("---")) else ln)
+        text = _r.sub(r"\s+", " ", "\n".join(keep))
+        return [x.strip() for x in _r.split(r"(?<=[.!?])\s+", text)
+                if len(x.strip()) > 25]
+
+    def _live(text):
+        return {x[:400] for x in _sentences(text)
+                if _ASSERTS.search(x) and not _HISTORY.search(x)}
+
+    found = _live(read("README.md"))
+    import inspect as _i
+    try:
+        sys.path.insert(0, HERE)
+        from nanomem.vault import Vault as _V
+        from nanomem.embed import EmbeddingProvider as _EP
+        from nanomem import mcp as _mcp
+        for cls in (_V, _EP):
+            for nm, member in sorted(vars(cls).items()):
+                if nm.startswith("_"):
+                    continue
+                if not (_i.isfunction(member) or _i.ismethod(member)
+                        or isinstance(member, (property, staticmethod, classmethod))):
+                    continue
+                found |= _live(_i.getdoc(member) or "")
+        for t in _mcp.TOOLS:
+            found |= _live(t.get("description", ""))
+            for _pn, _pv in (t.get("inputSchema", {}).get("properties") or {}).items():
+                found |= _live(_pv.get("description", ""))
+    except Exception as e:
+        bad(f"could not re-extract claims to check the registry is current: {e}")
+        found = set()
+
+    known = {c["claim"] for c in claims}
+    new_claims = sorted(found - known)
+    if new_claims:
+        bad(f"{len(new_claims)} claim(s) in the docs are not in "
+            f"evidence/claims_registry.json, so nothing is checking them: "
+            + " | ".join(x[:90] for x in new_claims[:3]))
+    if not unbacked and not dangling and not new_claims:
         n_t = sum(1 for c in claims if c.get("test"))
         NOTES.append(f"all {len(claims)} documented claims accounted for "
-                     f"({n_t} by a test or measurement)")
+                     f"({n_t} by a test or measurement), and the registry "
+                     f"matches today's docs")
 
 
 def check_generated_blocks():

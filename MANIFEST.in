@@ -14,6 +14,16 @@ include SERVICES_AND_API_SPECIFICATION.md
 include USER_MANUAL.md
 include USER_MANUAL_DEVELOPER.md
 include USER_MANUAL_PERSONAL.md
+include BENCHMARKS.md
+
+# THE EVIDENCE SHIPS WITH THE SOURCE, or the citations in it point at nothing.
+# The docs cite ~80 paths under `evidence/`, and neither that directory nor
+# `benchmarks/` was in the sdist: a downstream packager got a CHANGELOG full of
+# references to files the tarball did not contain. They stay out of the WHEEL --
+# `pip install` should not carry four megabytes of JSON -- and the README links
+# the same files by absolute URL for anyone who installed one.
+recursive-include benchmarks *.json
+recursive-include evidence *.json *.md *.py *.txt
 
 recursive-include nanomem/assets *.npz
 recursive-include tests *.py

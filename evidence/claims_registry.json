@@ -1,4 +1,10 @@
 {
+ "summary": {
+  "total": 45,
+  "with_test": 31,
+  "waived_not_a_claim": 14,
+  "still_unmapped": 0
+ },
  "claims": [
   {
    "source": "README.md",
@@ -81,12 +87,6 @@
    "source": "README.md",
    "claim": "**What it costs when you cannot declare one.** On a group the tagger inferred, `search` and `history` can disagree about which value is current: `history` resolves the tagged chain and reads the revision counter, while `search` also applies a relevance floor that can drop the newest value when it is phrased further from the question than an older one.",
    "id": "C013",
-   "test": "measured:evidence/entity_declaration_results.json"
-  },
-  {
-   "source": "README.md",
-   "claim": "Declaring the entity removes the `search`/`history` disagreement described above, but it does NOT prevent this truncation \u2014 the reproduction is a declared chain.",
-   "id": "C014",
    "test": "measured:evidence/entity_declaration_results.json"
   },
   {
@@ -271,12 +271,6 @@
    "test": "test_volatility_needs_a_restatement"
   },
   {
-   "source": "EmbeddingProvider.dim",
-   "claim": "If the server cannot be reached the deterministic offline encoder answers instead, and that encoder emits ``OFFLINE_DIM``.",
-   "id": "C044",
-   "test": "test_the_offline_encoder_honours_a_declared_width"
-  },
-  {
    "source": "mcp:nanomem_search.top_k",
    "claim": "Number of results to return.",
    "id": "C045",
@@ -285,8 +279,8 @@
   },
   {
    "source": "mcp:nanomem_history",
-   "claim": "A fact that never changed returns a single entry, which is an answer.",
-   "id": "C046",
+   "claim": "A fact that never changed returns a single entry, which is an answer, not an empty result.",
+   "id": "C044",
    "test": "test_history_of_an_unchanged_fact_has_one_entry"
   },
   {
@@ -296,11 +290,5 @@
    "test": null,
    "waived": "restates C042 for the MCP surface"
   }
- ],
- "summary": {
-  "total": 47,
-  "with_test": 33,
-  "waived_not_a_claim": 14,
-  "still_unmapped": 0
- }
+ ]
 }
