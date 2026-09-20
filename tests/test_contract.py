@@ -273,7 +273,7 @@ def test_stats_keys_and_types(vault_path):
     assert s1["encrypted_at_rest"] is False and s1["cipher"] == "none (plaintext)"
     from nanomem.engine import ENGINE_VERSION
     assert s1["engine_version"] == ENGINE_VERSION and s1["format_version"] == 3
-    assert s1["max_boost"] == pytest.approx(0.7)      # documented cap on the boosts
+    assert s1["max_boost"] == pytest.approx(1.10)     # documented cap on the boosts
     assert s1["max_boost"] == pytest.approx(s1["intent_boost"] + s1["group_hoist"]
                                             + s1["revision_lead"])
     # `peak_rss_kb()` reads `resource.getrusage`, which does not exist on

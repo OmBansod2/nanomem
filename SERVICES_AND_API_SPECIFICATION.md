@@ -140,7 +140,8 @@ Text over 500 words is auto-split into linked chunks.
 `top_k` is clamped to 1–50 (default 3).
 
 **`score` changed scale in 3.0.** It is now a cosine plus explicit, documented
-boosts, bounded by `stats()['max_boost']` (0.70); `cosine` is the plain cosine.
+boosts, bounded by `stats()['max_boost']` (1.10 since 0.7.16, when `REVISION_LEAD`
+went 0.20 -> 0.60); `cosine` is the plain cosine.
 Thresholds calibrated against the 0.1.x scale must be re-tuned — 0.25 → 0.42,
 0.32 → 0.53, 0.35 → 0.58 — or converted with
 `nanomem.engine.legacy_score_to_cosine()`.
@@ -396,7 +397,7 @@ for 3.1.
 | Optional password mode | yes |
 | Text-hop multi-hop retrieval | yes, opt-in |
 | Opt-in IVF cell router above 50,000 docs | yes, ships off — measured slower in-engine at equal recall |
-| MCP server for IDE assistants | **not included**; there is no `mcp.py` in this package |
+| MCP server for IDE assistants | **included**: `nanomem/mcp.py`, 7 tools over stdio (`nanomem_add`, `nanomem_search`, `nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats`). This row said "not included" through 0.7.17, which was false. |
 | Native image / audio embedding | **not included**; extract text first |
 | Multi-tenant auth, rate limiting, cluster sync | **not included**; neither HTTP service authenticates |
 

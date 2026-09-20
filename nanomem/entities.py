@@ -1167,10 +1167,29 @@ def make_group_key(user_id, project, entity) -> str:
 # ---------------------------------------------------------------------------
 INTENT_BOOST = 0.25         # a record tagged with the entity the question named
 GROUP_HOIST = 0.25          # ... and in the revision group the question named
-REVISION_LEAD = 0.20        # ... and the member of that group the question asked for
-# INTENT_BOOST + GROUP_HOIST + REVISION_LEAD is the LARGEST amount any boost can
+REVISION_LEAD = 0.60        # ... and the member of that group the question asked for
+# 0.20 until 0.7.16. It was never a tuned value: it was a cap chosen to sit above
+# the widest gap the lead could be asked to close, back when `group_relevance_floor`
+# guaranteed a group's members sat within `window_delta` (0.16) of each other.
+# `floor_keeps_current` removed that guarantee for DECLARED groups and the cap was
+# not revisited, so a declared chain whose newest revision is worded furthest from
+# the question needed 0.2850 and got 0.20 -- and `search` returned a value two
+# revisions old while `history` returned the current one.
+#
+# Swept 0.20 -> 1.50 over eight arms, two embedders
+# (`evidence/revision_lead_cap_results.json`, design/revision_lead_cap_spec.md).
+# The target arms saturate at 0.40 on `nomic-embed-text` and at 0.60 on this
+# package's own offline lexical encoder, which has much wider in-chain spread and
+# is a shipped path, not a test double. NO guard arm moves anywhere in that range,
+# so the cap is not buying the blast-radius protection it is easy to assume it
+# buys; 0.60 is the smallest value that fixes every target arm, which is the rule
+# the sweep was pre-registered with.
+#
+# This cap CAN still bind on a wider chain. tests/test_revision_lead_cap.py
+# records the largest lift any ranking set requests and FAILS if the cap is ever
+# reached, so the next time is found here rather than by a user.# INTENT_BOOST + GROUP_HOIST + REVISION_LEAD is the LARGEST amount any boost can
 # add to a score (engine.VaultEngine._max_boost, published as
-# stats()['max_boost'] = 0.70). EVERY entity term is ADDITIVE, so for a
+# stats()['max_boost'] = 1.10). EVERY entity term is ADDITIVE, so for a
 # cosine-scored vault `0 <= hit['score'] - hit['cosine'] <= stats()['max_boost']`
 # holds for every hit -- which is the score contract DECISIONS #8 makes binding.
 # 3.0.1 instead PERMUTED a group's scores into temporal order, handing one record

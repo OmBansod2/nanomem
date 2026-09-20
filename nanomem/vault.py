@@ -6,6 +6,7 @@ Provides a clean, intuitive 4-method interface: add(), search(), chat(), and ask
 """
 
 import os
+import warnings
 import time
 import json
 import urllib.parse
@@ -89,12 +90,143 @@ MAX_SUB_QUERIES = 8
 
 
 def _chunk_index(chunk_id: str) -> int:
-    """The N in ``{parent}_chunk_N``; a large number when there is none, so an
-    unexpected id sorts last instead of raising."""
-    tail = str(chunk_id).rsplit("_chunk_", 1)
-    if len(tail) != 2 or not tail[1].isdigit():
-        return 1 << 30
-    return int(tail[1])
+    """Where a chunk sits in its document, for ordering.
+
+    Two id shapes reach here. `add()` writes ``{parent}_chunk_N``; `ingest_file`
+    writes ``{basename}:{start}-{end}``, and from 0.7.18 those carry a
+    ``parent_id`` too, so they have to sort by their START LINE or a reassembled
+    file comes back with its lines shuffled. An unrecognised id sorts last
+    instead of raising.
+    """
+    text = str(chunk_id)
+    tail = text.rsplit("_chunk_", 1)
+    if len(tail) == 2 and tail[1].isdigit():
+        return int(tail[1])
+    span = text.rsplit(":", 1)
+    if len(span) == 2:
+        start = span[1].split("-", 1)[0]
+        if start.isdigit():
+            return int(start)
+    return 1 << 30
+
+
+_CJK_RANGES = (
+    (0x3040, 0x30FF),   # Hiragana, Katakana
+    (0x3400, 0x4DBF),   # CJK Unified Ideographs Extension A
+    (0x4E00, 0x9FFF),   # CJK Unified Ideographs
+    (0xAC00, 0xD7AF),   # Hangul syllables
+    (0xF900, 0xFAFF),   # CJK Compatibility Ideographs
+    (0x20000, 0x2FA1F), # CJK Extension B..F and Compatibility Supplement
+)
+
+
+def _is_dense_script(text: str, threshold: float = 0.2) -> bool:
+    """Is this text a script that does not put spaces between words?
+
+    Through 0.7.17 this was ``any(ord(c) > 0x2E80 for c in text)``. Every emoji
+    sits above that threshold, so ONE emoji anywhere in an English document
+    routed the whole thing down the character splitter, which cuts every
+    ``MAX_FACT_CHARS_CJK`` characters with no regard for word boundaries.
+    Measured on a 3,000-token ASCII document with a single emoji inserted:
+    chunks 6 -> 19 and 13 tokens PERMANENTLY LOST, with others stored truncated
+    mid-word ("tok004" for "tok00499"). Emoji are ordinary content in chat logs,
+    notes and commit messages, so this was silent data loss on everyday input.
+
+    Two things are fixed here. The ranges are the actual CJK and Hangul blocks
+    rather than "anything above U+2E80", so symbols and emoji no longer qualify.
+    And it is a PROPORTION rather than an existence test, so one Chinese
+    character quoted in an English paragraph does not change how the paragraph is
+    split -- which the old test also got wrong, just less visibly.
+    """
+    if not text:
+        return False
+    dense = 0
+    counted = 0
+    for ch in text:
+        if ch.isspace():
+            continue
+        counted += 1
+        o = ord(ch)
+        for lo, hi in _CJK_RANGES:
+            if lo <= o <= hi:
+                dense += 1
+                break
+    if counted == 0:
+        return False
+    return (dense / counted) >= threshold
+
+
+#: Metadata keys this library writes itself. A caller who sets one is not adding
+#: a field, they are overwriting a structural link -- and `parent_id` in
+#: particular is an ordinary thing to want (tickets, threads, comments). Two rows
+#: tagged `{"parent_id": "TICKET-42"}` were read back as ONE chunked document:
+#: `get("TICKET-42")` returned both texts joined, `exists` said True for a
+#: document nobody added, and `delete(id="TICKET-42")` removed both. Filtering on
+#: these keys is supported and documented; SETTING them is refused.
+RESERVED_METADATA_KEYS = frozenset({
+    "parent_id", "chunk_index", "chunk_total", "is_chunked",
+    "parent_sha256", "embed_backend",
+})
+
+
+def _jsonable_metadata(meta):
+    """Make metadata storable without silently turning it into a string.
+
+    Metadata is serialised as JSON, and a `set` is not JSON-serialisable -- so a
+    set-valued tag was stored as its Python REPR, `"{'x', 'y'}"`, and a filter
+    for `"x"` then matched nothing. A set is an obvious way to express "these
+    tags", so it is converted to a sorted list, which filters by membership the
+    way the caller meant. Tuples go the same way. Anything else is untouched.
+    """
+    if not isinstance(meta, dict):
+        return meta
+    out = {}
+    for k, v in meta.items():
+        if isinstance(v, (set, frozenset)):
+            out[k] = sorted(v, key=lambda x: (str(type(x)), str(x)))
+        elif isinstance(v, tuple):
+            out[k] = list(v)
+        else:
+            out[k] = v
+    return out
+
+
+def _reject_reserved_metadata(meta) -> None:
+    if not isinstance(meta, dict):
+        return
+    clash = sorted(RESERVED_METADATA_KEYS & set(meta))
+    if clash:
+        raise ValueError(
+            "metadata key(s) %s are written by nanomem itself and cannot be set "
+            "by a caller: they link a split document's chunks, and overriding "
+            "them makes unrelated records read back as one document. Rename the "
+            "field (for example %r -> %r). Filtering on these keys is still "
+            "supported." % (", ".join(repr(k) for k in clash), clash[0], "my_" + clash[0]))
+
+
+def _doc_fingerprint(text: str) -> str:
+    """A stable fingerprint of EXACTLY the text a caller passed to `add()`.
+
+    `split_large_text` REBUILDS text rather than slicing it -- paragraphs are
+    stripped, units are re-joined with " " and "\n\n" -- so the chunks cannot be
+    concatenated back into the original, and `_join_chunks` is a reconstruction,
+    not an inverse. Three ways it differs, all measured: every newline becomes a
+    space, a passage that repeats is dropped by the overlap detector (one
+    sentence repeated 400 times lost 29% of the document), and indentation is
+    gone.
+
+    0.7.16 resolved `delete(text_exact=...)` on a chunked document by comparing
+    against that reconstruction, and the test written for it used a document of
+    unique space-joined tokens -- the one shape where the reconstruction happens
+    to round-trip. Every real document over 500 words has newlines, so the fix
+    covered almost nothing and still returned 0. Found by the fourth black-box
+    review (F1).
+
+    So the match is made against what was WRITTEN, not against what can be
+    rebuilt. `hashlib` is stdlib; this adds no dependency.
+    """
+    import hashlib
+    return hashlib.sha256(str(text).strip().encode("utf-8")).hexdigest()
 
 
 def _join_chunks(texts: List[str], max_overlap_words: int = 200) -> str:
@@ -270,7 +402,7 @@ class Vault:
 
         words = clean.split()
         char_count = len(clean)
-        is_cjk = any(ord(c) > 0x2E80 for c in clean)
+        is_cjk = _is_dense_script(clean)
 
         if not is_cjk and len(words) <= max_words:
             return [clean]
@@ -285,7 +417,7 @@ class Vault:
         raw_units = []
         for p in paragraphs:
             p_words = p.split()
-            p_cjk = any(ord(c) > 0x2E80 for c in p)
+            p_cjk = _is_dense_script(p)
             if (not p_cjk and len(p_words) > max_words) or (p_cjk and len(p) > cls.MAX_FACT_CHARS_CJK):
                 sentences = [s.strip() for s in re.split(r"(?<=[.!?。！？\n])\s+", p) if s.strip()]
                 raw_units.extend(sentences if sentences else [p])
@@ -295,7 +427,7 @@ class Vault:
         units = []
         for u in raw_units:
             u_words = u.split()
-            u_cjk = any(ord(c) > 0x2E80 for c in u)
+            u_cjk = _is_dense_script(u)
             if not u_cjk and len(u_words) > max_words:
                 for i in range(0, len(u_words), max_words):
                     units.append(" ".join(u_words[i : i + max_words]))
@@ -368,17 +500,32 @@ class Vault:
             return ""
         clean_text = str(text).strip()
 
-        meta = dict(metadata or {})
+        _reject_reserved_metadata(metadata)
+        meta = _jsonable_metadata(dict(metadata or {}))
         import hashlib
         doc_id = str(id or meta.get("id") or f"doc_{hashlib.md5(clean_text.encode('utf-8')).hexdigest()[:10]}")
         meta["id"] = doc_id
-        if metadata is not None and isinstance(metadata, dict):
-            metadata["id"] = doc_id
+        # DO NOT WRITE BACK INTO THE CALLER'S DICT. Until 0.7.18 this set
+        # `metadata["id"]` on the object the caller passed in, so reusing one dict
+        # across several `add()` calls -- `meta = {"user_id": "alice"}` and then
+        # three facts -- fed the FIRST document's id back in as the second's, and
+        # every later document collapsed onto it. Three distinct facts, one id:
+        # `get` returned only the newest, `delete(id=)` removed all three, and
+        # `update(id=)` rewrote the first. It also contradicted this method's own
+        # documented rule that the id is a function of the TEXT alone. The id is
+        # the return value; mutating the argument was never documented.
         self.last_id = doc_id
 
         chunks = self.split_large_text(clean_text, max_words=self.MAX_FACT_WORDS, overlap_words=self.OVERLAP_WORDS)
         if len(chunks) <= 1:
             vec = self.embedder.embed(clean_text)
+            # Which encoder produced this vector. Rows written while the endpoint
+            # was unreachable are encoded lexically and are not comparable with
+            # rows the model embedded; without this there is no way to find them
+            # afterwards. Only recorded when it is NOT the model, so ordinary rows
+            # carry no extra metadata.
+            if getattr(self.embedder, "last_backend", "model") != "model":
+                meta["embed_backend"] = self.embedder.last_backend
             return self.engine.add_fact(
                 text=clean_text,
                 embedding=vec,
@@ -391,7 +538,12 @@ class Vault:
 
         parent_id = doc_id
         total_chunks = len(chunks)
+        # Hoisted out of the loop below. It was computed per chunk, so a
+        # 60,000-word document hashed 72 MB instead of 0.6 MB -- 119x the work,
+        # for a value that is identical on every chunk by definition.
+        parent_fp = _doc_fingerprint(clean_text)
         vecs = self.embedder.embed_batch(chunks)
+        backend = getattr(self.embedder, "last_backend", "model")
 
         for idx, ch in enumerate(chunks):
             chunk_meta = dict(meta)
@@ -401,6 +553,9 @@ class Vault:
             chunk_meta["chunk_total"] = total_chunks
             chunk_meta["parent_id"] = parent_id
             chunk_meta["is_chunked"] = True
+            chunk_meta["parent_sha256"] = parent_fp
+            if backend != "model":
+                chunk_meta["embed_backend"] = backend
 
             self.engine.add_fact(
                 text=ch,
@@ -455,6 +610,11 @@ class Vault:
             return 0
 
         chunks = []
+        # Once for the file, not once per chunk: this both joins and hashes.
+        file_fp = _doc_fingerprint("".join(raw_lines))
+        import hashlib as _hashlib
+        file_doc_id = "doc_" + _hashlib.md5(
+            os.path.abspath(file_path).encode("utf-8")).hexdigest()[:10]
         stride = max(1, lines_per_chunk - overlap_lines)
         code_exts = {
             ".py", ".ts", ".js", ".tsx", ".jsx", ".rs", ".go", ".cpp", ".c", ".h", ".hpp",
@@ -462,40 +622,84 @@ class Vault:
         }
         is_code = ext in code_exts
 
+        def _by_line_budget(lines):
+            """Break a slice on LINE boundaries so no piece exceeds the word cap.
+
+            Anything still over the cap reaches `add_batch`, which re-splits it
+            with the word-based splitter and loses the formatting this method
+            promises. Splitting here keeps whole lines, so indentation survives.
+            """
+            out, cur, cur_words = [], [], 0
+            for ln in lines:
+                w = len(ln.split())
+                if cur and cur_words + w > self.MAX_FACT_WORDS:
+                    out.append(cur); cur, cur_words = [], 0
+                cur.append(ln); cur_words += w
+            if cur:
+                out.append(cur)
+            return out or [lines]
+
         for start_idx in range(0, len(raw_lines), stride):
-            slice_lines = raw_lines[start_idx : start_idx + lines_per_chunk]
-            if not slice_lines:
+            window = raw_lines[start_idx : start_idx + lines_per_chunk]
+            if not window:
                 break
-            chunk_text = "".join(slice_lines).strip()
-            if chunk_text:
-                start_line = start_idx + 1
-                end_line = min(start_idx + len(slice_lines), len(raw_lines))
-                chunk_id = f"{basename}:{start_line}-{end_line}"
+            for slice_lines in _by_line_budget(window):
+                # KEEP THE FORMATTING THIS METHOD PROMISES. Two things used to
+                # break it. `.strip()` removed the leading indentation of a chunk's
+                # first line, which in Python is the difference between a method and
+                # a module-level function. And a 50-line slice of long lines can
+                # exceed `MAX_FACT_WORDS`, at which point `add_batch` re-split it with
+                # `split_large_text` -- the word-based splitter that rebuilds text --
+                # and the indentation went with it. Measured on 200 lines of ~30
+                # tokens each: indentation preserved with short lines, GONE with long
+                # ones, while the docstring promises "exact code formatting,
+                # indentation, and line numbers" either way.
+                chunk_text = "".join(slice_lines).rstrip("\n")
+                if chunk_text.strip():
+                    start_line = start_idx + 1
+                    end_line = min(start_idx + len(slice_lines), len(raw_lines))
+                    chunk_id = f"{basename}:{start_line}-{end_line}"
 
-                if callable(metadata):
-                    try:
-                        chunk_meta = dict(metadata(chunk_text, start_line, end_line) or {})
-                    except Exception:
+                    if callable(metadata):
+                        try:
+                            chunk_meta = dict(metadata(chunk_text, start_line, end_line) or {})
+                        except Exception:
+                            chunk_meta = {}
+                    elif isinstance(metadata, dict):
+                        chunk_meta = dict(metadata)
+                    else:
                         chunk_meta = {}
-                elif isinstance(metadata, dict):
-                    chunk_meta = dict(metadata)
-                else:
-                    chunk_meta = {}
 
-                chunk_meta["id"] = chunk_id
-                chunk_meta["file_path"] = file_path
-                chunk_meta["filename"] = basename
-                chunk_meta["start_line"] = start_line
-                chunk_meta["end_line"] = end_line
-                chunk_meta["is_code"] = is_code
+                    chunk_meta["id"] = chunk_id
+                    chunk_meta["file_path"] = file_path
+                    chunk_meta["filename"] = basename
+                    chunk_meta["start_line"] = start_line
+                    chunk_meta["end_line"] = end_line
+                    chunk_meta["is_code"] = is_code
+                    # The same fingerprint `add()` stamps on a split document, so
+                    # `delete(text_exact=<the file's text>)` reaches an ingested file
+                    # too. `delete` advertises exact-text targeting, and an ingested
+                    # file was the last multi-row document it could not match -- it
+                    # returned 0 and removed nothing, silently.
+                    chunk_meta["parent_sha256"] = file_fp
+                    # ONE INGESTED FILE IS ONE DOCUMENT. Without this every
+                    # chunk looked like a separate VERSION of the entity, and
+                    # `forget_superseded(keep=1)` on a four-chunk document
+                    # deleted three of them -- measured: the query that answered
+                    # "are shipping charges refundable?" correctly before the
+                    # call answered with a DIFFERENT passage after, which this
+                    # method's own docstring calls worse than an empty result.
+                    # `add()` has always stamped this; `ingest_file` never did.
+                    chunk_meta["parent_id"] = file_doc_id
 
-                chunk_source = source or f"{basename}:{start_line}-{end_line}"
-                chunks.append({
-                    "id": chunk_id,
-                    "text": chunk_text,
-                    "metadata": chunk_meta,
-                    "source": chunk_source
-                })
+                    chunk_source = source or f"{basename}:{start_line}-{end_line}"
+                    chunks.append({
+                        "id": chunk_id,
+                        "text": chunk_text,
+                        "metadata": chunk_meta,
+                        "source": chunk_source,
+                        "preserve_indent": True,
+                    })
 
         if chunks:
             self.add_batch(chunks, batch_size=32)
@@ -521,10 +725,16 @@ class Vault:
             ".txt", ".csv", ".tsv", ".log", ".rst", ".transcript"
         }
         allowed_exts = set(extensions) if extensions else default_exts
-        ignored = set(ignore_dirs or [
+        # EXTENDS the automatic list, it does not replace it. This read
+        # `set(ignore_dirs or [defaults])`, so naming ONE directory to skip
+        # silently re-enabled every default -- `ignore_dirs=["src"]` indexed
+        # `node_modules`. The docstring says build artifacts, git history and
+        # caches are skipped "automatically", which is not something a caller
+        # adding one more directory is asking to turn off.
+        _AUTOMATIC_SKIPS = (
             ".git", "node_modules", "__pycache__", ".venv", "venv", "env", ".idea",
-            ".vscode", "dist", "build", "target", ".next", ".nuxt", "coverage", ".pytest_cache"
-        ])
+            ".vscode", "dist", "build", "target", ".next", ".nuxt", "coverage", ".pytest_cache")
+        ignored = set(_AUTOMATIC_SKIPS) | {str(x) for x in (ignore_dirs or [])}
 
         targets = []
         est_bytes = 0
@@ -586,6 +796,11 @@ class Vault:
             return 0
 
         total = len(records)
+        # What was HANDED IN, versus what actually reached the vault. `total` is
+        # the arena-sizing hint below; it was also the return value, so a batch
+        # containing a record with empty text reported storing it. A caller
+        # reconciling counts had no way to see the gap.
+        stored = 0
         # ARENA SIZING. A bulk caller knows how many rows are coming; the engine
         # does not, and nothing in the library used to tell it. Measured over
         # a 71,433-document ingest of 768-d vectors, peak ru_maxrss of the whole
@@ -598,9 +813,17 @@ class Vault:
         # It is only a hint -- a wrong one costs nothing but pages nobody
         # touches.
         self.engine.reserve_additional_rows(total)
+        dropped_empty = 0
         for i in range(0, total, batch_size):
             chunk = records[i : i + batch_size]
-            texts = [str(r.get("text", "")).strip() for r in chunk]
+            # `ingest_file` promises "exact code formatting, indentation, and
+            # line numbers". A blanket `.strip()` removed the leading indentation
+            # of every chunk's FIRST line -- in Python the difference between a
+            # method and a module-level function -- so a record may ask to keep
+            # it. Trailing whitespace is still trimmed either way.
+            texts = [(str(r.get("text", "")).rstrip()
+                      if r.get("preserve_indent") else str(r.get("text", "")).strip())
+                     for r in chunk]
             has_all_vecs = all("embedding" in r and r["embedding"] is not None for r in chunk)
             if has_all_vecs:
                 vecs = [r["embedding"] for r in chunk]
@@ -609,6 +832,7 @@ class Vault:
 
             for j, r in enumerate(chunk):
                 if not texts[j]:
+                    dropped_empty += 1
                     continue
                 meta = dict(r.get("metadata", {}))
                 import hashlib
@@ -637,19 +861,23 @@ class Vault:
                 else:
                     pieces = [texts[j]]
                 if len(pieces) > 1:
+                    piece_fp = _doc_fingerprint(texts[j])   # once per record, not per chunk
                     piece_vecs = self.embedder.embed_batch(pieces)
                     for k, piece in enumerate(pieces):
                         cmeta = dict(meta)
                         cid = f"{doc_id}_chunk_{k + 1}"
                         cmeta.update({"id": cid, "chunk_index": k + 1,
                                       "chunk_total": len(pieces),
-                                      "parent_id": doc_id, "is_chunked": True})
+                                      "parent_id": doc_id, "is_chunked": True,
+                                      "parent_sha256": piece_fp})
+                        stored += 1
                         self.engine.add_fact(
                             text=piece, embedding=piece_vecs[k],
                             source=r.get("source", "batch_ingestion"),
                             metadata=cmeta, timestamp=r.get("timestamp"),
                             revision=r.get("revision"), id=cid)
                     continue
+                stored += 1
                 self.engine.add_fact(
                     text=texts[j],
                     embedding=vecs[j],
@@ -660,7 +888,12 @@ class Vault:
                     id=doc_id
                 )
         self.flush()
-        return total
+        if dropped_empty:
+            warnings.warn(
+                "nanomem: add_batch was given %d record(s) with no text and "
+                "stored %d of %d. The return value is what reached the vault."
+                % (dropped_empty, stored, total), RuntimeWarning, stacklevel=2)
+        return stored
 
     @staticmethod
     def decompose_query(query: str) -> List[str]:
@@ -752,7 +985,8 @@ class Vault:
                 temporal_direction=temporal_direction,
                 alpha=alpha,
                 num_hops=num_hops,
-                beam_width=beam_width
+                beam_width=beam_width,
+                as_of=as_of
             )
 
 
@@ -945,7 +1179,8 @@ class Vault:
         alpha: float = 0.35,
         num_hops: int = 2,
         beam_width: int = 2,
-        bridge: Optional[Any] = None
+        bridge: Optional[Any] = None,
+        as_of: Optional[float] = None
     ) -> List[Dict[str, Any]]:
         """
         Two-pass retrieval for bridge ("A -> B -> answer") questions. Opt-in.
@@ -1003,7 +1238,15 @@ class Vault:
             top_k=safe_top_k,
             metadata_filter=filter,
             min_score=min_score,
-            temporal_direction=temporal_direction
+            temporal_direction=temporal_direction,
+            # BOTH HOPS take the cutoff. `search(as_of=..., multihop=True)`
+            # delegated here and simply did not pass it -- this method did not
+            # even accept it -- so a question asked "as it stood then" was
+            # answered with a record written after the cutoff. Measured: a fact
+            # timestamped 1.8e9 came back for `as_of=1.7e9`. The bridge hop
+            # needs it as much as the first: bridging THROUGH a future record
+            # reaches conclusions the vault could not have supported then.
+            as_of=as_of
         )
         if not single or k_bridge <= 0:
             return single[:safe_top_k]
@@ -1025,7 +1268,8 @@ class Vault:
             top_k=safe_top_k + k_bridge + 2,
             metadata_filter=filter,
             min_score=min_score,
-            temporal_direction=temporal_direction
+            temporal_direction=temporal_direction,
+            as_of=as_of
         )
 
         chosen: List[Dict[str, Any]] = []
@@ -1206,8 +1450,23 @@ class Vault:
 
     def get(self, id: str) -> Optional[Dict[str, Any]]:
         """
-        Retrieve an exact memory record, fact, or chunk by its unique ID.
+        Retrieve a memory record, fact, or chunk by its unique ID.
         Returns the record dictionary if found, or None if not present.
+
+        For a stored row the text is exactly what was stored. For the PARENT id of
+        a document `add()` split, there is no such row, and the text returned is a
+        RECONSTRUCTION rebuilt from the chunks -- not the document that was added.
+        It differs in three measured ways: every newline becomes a space, a passage
+        that repeats can be dropped by the overlap detector (one sentence repeated
+        400 times lost 29% of the document), and leading indentation is gone. This
+        docstring said "exact" through 0.7.16 and that was wrong.
+
+        ``metadata["reconstructed"]`` is True on such a result, and
+        ``metadata["reconstruction_exact"]`` says whether it round-tripped, checked
+        against a fingerprint of the original. ``metadata["chunk_ids"]`` names the
+        rows that hold the exact stored content. If you need the file's formatting
+        preserved, ingest it with :meth:`ingest_file`, which chunks on line
+        boundaries and does not rebuild text.
         """
         clean_id = str(id).strip()
         if not clean_id:
@@ -1228,9 +1487,19 @@ class Vault:
             meta["id"] = clean_id
             meta["chunk_ids"] = [c.get("id") for c in chunks]
             meta.pop("parent_id", None)
+            # SAY THAT THIS IS A RECONSTRUCTION, AND WHETHER IT SURVIVED.
+            # A caller cannot otherwise tell this from a stored row, and for a
+            # coding agent the difference is source code with its indentation
+            # silently removed. The fingerprint is already stored for `delete`,
+            # so the honest answer costs a comparison.
+            rebuilt = _join_chunks([c.get("text", "") for c in chunks])
+            stamp = (chunks[0].get("metadata") or {}).get("parent_sha256")
+            meta["reconstructed"] = True
+            if stamp:
+                meta["reconstruction_exact"] = (_doc_fingerprint(rebuilt) == stamp)
             return {
                 "id": clean_id,
-                "text": _join_chunks([c.get("text", "") for c in chunks]),
+                "text": rebuilt,
                 "metadata": meta,
                 "source": first.get("source"),
                 "timestamp": float(first.get("timestamp", 0.0)),
@@ -1303,14 +1572,20 @@ class Vault:
                 return True
             first = chunks[0]
             new_meta = dict(first.get("metadata") or {})
-            for k in ("parent_id", "is_chunked", "id"):
+            # Drop EVERY key the library writes itself, not just three of them.
+            # This metadata came off a stored chunk, so it carries the structural
+            # links; re-adding with them would both re-assert a stale document
+            # shape and now trip `_reject_reserved_metadata`.
+            for k in set(RESERVED_METADATA_KEYS) | {"id"}:
                 new_meta.pop(k, None)
             if metadata is not None:
                 new_meta.update(metadata)
             self.delete(id=clean_id)
             self.add(str(text).strip(),
                      metadata=new_meta or None,
-                     source=source if source is not None else first.get("source"))
+                     source=source if source is not None else first.get("source"),
+                     timestamp=first.get("timestamp"),
+                     id=clean_id)
             self.flush()
             return True
 
@@ -1468,6 +1743,13 @@ class Vault:
         """
         Permanently remove specific memory records from the vault.
         Supports targeting by unique ID or list of IDs, exact text, substring, metadata filter ('where'), or source document.
+
+        `text_exact` on a document that `add()` SPLIT matches two things: the text
+        exactly as it was passed to `add()` (compared by fingerprint, so newlines,
+        indentation and repeated passages all count), and the whitespace-normalised
+        reconstruction that `get(parent_id)["text"]` returns. It is not a substring
+        or fuzzy match: a document is removed only when one of those two matches in
+        full, and then every one of its chunks goes.
         Returns the number of deleted records.
 
         COST. There are no tombstones in 3.0 (DECISIONS #11), so a delete is a
@@ -1495,6 +1777,54 @@ class Vault:
         if ids is not None:
             target_ids.update(str(x).strip() for x in ids if str(x).strip())
 
+        # A document `add()` split is stored as `{parent}_chunk_N` rows, and no
+        # single row holds the text the caller handed us -- so `text_exact` with
+        # that text matched nothing and returned 0, on a mode the docstring
+        # advertises. Found by the third black-box review (M2). The by-id forms
+        # were repaired for chunked documents in 0.7.11; this is the same defect
+        # on the by-text form. Resolve to parent ids with the SAME de-overlap
+        # join `get()` uses, so what reconstructs is what deletes.
+        text_ids = set()
+        if text_exact is not None:
+            want = text_exact.strip()
+            if not any(r.get("text", "").strip() == want for r in all_recs):
+                # MATCH WHAT WAS WRITTEN, NOT WHAT CAN BE REBUILT. `split_large_text`
+                # rebuilds text rather than slicing it, so `_join_chunks` is a
+                # reconstruction and comparing against it matched only documents of
+                # unique space-joined words -- see `_doc_fingerprint`.
+                fp = _doc_fingerprint(want)
+                groups: Dict[str, List[Dict[str, Any]]] = {}
+                for r in all_recs:
+                    m = r.get("metadata") or {}
+                    if m.get("parent_sha256") == fp:
+                        # A split document is named by its parent; an ingested file
+                        # has no parent row, so the chunk is named directly.
+                        text_ids.add(str(m.get("parent_id") or r.get("id") or ""))
+                    pid = m.get("parent_id")
+                    if pid:
+                        groups.setdefault(str(pid), []).append(r)
+                text_ids.discard("")
+                for pid, rows in groups.items():
+                    if pid in text_ids:
+                        continue
+                    rows.sort(key=lambda r: _chunk_index(r.get("id", "")))
+                    rebuilt = _join_chunks([r.get("text", "") for r in rows]).strip()
+                    if rebuilt == want:
+                        text_ids.add(pid)
+                        continue
+                    # LEGACY ROWS ONLY. A vault written before 0.7.18 has no
+                    # fingerprint, and its reconstruction differs from the document
+                    # by whitespace alone for every shape except a repeated passage
+                    # (measured: newline-joined, CSV and indented code all match once
+                    # whitespace is collapsed; a repeated passage does not, because
+                    # that content is genuinely not in the vault). Without this the
+                    # 0.7.17 fix reaches only documents written after upgrading --
+                    # which is nobody's existing data.
+                    if any((r.get("metadata") or {}).get("parent_sha256") for r in rows):
+                        continue
+                    if " ".join(rebuilt.split()) == " ".join(want.split()):
+                        text_ids.add(pid)
+
         kept = []
         deleted_count = 0
         for r in all_recs:
@@ -1502,27 +1832,43 @@ class Vault:
             rec_id = str(r.get("id") or (r.get("metadata") or {}).get("id") or "")
             meta = r.get("metadata") or {}
 
-            if target_ids and (rec_id in target_ids
-                               or meta.get("parent_id") in target_ids):
-                drop = True
-            elif text_exact is not None and r.get("text", "").strip() == text_exact.strip():
-                drop = True
-            elif text_contains is not None and text_contains.lower() in r.get("text", "").lower():
-                drop = True
-            elif source is not None:
+            # EVERY CRITERION THE CALLER GAVE MUST MATCH. This was an `elif`
+            # chain, so the first one that applied decided and the rest were
+            # ignored: `delete(source="report.txt", where={"team": "b"})`
+            # deleted BOTH rows of that source, including the one the filter
+            # excluded. Narrowing is the safe direction for a delete -- a caller
+            # who names two things means the intersection, and the failure mode
+            # of the old reading was deleting data they asked to keep.
+            checks = []
+            if target_ids:
+                checks.append(rec_id in target_ids
+                              or meta.get("parent_id") in target_ids)
+            if text_exact is not None:
+                # One criterion, two ways to satisfy it: the row IS the text, or
+                # the row belongs to a document whose text this is (resolved by
+                # fingerprint above). `text_ids` is deliberately separate from
+                # `target_ids` -- folding it in made "delete by text" and
+                # "delete by id" two criteria that a chunk could never satisfy
+                # at once, and `delete(text_exact=<a split document>)` stopped
+                # deleting anything.
+                checks.append(r.get("text", "").strip() == text_exact.strip()
+                              or rec_id in text_ids
+                              or meta.get("parent_id") in text_ids)
+            if text_contains is not None:
+                checks.append(text_contains.lower() in r.get("text", "").lower())
+            if source is not None:
                 src_str = str(r.get("source", ""))
                 fn_str = str(meta.get("filename", ""))
                 fp_str = str(meta.get("file_path", ""))
                 clean_src = str(source).strip()
-                if (clean_src == src_str or
-                    clean_src == fn_str or
-                    src_str.startswith(f"{clean_src}:") or
-                    clean_src in src_str or
-                    fp_str.endswith(clean_src)):
-                    drop = True
-            elif where is not None:
-                if self.engine._matches_filter(meta, where):
-                    drop = True
+                checks.append(clean_src == src_str or
+                              clean_src == fn_str or
+                              src_str.startswith(f"{clean_src}:") or
+                              clean_src in src_str or
+                              fp_str.endswith(clean_src))
+            if where is not None:
+                checks.append(bool(self.engine._matches_filter(meta, where)))
+            drop = bool(checks) and all(checks)
 
             if drop:
                 deleted_count += 1
@@ -1730,12 +2076,30 @@ class Vault:
         all_recs = self.get_all_records()
         groups: Dict[str, List[Dict[str, Any]]] = {}
 
+        # GROUP BY THE VALUE, NAME THE FILE SEPARATELY. Grouping by the
+        # SANITISED name merged distinct values that happen to sanitise alike --
+        # `"a/b"` and `"a_b"` both became `a_b.dat`, so two teams' records were
+        # written into one vault with nothing to say so. Grouping on the real
+        # value keeps them apart; only the FILENAME is sanitised, and a
+        # collision there gets a short digest suffix so the partition stays
+        # one-file-per-value.
+        import hashlib as _hashlib
+        used = {}
         for r in all_recs:
             val = (r.get("metadata") or {}).get(metadata_key)
-            if val is not None:
-                safe_name = re.sub(r"[^\w\-_]", "_", str(val)).strip("_")
-                if safe_name:
-                    groups.setdefault(safe_name, []).append(r)
+            if val is None:
+                continue
+            key = str(val)
+            if key not in used:
+                safe_name = re.sub(r"[^\w\-_]", "_", key).strip("_")
+                if not safe_name:
+                    safe_name = "value"
+                if safe_name in used.values():
+                    safe_name = "%s-%s" % (
+                        safe_name,
+                        _hashlib.md5(key.encode("utf-8")).hexdigest()[:6])
+                used[key] = safe_name
+            groups.setdefault(used[key], []).append(r)
 
         results = {}
         for grp_name, recs in groups.items():

@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.15 · engine 3.4.3 · container format 3 · arena cache format 3.
+Package 0.7.18 · engine 3.4.6 · container format 3 · arena cache format 3.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.15 3.4.3
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.18 3.4.6
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -48,7 +48,7 @@ are not the real model, so benchmark with the daemon up.
 | Change | What to do |
 | :--- | :--- |
 | `score` is a cosine (was a squashed non-linear value) | re-tune thresholds: 0.25 → 0.42, 0.32 → 0.53, 0.35 → 0.58, or call `nanomem.engine.legacy_score_to_cosine(old)` |
-| hits carry both `score` and `cosine` | compare against `cosine` for a pure similarity; `score` = cosine + documented boosts, bounded by `stats()['max_boost']` (0.70) |
+| hits carry both `score` and `cosine` | compare against `cosine` for a pure similarity; `score` = cosine + documented boosts, bounded by `stats()['max_boost']` (1.10) |
 | `Vault.add()` and `engine.add_fact()` return the document id (`str`) | previously `None`; the REST add response now returns a usable id |
 | plaintext is the default | pass `password=` (or `NANOMEM_PASSWORD`) to encrypt; check `stats()['encrypted_at_rest']` |
 | v2 files migrate on first open | the original is preserved as `<path>.v2.bak` |
@@ -781,7 +781,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**612 tests**, no network required, nothing skipped when a local embedder is
+**693 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 
@@ -814,7 +814,8 @@ one and it never existed.
    number was limited by what got written, not by what got ranked.**
 7. The write-gate classifier is English-only.
 8. `durable="full"` is implemented but unmeasured.
-9. No MCP server ships in this package.
+9. An MCP server DOES ship: `nanomem/mcp.py`, 7 tools over stdio
+   (`nanomem_add`, `nanomem_search`, `nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats`). This line used to say the opposite.
 10. Third-person questions are resolved from `name`-tagged records in a personal
     vault; a vault where the owner never stated their name falls back to plain
     cosine for those.

@@ -96,11 +96,18 @@ memory believed at a past moment, what changed last week, and which of its own
 beliefs have gone stale.
 
 The vault is an ordinary file. Point the CLI or a Python script at the same path
-to read what the assistant wrote.
+to read what the assistant wrote — a write is on disk before its reply is sent,
+so another process sees it immediately and stopping the server cannot lose it.
+
+Through 0.7.17 that was not true: the server flushed only on a clean exit, and an
+MCP client stops its servers with SIGTERM. Twenty `nanomem_add` calls, each
+answered `"Stored …"`, then SIGTERM, left **zero rows** in the vault. If you ran
+an earlier version, anything the assistant "remembered" in a session that was not
+closed cleanly was never written.
 
 ---
 
-Package 0.7.15 · engine 3.4.3 · container format 3 · arena cache format 3.
+Package 0.7.18 · engine 3.4.6 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -131,7 +138,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-612 tests, no network needed.
+693 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -268,17 +275,50 @@ return a shorter chain than existed, in the worst case one entry flagged
 That truncation is fixed in 0.7.14 and 0.7.15 — a declared chain now returns
 every revision it holds, and `changes()` agrees with it.
 
-What remains is the disagreement itself, and only on a group the TAGGER
-inferred. Measured over three chains in two timestamp regimes
-(`evidence/entity_declaration_results.json`):
+What remains is the disagreement itself. Until 0.7.16 this section said
+**"declare the entity and the disagreement goes away"**, on the strength of
+three chains scoring 3/3 (`evidence/entity_declaration_results.json`). A third
+independent black-box review found a declared chain where it does not, and the
+claim was wrong in a way the measurement could not see: in all three of those
+chains every revision RESTATES the attribute ("I now work at Initech"), which
+keeps the chain's members close together. When revision 1 names the attribute
+and later revisions refer to it implicitly -- "My desk is on the third floor of
+Kestrel House" then "Now parked in the Maple Wharf building" -- the members
+spread apart, and the lift that promotes the current value was capped below what
+that spread needs. `search[0]` returned a desk location two moves old while
+`history()` returned the right one, with the entity declared.
 
-| | `search` top-1 == `history`'s current value |
-|---|---|
-| entity declared | 3/3 |
-| left to the tagger | 2/3 |
+0.7.16 raises that cap on a sweep over eight arms and two embedders
+(`evidence/revision_lead_cap_results.json`). Measured over twelve chains of the
+phrasing that broke it, each alone in its vault, in two timestamp regimes:
 
-**Declare the entity and the disagreement goes away.** Leave it to the tagger
-and `changes()` is the unfiltered view to cross-check against.
+| declared chains, `search` top-1 == `history`'s current value | 0.7.15 | 0.7.16 |
+|---|---|---|
+| later revisions refer implicitly, real model (24 cases) | 41.7% | **100.0%** |
+| the same chains on the offline fallback encoder (12) | 25.0% | **75.0%** |
+| drifting phrasing, generated set (100) | 71.0% | **100.0%** |
+
+and `left to the tagger` stays 2/3, unchanged and still measured on three chains
+only (`evidence/entity_declaration_results.json`).
+
+**Declaring the entity is what makes the chain resolvable, and on a real
+embedding model it is what makes `search` and `history` agree on these sets.**
+It is not a guarantee. On the twelve offline-encoder chains measured here, every
+remaining failure has the same cause: that encoder is lexical, the newest revision
+lands so far from the question that the relevance screen drops it from the result
+entirely, and no ranking boost can promote a record that was never returned
+(6 of 6 failures, `revision_lead_cap_results.json` arm H).
+
+That is the cause on THIS corpus, not the only one there is. An independent
+reviewer, building chains of the same described shape, measured failures of a
+second kind: the newest revision IS returned, the boost is applied and saturates
+at `max_boost`, and the lift needed to lead the chain (~0.68) still exceeds the
+0.60 cap. Those would be fixed by a larger cap; the ones measured here would not,
+which is why the published sweep shows this arm flat from 0.60 through 1.50. Two
+corpora of the same shape can differ this much on a lexical encoder, so treat the
+75.0% as what it is — a measurement of twelve chains, not a property of the
+fallback. `tests/test_revision_lead_cap.py` fails if the cap is ever reached on
+the sets it checks. `changes()` is the unfiltered view to cross-check against.
 
 ---
 

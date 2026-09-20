@@ -144,8 +144,16 @@ def check_metadata(offline):
                 bad(f"declared URL is not reachable: {url}")
 
 
-def check_claims():
-    """The class of bug that shipped three times: advertising what is absent."""
+def check_assets_and_absent_claims():
+    """The class of bug that shipped three times: advertising what is absent.
+
+    RENAMED in 0.7.16. This was called `check_claims`, and so is the function
+    370 lines below it, which Python resolves by keeping the LAST definition --
+    so from the day the second one was written this one never ran, including the
+    untracked-`.npz` rule its own comment says has silently eaten two fixtures.
+    A preflight check that does not run is worse than one that was never
+    written, because the passing line in the report says it did.
+    """
     src = "\n".join(read(os.path.join("nanomem", f))
                     for f in sorted(os.listdir(os.path.join(HERE, "nanomem")))
                     if f.endswith(".py"))
@@ -221,6 +229,14 @@ def check_wheel(ver):
                 bad(f"{os.path.basename(w)} is missing the classifier asset")
             if any(n.endswith("model.bin") for n in names):
                 bad(f"{os.path.basename(w)} ships model.bin (139 MB, never opened)")
+        # SAY SO WHEN IT PASSES. Until 0.7.16 this check reported nothing on
+        # success, so a verified wheel and a wheel nobody looked at printed the
+        # same thing: nothing. That is the same failure as a check that prints a
+        # passing line while doing nothing -- which this file had, for 370 lines,
+        # in `check_claims`. A report you cannot read the absence of is not a
+        # report.
+        NOTES.append("%s declares AGPL-3.0-or-later, carries the classifier "
+                     "asset and ships no model.bin" % os.path.basename(w))
 
 
 def check_sdist(ver):
@@ -443,6 +459,48 @@ def check_claims():
                      f"matches today's docs")
 
 
+def check_registry_counts():
+    """A prose count of the registry must equal the registry.
+
+    The CHANGELOG said the registry holds 47 claims, 33 of them with a test. It
+    holds 45 and 31: two claims were removed and the sentence describing them was
+    not. An outside reviewer opened the file and counted, which is not a release
+    process. Found by the third black-box review (M1).
+
+    This is the claims mechanism failing on its own description: `check_claims`
+    verifies every claim in the docs is mapped, and the number of claims is
+    itself a claim in the docs that nothing checked.
+    """
+    reg = json.loads(read(os.path.join("evidence", "claims_registry.json")))
+    entries = reg.get("claims", reg.get("entries", []))
+    summary = reg.get("summary", {})
+    actual = {"total": len(entries),
+              "with_test": summary.get("with_test"),
+              "waived": summary.get("waived_not_a_claim")}
+    if summary.get("total") != actual["total"]:
+        bad("claims_registry.json summary says total=%s but carries %d entries"
+            % (summary.get("total"), actual["total"]))
+    # UNQUALIFIED counts only. A released CHANGELOG entry describes the registry
+    # as it stood then, and the registry grows with the docs -- so a sentence
+    # carrying an explicit "as of <version>" is history and is left alone, while
+    # a bare count is a live claim about the shipped file and must match it.
+    # Getting this wrong once already rewrote 0.7.15's entry to 0.7.16's numbers.
+    pat = re.compile(r"enumerates the (\d+) checkable claims.*?false \((\d+)\).*?"
+                     r"behavioural claim \((\d+)\)", re.S)
+    for name in ("README.md", "CHANGELOG.md", "USER_MANUAL.md",
+                 "USER_MANUAL_DEVELOPER.md"):
+        path = os.path.join(HERE, name)
+        if not os.path.exists(path):
+            continue
+        for m in pat.finditer(read(name)):
+            said = (int(m.group(1)), int(m.group(2)), int(m.group(3)))
+            want = (actual["total"], actual["with_test"], actual["waived"])
+            if said != want:
+                bad("%s says the registry holds %s claims (%s with a test, %s "
+                    "waived); it holds %s (%s, %s)"
+                    % ((name,) + said + want))
+
+
 def check_generated_blocks():
     """EVERY GENERATED BLOCK THE REFRESH KNOWS ABOUT MUST STILL EXIST.
 
@@ -612,9 +670,33 @@ def check_benchmarks():
         bad(f"engine is {engine} but these results were measured on an "
             f"older one, and BENCHMARKS.md presents them as current: "
             + ", ".join(stale) + " -- re-run them or drop the claims")
-    if not stale and not unstamped:
+    # ...AND THE SAME RULE IN `evidence/`, WHICH IS WHERE INDEX.md SAYS IT HOLDS.
+    # This check scanned `benchmarks/` only, while `evidence/INDEX.md` states the
+    # rule over "every results file" and names this guard as what enforces it.
+    # `evidence/` keeps its own copies of some results files and the refresh
+    # stages into `benchmarks/`, so two of them sat at engine 3.4.3 through a
+    # release that shipped 3.4.4 -- one of them cited by the README for a live
+    # claim. Found by the fourth black-box review (M1). A guard whose scope is
+    # narrower than the rule it is named for is the rule not being enforced.
+    edir = os.path.join(HERE, "evidence")
+    e_stale = []
+    for f in sorted(os.listdir(edir)):
+        if not f.endswith(".json"):
+            continue
+        try:
+            obj = _json.load(open(os.path.join(edir, f)))
+        except Exception:
+            continue
+        m = (obj or {}).get("measured_on") if isinstance(obj, dict) else None
+        if m and m.get("engine") and str(m["engine"]) != engine:
+            e_stale.append(f"{f} (engine {m['engine']})")
+    if e_stale:
+        bad(f"engine is {engine} but these evidence/ files were measured on an "
+            f"older one and are cited as current: " + ", ".join(e_stale)
+            + " -- re-run them or drop the claims")
+    if not stale and not unstamped and not e_stale:
         NOTES.append(f"{len(files)} benchmark results all measured on "
-                     f"engine {engine}")
+                     f"engine {engine}, and every stamped evidence/ file agrees")
     # AND every number the page quotes must be IN the file it cites. The
     # citation alone is not enough: one refresh after this guard was written,
     # BENCHMARKS.md still read "2.09 ms" while its own results file said 2.15 --
@@ -686,7 +768,9 @@ def main():
     check_readme_sample()
     check_wheel(ver)
     check_sdist(ver)
+    check_assets_and_absent_claims()
     check_claims()
+    check_registry_counts()
     check_generated_blocks()
     check_citations()
     check_benchmarks()

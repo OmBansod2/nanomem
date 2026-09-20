@@ -1,7 +1,7 @@
 {
  "measured_on": {
-  "nanomem": "0.7.15",
-  "engine": "3.4.3",
+  "nanomem": "0.7.18",
+  "engine": "3.4.6",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "1_backfilled_older_revision": {
@@ -80,7 +80,7 @@
   "verdict": "PASS",
   "chars": 200000,
   "records_created": 1,
-  "seconds": 0.25
+  "seconds": 0.26
  },
  "8_reused_explicit_id": {
   "verdict": "PASS",

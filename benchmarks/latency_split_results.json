@@ -1,7 +1,7 @@
 {
  "measured_on": {
-  "nanomem": "0.7.15",
-  "engine": "3.4.3",
+  "nanomem": "0.7.18",
+  "engine": "3.4.6",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "title": "Where a query's latency actually goes",
@@ -19,16 +19,16 @@
   "sample": "60 DISTINCT entities queried once each"
  },
  "measurements_ms_median": {
-  "store_only_query_pre_embedded": 2.13,
-  "embed_query_only_http": 10.42,
-  "vault_search_decompose_false": 15.22,
-  "vault_search_decompose_true_DEFAULT": 49.71,
-  "decomposition_overhead_ms": 34.5
+  "store_only_query_pre_embedded": 2.19,
+  "embed_query_only_http": 11.11,
+  "vault_search_decompose_false": 15.23,
+  "vault_search_decompose_true_DEFAULT": 50.33,
+  "decomposition_overhead_ms": 35.1
  },
  "store_side_filtered_search": {
   "note": "deterministic offline encoder, so the store is isolated from the embedder",
-  "unfiltered_ms": 0.76,
-  "filtered_ms": 2.05,
+  "unfiltered_ms": 0.78,
+  "filtered_ms": 2.11,
   "unfiltered_record_decodes": 5,
   "filtered_record_decodes": 4,
   "filtered_before_0_7_9_ms": 33.7,

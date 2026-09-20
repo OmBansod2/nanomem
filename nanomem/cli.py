@@ -45,6 +45,33 @@ def _fmt_when(ts):
     return datetime.fromtimestamp(float(ts)).strftime("%Y-%m-%d %H:%M")
 
 
+def _fail(message, code=1):
+    """Report a failure the way a shell expects: stderr, and a non-zero exit.
+
+    Four paths used to `print(...)` an error to STDOUT and fall off the end of
+    the function, which exits 0 -- so `nanomem ingest missing.txt && next_step`
+    ran `next_step`, and `nanomem ... > out.txt` put the error in out.txt with
+    nothing on stderr. Measured: `ingest` a missing file, `user delete` an
+    absent user, and `search` a vault that does not exist all exited 0.
+    """
+    print(f"[nanomem] Error: {message}", file=sys.stderr)
+    sys.exit(code)
+
+
+def _require_vault(path):
+    """A read command must not treat a missing vault as an empty one.
+
+    `nanomem search x --vault /tmp/typo.dat` printed "No matching memories found"
+    and exited 0, so a mistyped path was indistinguishable from an empty vault --
+    to a person and to a script. Opening a vault CREATES it, so this has to be
+    checked before the open. Write commands still create on demand.
+    """
+    if not os.path.exists(path):
+        _fail("no vault at %r. Write to it first (nanomem add ... --vault %s), "
+              "or check the path." % (path, path))
+    return path
+
+
 def main():
     """Entry point. Vault-level failures are reported, not traced."""
     from .errors import NanomemError
@@ -228,7 +255,7 @@ def _main():
         if getattr(a, "profile", None):
             uname = a.profile.strip()
             if must_exist and not user_exists(uname):
-                print(f"[nanomem] Error: User profile '{uname}' does not exist.")
+                print(f"[nanomem] Error: User profile '{uname}' does not exist.", file=sys.stderr)
                 print(f"  To create this user, run: nanomem user create {uname}")
                 print(f"  To see all created users, run: nanomem user list\n")
                 sys.exit(1)
@@ -247,6 +274,12 @@ def _main():
 
     v_path = _resolve_vault(args, must_exist=bool(getattr(args, "profile", None)))
     pw = _password_for(args)
+
+    # A READ against a vault that is not there is an error, not an empty result.
+    # Listed by command so a WRITE still creates a vault on demand, which is how
+    # `nanomem add` is meant to work.
+    if args.command in ("search", "history", "changes", "stats", "inspect", "forget"):
+        _require_vault(v_path)
 
     if args.command == "init":
         v_path = _resolve_vault(args, must_exist=False)
@@ -268,6 +301,12 @@ def _main():
             doc_id = v.add(args.text, source=args.source, metadata=meta)
             dt_us = (time.perf_counter() - t0) * 1e6
             as_ent = f" as '{args.entity}'" if getattr(args, "entity", None) else ""
+            # `add()` returns "" for empty or whitespace-only input. This printed
+            # "Stored fact  in 1.7 µs ... -> '   '" for it -- an empty id, a
+            # confirmed entity, and a success exit, for a fact that was never
+            # stored. Say what happened instead.
+            if not doc_id:
+                _fail("nothing to store: the text is empty or only whitespace.")
             print(f"[nanomem] Stored fact {doc_id}{as_ent} in {dt_us:.1f} µs "
                   f"into '{v_path}' -> '{args.text}'")
 
@@ -303,9 +342,17 @@ def _main():
             print()
 
     elif args.command == "changes":
+        # A reversed range printed a raw Python traceback. It is a typo, not a bug
+        # in the library, and the message should say which way round the arguments
+        # go rather than showing the user a stack.
+        def _guard_range(since_ts, until_ts):
+            if since_ts is not None and until_ts is not None and until_ts < since_ts:
+                _fail("--until (%s) is earlier than --since (%s); the range is "
+                      "(since, until]." % (args.until, args.since))
         with Vault(v_path, password=pw) as v:
             since = _parse_when(args.since)
             until = _parse_when(args.until)
+            _guard_range(since, until)
             rows = v.changes(since, until=until, limit=args.limit)
             if not rows:
                 print(f"[nanomem] '{v_path}' learned nothing in that window.")
@@ -330,7 +377,7 @@ def _main():
                 n_chunks = v.ingest_file(args.file)
                 print(f"[nanomem] Ingested {n_chunks} chunks from '{args.file}' into '{v_path}'")
             else:
-                print(f"[nanomem] Error: Path '{args.file}' not found.")
+                _fail(f"Path '{args.file}' not found.")
 
     elif args.command == "merge":
         with Vault(args.into, password=pw) as v:
@@ -472,11 +519,11 @@ def _main():
                 target = create_user(args.name)
                 print(f"[nanomem] ✅ Created user profile '{args.name}' -> '{target}'")
             except Exception as e:
-                print(f"[nanomem] Error: {e}")
+                _fail(str(e))
 
         elif args.user_action == "delete":
             if not user_exists(args.name):
-                print(f"[nanomem] Error: User '{args.name}' does not exist.")
+                _fail(f"User '{args.name}' does not exist.")
                 return
             if not getattr(args, "yes", False):
                 try:

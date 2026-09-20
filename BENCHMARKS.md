@@ -6,17 +6,19 @@ run it is printed next to the claim. The rest is a number in a results file,
 reported with the machine it was measured on and where nanomem loses.
 
 ```bash
-pip download --no-deps --no-binary :all: nanomem==0.7.9
-tar xzf nanomem-0.7.9.tar.gz && cd nanomem-0.7.9
+pip download --no-deps --no-binary :all: nanomem==0.7.18
+tar xzf nanomem-0.7.18.tar.gz && cd nanomem-0.7.18
 pip install pytest && python -m pytest tests/ -q
-# 559 passed, 17 skipped   -- no network, no API key, no fixtures to fetch
+# 681 passed   -- no network, no API key, no fixtures to fetch
 ```
 
-The 17 skips need research fixtures that are not shipped. Every test named on
-this page runs from that download except one, which is called out where it
-appears.
+Every test named on this page runs from that download except one, which is
+called out where it appears.
 
-Everything here is nanomem **0.7.9 / engine 3.4.1**. Timings are an Apple M4
+Everything here is nanomem **0.7.18 / engine 3.4.6**. This line read "0.7.9 /
+engine 3.4.1" through 0.7.17 -- nine releases stale, on the page the README calls
+"Evidence", while the download instructions above fetched a version from before
+half the fixes on it. Timings are an Apple M4
 Pro, macOS 26.5, 12 logical CPUs, Python 3.12.12, numpy 2.5.3.
 
 ---
@@ -90,11 +92,11 @@ is weakest. 71,433 documents, 768-d (`benchmarks/competitors_standard_results.js
 <!-- GENERATED: headtohead -- rewritten by evidence/refresh_benchmarks.py -->
 | arm | recall@4 | p50 query | disk | reopen | peak RSS |
 |---|---|---|---|---|---|
-| FAISS flat IP | 60.6% | **1.09 ms** | 209 MB | 0.016 s | **230 MB** |
-| **nanomem exact** | 60.6% | 1.82 ms | **149 MB** | 0.255 s | 296 MB |
-| sqlite-vec brute force | 60.6% | 55.09 ms | 258 MB | **0.001 s** | 266 MB |
-| Chroma HNSW (tuned) | 60.6% | 8.49 ms | 514 MB | 0.002 s | 314 MB |
-| Chroma HNSW (default) | 54.6% | 1.29 ms | 488 MB | 0.002 s | 285 MB |
+| FAISS flat IP | 60.6% | **1.10 ms** | 209 MB | 0.012 s | **230 MB** |
+| **nanomem exact** | 60.6% | 1.91 ms | **149 MB** | 0.248 s | 301 MB |
+| sqlite-vec brute force | 60.6% | 54.00 ms | 258 MB | **0.001 s** | 266 MB |
+| Chroma HNSW (tuned) | 60.6% | 8.54 ms | 514 MB | 0.002 s | 318 MB |
+| Chroma HNSW (default) | 55.0% | 1.25 ms | 488 MB | 0.002 s | 290 MB |
 <!-- /GENERATED -->
 
 Query decomposition is **on by default** and roughly triples end-to-end latency
@@ -103,10 +105,10 @@ on a short identifier-like query, because it embeds sub-queries separately. Pass
 
 <!-- GENERATED: latency -- rewritten by evidence/refresh_benchmarks.py -->
 ```
-store only, query already embedded      2.13 ms   <- the part nanomem owns
-embedding round-trip (local Ollama)    10.42 ms   <- your embedder, not the store
-Vault.search(decompose=False)          15.22 ms
-Vault.search(...)  the DEFAULT         49.71 ms   <- decomposition adds 34.5 ms
+store only, query already embedded      2.19 ms   <- the part nanomem owns
+embedding round-trip (local Ollama)    11.11 ms   <- your embedder, not the store
+Vault.search(decompose=False)          15.23 ms
+Vault.search(...)  the DEFAULT         50.33 ms   <- decomposition adds 35.1 ms
 ```
 <!-- /GENERATED -->
 
@@ -124,9 +126,9 @@ which re-runs the same queries down the old path and requires identical ids:
 
 <!-- GENERATED: storeside -- rewritten by evidence/refresh_benchmarks.py -->
 ```
-unfiltered                 0.76 ms       5 record decodes
+unfiltered                 0.78 ms       5 record decodes
 filtered, before 0.7.9    33.70 ms  15,001 record decodes   (the whole corpus)
-filtered, now              2.05 ms       4 record decodes
+filtered, now              2.11 ms       4 record decodes
 ```
 <!-- /GENERATED -->
 
@@ -216,8 +218,8 @@ dependency.
   legitimately matches every owner's rows — 100 of 150 returned rows belonged to
   other tenants in a 3-tenant probe. Pass the filter.
 - **The `router_auto` path is not the default and should not be used at scale**:
-  at 71,433 documents it shows 1456 MB peak RSS and a 7.1 s reopen, against
-  296 MB and 0.25 s for the exact path.
+  at 71,433 documents it shows 1463.0 MB peak RSS and a 7.2206 s reopen, against
+  301.2 MB and 0.2482 s for the exact path.
 
 ---
 

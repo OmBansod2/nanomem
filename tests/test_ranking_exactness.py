@@ -184,8 +184,12 @@ def test_boosts_are_bounded_and_documented(tmp_path):
         assert h["score"] - h["cosine"] <= mb + 1e-6, h
     top_cos = max(h["cosine"] for h in hits)
     assert max(h["score"] for h in hits) <= top_cos + mb + 1e-6
-    assert mb == pytest.approx(0.70)
-    assert (ent.INTENT_BOOST + ent.GROUP_HOIST + ent.REVISION_LEAD) == pytest.approx(0.70)
+    # 0.70 until 0.7.16, when REVISION_LEAD went 0.20 -> 0.60 because a
+    # declared chain's current value could need a larger lift than the cap
+    # allowed and silently lost rank 1 to its own superseded revision
+    # (design/revision_lead_cap_spec.md).
+    assert mb == pytest.approx(1.10)
+    assert (ent.INTENT_BOOST + ent.GROUP_HOIST + ent.REVISION_LEAD) == pytest.approx(1.10)
     e.close()
 
 

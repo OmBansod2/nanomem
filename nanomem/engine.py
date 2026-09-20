@@ -67,7 +67,7 @@ What this actually is, stated without decoration:
   personal records: ``intent_boost`` (+0.25) when a record's entity matches the
   question's intent, ``group_hoist`` (+0.25) for the revision group the question
   named, and ``revision_lead`` (at most +0.20) for the member of that group the
-  question asked for. ``stats()['max_boost']`` publishes the total, 0.70, and it
+  question asked for. ``stats()['max_boost']`` publishes the total, 1.10, and it
   is a real bound: for every hit
   ``0 <= hit['score'] - hit['cosine'] <= stats()['max_boost']``. 3.0.1 PERMUTED a
   group's scores instead of adding, so a record could hold another record's
@@ -149,7 +149,7 @@ from .errors import (ClosedVaultError, ContainerReplacedError, CorruptContainerE
 #: live engine now raises `VaultShrankError` instead of faulting the process.
 #: The version moves because the default layout on disk, and one failure mode,
 #: both changed with no argument change.
-ENGINE_VERSION = "3.4.3"
+ENGINE_VERSION = "3.4.6"
 MT_BASE = 1 << 40                      # virtual row ids for unflushed records
 _KEEP = object()                       # sentinel for "leave this as it is"
 
@@ -1032,6 +1032,52 @@ class VaultEngine:
             return f"residency={self.residency}"
         return None
 
+    def _scan_tolerating_a_concurrent_rewrite(self, attempts: int = 4) -> None:
+        """Scan the container, retrying only when the FILE ITSELF changed under us.
+
+        `router="auto"` rewrites the vault on the open that crosses
+        `n_exhaustive` (`_maybe_engage_router` -> `compact(recluster=True)`), and
+        that rewrite lands with `os.replace`. A process that is midway through
+        `scan()` when the swap happens reads a prefix from one file and a trailer
+        from the other, and raises `IntegrityError("trailer mismatch")` from
+        inside the CONSTRUCTOR. The racing REWRITERS already cooperate --
+        `_maybe_engage_router` catches `ContainerReplacedError` and says only one
+        of them can win -- but a concurrent READER had no such handling.
+        Measured on the shipped suite before this: 4 concurrent `router="auto"`
+        opens of one vault failed 5 times in 15 runs, so
+        `tests/test_round4_regressions.py` was not reliably green and neither was
+        the "631 tests pass" line in the README.
+
+        The retry is gated on EVIDENCE, not on optimism: the file's identity
+        (inode, size, mtime) must actually have changed between the attempt and
+        the failure. A vault that is genuinely corrupt has a stable identity, so
+        it still raises -- on the first attempt, with the same error as before.
+        """
+        from .errors import IntegrityError as _IntegrityError
+
+        def _identity():
+            try:
+                st = os.stat(self.filepath)
+                return (st.st_ino, st.st_size, st.st_mtime_ns)
+            except OSError:
+                return None
+
+        last = None
+        for attempt in range(attempts):
+            before = _identity()
+            try:
+                self._cont.scan(self.arena)
+                return
+            except _IntegrityError as exc:
+                last = exc
+                if _identity() == before:
+                    raise                     # stable file: this is real damage
+                # Another process replaced the vault mid-scan. Start over on the
+                # file that is there now.
+                self.arena.reset() if hasattr(self.arena, "reset") else None
+                self._cont.reopen() if hasattr(self._cont, "reopen") else None
+        raise last
+
     def _load_arena(self) -> None:
         """Fill the arena for a fresh container: from the cache if one binds.
 
@@ -1049,7 +1095,7 @@ class VaultEngine:
         covered = self._attach_arena_cache(info)
         info["attach_s"] = round(time.perf_counter() - t0, 6)
         t1 = time.perf_counter()
-        self._cont.scan(self.arena)
+        self._scan_tolerating_a_concurrent_rewrite()
         info["scan_s"] = round(time.perf_counter() - t1, 6)
         # The moment the scan returns is the moment the arena describes the file,
         # so this is the (size, mtime) the cache binds itself to. Captured HERE
@@ -2006,7 +2052,7 @@ class VaultEngine:
 
         ``score`` is ``cosine`` plus the documented entity boosts, and the bound
         is ``stats()['max_boost']`` (``intent_boost + group_hoist +
-        revision_lead + temporal_prior`` = +0.70 at the shipped defaults):
+        revision_lead + temporal_prior`` = +1.10 at the shipped defaults):
         ``0 <= hit['score'] - hit['cosine'] <= stats()['max_boost']`` for every
         hit. Boosts apply only to a personal-memory question against a vault that
         holds tagged personal records. (This docstring said +0.50 through 3.0.2
@@ -2423,6 +2469,25 @@ class VaultEngine:
         # When the revisions are not comparable the timestamp is the only order
         # there is, so the revision key is dropped rather than trusted.
         rv_cmp = rv if self._revisions_comparable(rows, group) else np.zeros_like(rv)
+        # THE CAP AND THE FLOOR ARE ONE RULE. `floor_keeps_current` deliberately
+        # keeps the newest member of a DECLARED group however far below the
+        # group's best it sits, so a declared group's internal cosine spread is
+        # no longer bounded by `window_delta` -- and the comment above, which
+        # justifies the lead's cap by that bound, stopped being true when that
+        # exemption shipped. A cap of 0.20 then silently failed to lift the
+        # member the floor had just protected: the third black-box review found
+        # a declared three-revision chain whose current value needed a lift of
+        # 0.2850 and got 0.20, so `search[0]` returned a value two revisions old
+        # while `history()` returned the right one
+        # (`evidence/revision_lead_cap_results.json`, arm G).
+        #
+        # The cap is NOT bounded by the group's own spread, though that fixes
+        # every measured arm identically: it would leave the total boost bounded
+        # by no constant, and `_apply_filter` proves the exactness of FILTERED
+        # search by assuming `max_boost` bounds it. Measured excess under that
+        # candidate: 0.7968 against a published 0.70. The candidate was
+        # withdrawn rather than void a proof that holds
+        # (design/revision_lead_cap_spec.md, amendment 1).
         return _ent.apply_revision_lead(final, group, rv_cmp, tsv, explicit, marks,
                                         hist_mode, self.revision_lead)
 
@@ -2956,6 +3021,24 @@ class VaultEngine:
             tsv[j] = item["timestamp"]
         return ent, rv, tsv
 
+    def _entity_ids_containing(self, index, norm):
+        """Every interned entity id whose key has ``norm`` as one of its parts.
+
+        A composite tag (`{"entity": ["work", "job"]}`) interns as `work_job`, so
+        the superset above has to admit it -- but walking all 5,000 entity names
+        on EVERY filtered query cost 0.4 ms at that size and grew linearly. The
+        parts map is built once and rebuilt only when the vocabulary grows.
+        """
+        cache = getattr(self, "_entity_parts_cache", None)
+        if cache is None or cache[0] is not index or cache[1] != len(index):
+            parts = {}
+            for name, i in index.items():
+                for piece in {str(name)} | set(str(name).split("_")):
+                    parts.setdefault(piece, []).append(i)
+            cache = (index, len(index), parts)
+            self._entity_parts_cache = cache
+        return cache[2].get(norm, [])
+
     def _apply_filter(self, rows, base, mask, metadata_filter, top_k, max_boost):
         """Lazy metadata walk in score order, stopped by a boost-safe bound.
 
@@ -2969,7 +3052,7 @@ class VaultEngine:
         The revision permutation cannot defeat the bound: a candidate only joins
         a revision group if it is within ``group_cos_delta`` (0.06) or
         ``window_delta`` (0.16) of the group's leader, and anything the bound
-        prunes is more than ``max_boost`` (0.70 at the shipped defaults, and the
+        prunes is more than ``max_boost`` (1.10 at the shipped defaults, and the
         caller passes the value ``stats()`` publishes) below the leader.
         """
         # CHEAP SUPERSET FIRST, when the filter names an entity.
@@ -2986,15 +3069,32 @@ class VaultEngine:
         # and restricting to that id can only drop rows that could never have
         # matched. Every surviving row is still put through `matches_filter`
         # unchanged, so this narrows the walk without touching its semantics.
+        # ...BUT THE SUPERSET HAS TO BE A SUPERSET. The argument above holds for a
+        # SCALAR tag, where `matches_filter` tests equality. For a LIST-valued
+        # tag it does not: `{"entity": ["work", "job"]}` interns as `work_job`,
+        # `matches_filter` accepts it for `{"entity": "work"}` by membership, and
+        # restricting to the id `work` dropped it. Measured: `search(filter=
+        # {"entity": "work"})` returned one row where `get_all_records(where=...)`
+        # returned two -- and only once ANOTHER row carried the plain tag, so the
+        # exactness `_apply_filter` documents failed on a corpus-dependent trigger.
+        #
+        # Composite ids are joined with "_" by `normalize_entity`, so every id
+        # that could match by membership has the wanted id as one of its parts.
+        # Taking all of them keeps this a superset; `matches_filter` below still
+        # decides. A scalar tag that merely contains the part (`home_address` for
+        # `home`) is admitted too, which costs a few extra decodes and changes no
+        # result.
         want_ent = metadata_filter.get("entity") if metadata_filter else None
         if isinstance(want_ent, (str, bytes)) and want_ent:
-            eid = self.arena.entity_index.get(_ent.normalize_entity(want_ent), -1) \
-                if hasattr(self.arena, "entity_index") else -1
-            if eid >= 0:
-                ent_col = self._columns(np.asarray(rows))[0]
-                mask = mask & (ent_col == eid)
-                if not mask.any():
-                    return mask
+            index = getattr(self.arena, "entity_index", None)
+            if index:
+                norm = _ent.normalize_entity(want_ent)
+                eids = self._entity_ids_containing(index, norm)
+                if eids:
+                    ent_col = self._columns(np.asarray(rows))[0]
+                    mask = mask & np.isin(ent_col, np.asarray(eids, dtype=ent_col.dtype))
+                    if not mask.any():
+                        return mask
         keep = np.zeros(mask.shape, dtype=bool)
         order = np.argsort(-base, kind="stable")
         kept = []
@@ -3115,6 +3215,25 @@ class VaultEngine:
             group = self._widen_group(group, cos, mask, rows, ent)
             if group.size == 0:
                 group = np.asarray([int(np.argmax(scored))], dtype=np.int64)
+            # ONE CHAIN BELONGS TO ONE GROUP KEY, NOT TO ONE ENTITY NAME.
+            # `tagged_ids` above are interned from `normalize_entity(...)`, which
+            # is the entity alone -- but a revision group is keyed on
+            # (user_id, project, entity), which is why two tenants' first records
+            # are both revision 1. So `history("where do I work")` returned
+            # Alice's two employers AND Bob's, interleaved by timestamp and
+            # numbered as if they were one person's chain. Measured: a 3-entry
+            # history spanning two user_ids.
+            #
+            # Restrict to the anchor's own group. A row with no group key (an
+            # untagged record) keeps the old behaviour, so this narrows only the
+            # case that was wrong.
+            gids = self._group_ids(np.asarray(rows)[group])
+            anchor = int(np.argmax(scored))
+            anchor_gid = self._group_ids(np.asarray(rows)[[anchor]])
+            if anchor_gid.size and anchor_gid[0] >= 0:
+                same = group[gids == anchor_gid[0]]
+                if same.size:
+                    group = same
             # Same guard as the ranker: a revision number is an ordinal within
             # ONE group key, so across keys the timestamp is the only order there
             # is (see :meth:`_revisions_comparable`).

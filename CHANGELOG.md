@@ -6,6 +6,372 @@ number below is from one of those files.
 
 ---
 
+## 0.7.18 — engine 3.4.6
+
+**Fourteen dimensions of the package were audited against their own
+documentation, by agents that had to run every reproduction and defend it
+against three sceptics.** Five defects were critical. Every one of them is the
+same shape: the software said it had done something it had not done.
+
+### It said it stored your memory, and it had not
+
+**The MCP server acknowledged writes it never persisted.** It opened one vault
+and flushed only in a `finally`, and an MCP client stops its servers with
+SIGTERM, which does not run `finally`.
+
+```
+20 x nanomem_add, then SIGTERM  -> rows in the vault: 0
+20 x nanomem_add, then kill -9  -> rows in the vault: 0
+during the session, another process sees: 0 rows
+```
+
+Every one of those calls answered `"Stored as 'port': ..."`. Only a clean stdin
+close ever persisted anything, which is why four previous reviews missed it:
+every test drove the server that way. Writes are now flushed before the reply is
+sent, for any tool not on an explicit read-only list, and SIGTERM/SIGINT/SIGHUP
+close the vault. 20/20 survive SIGTERM, 2/2 survive `kill -9`, and a write is
+visible to another process immediately. Reads are unaffected (10.2 ms -> 12.3 ms
+per search, inside the noise of the embedding round-trip).
+
+**Every chunk of a document went in ONE embedding request**, against a fixed 5 s
+timeout, so a large document timed out and fell back to the lexical encoder --
+silently, because the fallback did not announce itself either:
+
+```
+20,000 words  (40 chunks)  -> 40/40  chunks stored with LEXICAL vectors
+60,000 words  (120 chunks) -> 120/120
+120,000 words (240 chunks) -> 240/240
+```
+
+Those documents were unsearchable by meaning and nothing said so. Requests are
+now 16 texts each with a timeout that scales, and ALL-OR-NOTHING per call so one
+document can never mix encoders. After: 0/40 and 0/120. A genuinely unreachable
+daemon still falls back in 0.37 s.
+
+**The lexical fallback is no longer silent.** A record written while the endpoint
+was unreachable did not appear in the results for its own question. It now warns
+once per process and the row carries `metadata["embed_backend"]`, so you can find
+and re-add exactly what was written during an outage. Model-embedded rows carry
+no extra metadata.
+
+### It lost data
+
+**`forget_superseded(keep=1)` deleted three of the four chunks of ONE ingested
+document.** The version-collapse groups chunks by `parent_id`; `ingest_file`
+never stamped one, so every chunk of one file counted as a separate revision of
+the entity.
+
+```
+BEFORE  search("are shipping charges refundable?") -> the right passage
+        forget_superseded(keep=1) -> {'groups': 1, 'deleted': 3, 'kept': 1}
+AFTER   search("are shipping charges refundable?") -> a DIFFERENT passage
+```
+
+Returning a different fact rather than nothing is what this method's own
+docstring calls worse than an empty result. An ingested file is now one document:
+`{'groups': 0, 'deleted': 0}`, and two genuine versions still collapse.
+
+**One emoji rerouted a Latin document into the CJK character splitter.** The
+script test was `any(ord(c) > 0x2E80 ...)`, and every emoji is above that, so the
+document was cut every 1,500 characters with no regard for word boundaries:
+
+```
+plain ASCII      3000/3000 tokens stored
++ one emoji      2982/3000   -- 18 tokens GONE, others truncated mid-word
++ one CJK char   2982/3000
+```
+
+Emoji are ordinary content in chat logs and notes. The test now uses the actual
+CJK and Hangul blocks and asks for a PROPORTION rather than existence, so one
+quoted Chinese character in an English paragraph no longer changes anything.
+Pure CJK still splits by characters.
+
+**`add()` wrote into the caller's metadata dict**, and the next call reads
+`metadata["id"]` before hashing the text -- so reusing one dict across three
+`add()` calls gave all three documents the FIRST document's id:
+
+```
+meta = {"user_id": "alice"}          # one dict, reused
+ids  -> ['doc_5d8097d1f4', 'doc_5d8097d1f4', 'doc_5d8097d1f4']
+```
+
+`get` then returned only the newest of them, `delete(id=)` removed all three, and
+`update(id=)` rewrote the first. It also contradicted `add()`'s own documented
+rule that the id is a function of the TEXT alone.
+
+### It read files it had no business reading
+
+**`POST /v1/memory/ingest` took `file` and `directory` from the request body and
+passed them straight through.** `/v1/vault/init` has confined its client-supplied
+path since 3.0.3 and `resolve_vault_path`'s docstring explains exactly why; the
+sibling handler had no confinement at all.
+
+```
+{"file": "/etc/hosts"} -> HTTP 200 {"chunks_indexed": 1}, readable back via /v1/memory/search
+every response carried Access-Control-Allow-Origin: *
+```
+
+The documented exposure is "your memories". Both fields are now confined to the
+vault directory, and the CORS wildcard is opt-in (`run_proxy(allow_cors=True)`) --
+an unauthenticated loopback API that takes filesystem paths should not be
+reachable from any page the operator happens to visit.
+
+### It answered the wrong question
+
+* **A filtered search dropped rows a filtered scan returned.** `_apply_filter`'s
+  cheap superset restricted to the interned id of the filter value, which is
+  sound for a scalar tag and wrong for a list: `{"entity": ["work", "job"]}`
+  interns as `work_job`, membership accepts it, and the shortcut dropped it --
+  but only once another row carried the plain tag, so the failure depended on the
+  rest of the corpus. Documented exactness, violated.
+* **`history()` merged two tenants' chains.** It masked on the entity name, while
+  a revision group is keyed on `(user_id, project, entity)`. One tenant's history
+  came back containing another tenant's value.
+* **`search(as_of=..., multihop=True)` returned records written after the
+  cutoff.** `search_multihop` did not accept `as_of` at all. Both hops take it
+  now: bridging THROUGH a future record reaches conclusions the vault could not
+  have supported then.
+* **`delete()` applied only the first criterion it was given.** It was an `elif`
+  chain, so `delete(source="report.txt", where={"team": "b"})` deleted BOTH rows
+  of that source, including the one the filter excluded. Criteria now narrow.
+* **A user metadata key named `parent_id`** -- an ordinary thing to want for
+  tickets or threads -- was read as the internal chunk link, so two unrelated rows
+  read back as one document and `exists()` said True for a document nobody added.
+  Setting a reserved key is now refused, with the key named and a way out
+  suggested. Filtering on them is unchanged.
+
+### It said the wrong thing
+
+* **Three shipped documents stated that no MCP server ships.** `nanomem/mcp.py`
+  is in both the wheel and the sdist and exposes seven tools over stdio.
+* `SERVICES_AND_API_SPECIFICATION.md` documented the score bound as
+  `max_boost = 0.70`; it has been 1.10 since 0.7.16.
+* `BENCHMARKS.md` -- the page the README calls "Evidence" -- was stamped
+  **0.7.9 / engine 3.4.1**, nine releases stale, and its own download
+  instructions fetched 0.7.9.
+* `nanomem_history(max_len=1)` told an agent a fact "has never changed" about a
+  fact that had changed three times: the message keyed on the length of the chain
+  AFTER `max_len` had truncated it.
+* Four CLI failures printed to stdout and exited 0, so `nanomem ingest
+  missing.txt && next_step` ran `next_step`. `nanomem search --vault typo.dat`
+  reported "No matching memories found", exited 0, and CREATED the vault it was
+  asked to read. `nanomem add "   "` printed "Stored fact" with an empty id.
+* `add_batch` returned what it was handed rather than what it stored.
+* `ingest_directory(ignore_dirs=[...])` REPLACED the automatic skip list, so
+  naming one directory silently re-enabled `node_modules` and `.git`.
+* A set-valued tag was stored as its Python repr, `"{'x', 'y'}"`, and a filter
+  for `"x"` matched nothing. Sets and tuples are stored as lists.
+* `split_by_key` grouped by the sanitised FILENAME, so `"a/b"` and `"a_b"` were
+  written into one vault.
+* **`ingest_file` did not keep the formatting it promises.** `add_batch` stripped
+  the leading indentation off each chunk's first line, and a 50-line slice of long
+  lines exceeded `MAX_FACT_WORDS` and was re-split by the word-based splitter:
+  0 of 200 long lines survived verbatim. Now 200/200.
+
+### Two things found by using the machinery, not by the audit
+
+**`update()` on a chunked document silently reassigned the caller's id.** The
+parent path deleted the chunks and re-added the text without passing the id, so
+`add()` minted a new one and `update` returned True while the handle the caller
+held stopped resolving. The README tells callers to keep that id.
+
+**`delete(text_exact=...)` still missed every vault that already existed.**
+0.7.17's fix stamped a fingerprint at write time, which reaches only documents
+written AFTER upgrading -- that is, nobody's existing data. Legacy rows now fall
+back to a whitespace-normalised comparison, which rescues the newline, CSV and
+indented-code shapes; a repeated passage stays unmatchable because that content
+is genuinely not in the vault. An ingested file is reachable by its text too.
+
+### Fixed in passing
+
+`concurrent router opens crashed the constructor` -- `router="auto"` rewrites the
+vault on the open that crosses `n_exhaustive`, and a process scanning during that
+rewrite raised `IntegrityError`. The racing writers already cooperated; a
+concurrent reader had no handling. Measured on pristine 0.7.17: **5 failures in
+15 runs**, so the shipped suite was not reliably green and neither was the
+README's test-count line. The scan now retries only when the file's identity
+actually changed, so a genuinely damaged vault still raises on the first attempt.
+
+The 0.7.17 document fingerprint was also being recomputed once per chunk --
+O(chunks x bytes). A 3.3 MB document hashed 1,980 MB. Hoisted.
+
+### Not reproduced, and therefore not changed
+
+`nanomem_volatility` was reported to crash at `min_revisions <= 1`; it returns
+results at 0, 1 and -1. `export()`/`split()` were reported to treat a `None`
+filter value as matching rows lacking the key; a filter for `None` matched only
+the row that has the key. Both are recorded here rather than quietly dropped.
+
+---
+
+## 0.7.17 — engine 3.4.5
+
+**`delete(text_exact=…)` still did nothing on almost every real document.**
+0.7.16 fixed this for documents `add()` had split, and the test written for it
+used a document of unique space-joined tokens — the one shape where the fix
+worked. Every real document over 500 words has a newline in it. Fourth
+black-box review, F1.
+
+```
+same 160 sentences, joined by spaces    -> 5 rows deleted   OK
+the same sentences, joined by newlines  -> 0, nothing deleted
+one sentence repeated 400x              -> 0, nothing deleted
+1,200-row CSV / 900-line log / code     -> 0, nothing deleted
+```
+
+**Why.** `split_large_text` REBUILDS text rather than slicing it — paragraphs are
+stripped, units re-joined with `" "` and `"\n\n"` — so the chunks cannot be
+concatenated back into the original. `_join_chunks` is a reconstruction, not an
+inverse, and 0.7.16 compared the caller's text against it. Measured, it differs
+three ways: every newline becomes a space, a repeated passage is dropped by the
+overlap detector (one sentence repeated 400 times loses 29% of the document), and
+indentation is gone.
+
+`delete` now matches a **fingerprint of exactly what was passed to `add()`**
+(sha256, stdlib, no new dependency), so newlines, indentation and repetition all
+count. It still also accepts the reconstruction `get(parent_id)["text"]` returns,
+because 0.7.16's changelog told callers to pass that and it is the only handle a
+0.7.16 user had; `delete`'s docstring now states both forms instead of implying
+one. Nothing is deleted on a near miss — the controls are in the suite.
+
+**`get()` said "exact" and returned a rebuild.** For a stored row it always
+returned exactly what was stored; for the PARENT id of a split document there is
+no such row and it returned the lossy reconstruction, with the docstring calling
+it exact. A caller could not tell the two apart — for a coding agent, source with
+its indentation silently removed, presented as the file. `get()` now says so:
+`metadata["reconstructed"]` is True on such a result and
+`metadata["reconstruction_exact"]` reports whether it round-tripped, checked
+against the stored fingerprint. `metadata["chunk_ids"]` names the rows holding
+the exact content, and `ingest_file` — which chunks on line boundaries and does
+not rebuild text — keeps its "preserves exact formatting" promise intact.
+
+**Not fixed, and now pinned by a test rather than described loosely.** The
+reconstruction is still lossy in those three ways; `test_the_reconstruction_is_lossy_in_the_three_documented_ways`
+fails if that ever changes, so the docs cannot drift away from it silently. No
+data is lost from storage: the union of stored chunks still contains every unique
+token of the input, asserted at 20,000 words.
+
+**The offline-encoder limitation was stated as having one cause; it has at least
+two.** The README named the relevance screen dropping the newest revision. That
+is the cause of all 6 of 6 failures on the twelve chains measured here, and the
+reviewer's chains of the same shape produced failures of a second kind — newest
+returned, boost saturating at `max_boost`, and the lift needed (~0.68) still over
+the 0.60 cap. Both are now named, and the 75.0% is labelled as a measurement of
+twelve chains rather than a property of the fallback. Fourth review, F2.
+
+**Two evidence files shipped stamped on the previous engine.** `evidence/`
+keeps its own copies of some results files; the refresh staged only into
+`benchmarks/` and the preflight guard scanned only `benchmarks/`, while
+`evidence/INDEX.md` states the rule over every results file and names that guard
+as what enforces it. So `entity_declaration_results.json` — cited by the README
+for a live claim — and `intent_margin_arms_results.json` sat at engine 3.4.3
+through a release that shipped 3.4.4. The guard now scans `evidence/` too and the
+refresh updates any copy that exists there. A guard whose scope is narrower than
+the rule it is named for is the rule not being enforced. Fourth review, M1.
+
+**The README's before/after table labelled both columns 0.7.16**, and a sentence
+recording when the `history` truncation was fixed had been rewritten from 0.7.15
+to 0.7.16. Both were collateral from a global version replace in the previous
+release — it edited history as well as the version banner. Fourth review, M2.
+
+---
+
+## 0.7.16 — engine 3.4.4
+
+**A declared chain lost rank 1 to its own superseded revision.** First finding
+of the third black-box review, against published 0.7.15. A three-revision chain,
+entity declared on every write, alone in its vault:
+
+```
+search[0]   rev=1  score=0.9911  cos=0.7411  'My desk is on the third floor of Kestrel House.'
+search[1]   rev=3  score=0.9061  cos=0.4561  'Now parked in the Maple Wharf building.'   <- current
+history()   3 entries, superseded [True, True, False], history[-1] = Maple Wharf
+```
+
+Asking "where is my desk" returned the desk location from two moves ago, while
+`history` in the same vault returned the right one. The README's bolded promise
+was **"declare the entity and the disagreement goes away"**, so this is a
+documented guarantee failing, not a limitation.
+
+**The fix that caused it.** `floor_keeps_current`, added in 0.7.12 to fix the
+SECOND review's finding, deliberately keeps the newest member of a declared
+group however far below the group's best it sits. The lead that then promotes
+that member was capped at `REVISION_LEAD` = 0.20, and the cap was justified —
+in a code comment and in `apply_revision_lead`'s docstring — by the fact that
+`group_relevance_floor` kept every group's members within `window_delta` (0.16)
+of each other. The exemption removed exactly that bound and the cap was not
+revisited. Instrumented on the reproduction: lift needed **0.2850**, cap 0.20.
+
+The docstring's evidence that the cap never binds — "72 calls, maximum lift
+0.1563, cap reached 0 times" — was measured on a corpus in which every revision
+RESTATES the attribute, so the spread stays under 0.16 by construction. So was
+the README's 3/3. Both were true of what they measured and neither was a
+property of the code.
+
+**`REVISION_LEAD` 0.20 -> 0.60, `stats()['max_boost']` 0.70 -> 1.10.** Swept
+0.20–1.50 across eight arms and two embedders, pre-registered before the
+measuring script existed (`evidence/revision_lead_cap_results.json`):
+
+| declared chains, `search` top-1 == `history`'s current value | 0.7.15 | 0.7.16 |
+|---|---|---|
+| later revisions refer implicitly, real model (24) | 41.7% | **100.0%** |
+| the same chains on the offline fallback encoder (12) | 25.0% | **75.0%** |
+| drifting phrasing, generated set (100) | 71.0% | **100.0%** |
+
+No guard arm moved anywhere in that range — canonical, siblings, historical,
+previous and the 3-persona chat set are all unchanged to the decimal.
+
+**Three things this release admits rather than smooths over.**
+
+*The candidate that fixed it structurally was rejected.* Bounding the lead by
+the group's own spread instead of a constant fixes every arm identically and can
+never bind. It also pushes `score - cosine` to 0.7968, above the published
+`max_boost` — and `_apply_filter` proves the exactness of FILTERED search by
+assuming that constant bounds every boost. Voiding a proof that holds to fix a
+claim that does not is the wrong trade, so the constant stayed a constant.
+
+*A pre-registered falsification test fired.* The spec predicted that widening
+the lead for tagger-inferred groups would regress the chat set the way
+unconditional floor protection did (−19.4). It did not: it is identical to the
+declared-only variant on every arm, because the floor still keeps inferred
+groups narrow so the widening never fires on them. The declared/inferred gate is
+inert for the cap, and the safety property claimed for it was not there.
+
+*The cap buys no protection any arm can see.* It is easy to assume a cap bounds
+how wrong the ranker can be when a group is assembled wrongly. Swept to 1.50,
+not one guard arm moves. That reasoning was written into the spec as if the
+sweep supported it; it did not, and the correction is recorded rather than
+dropped.
+
+**What is still broken.** Three of twelve chains on the offline lexical encoder
+stay wrong at every cap including 1.50. Their newest revision lands so far from
+the question that the relevance screen drops it from the result entirely, and no
+boost can promote a record that was never returned. That is a separate defect,
+named here and not fixed. `tests/test_revision_lead_cap.py` records the largest
+lift any ranking set requests and fails if the cap is ever reached again.
+
+**`delete(text_exact=…)` could not match a document `add()` had split.** The
+docstring advertises deleting by exact text; on a 2,000-word document that text
+lives in no single stored row, so it matched nothing and returned 0. The by-id
+forms were repaired for chunked documents in 0.7.11 and this is the same defect
+on the by-text form. It now resolves to the parent with the same de-overlap join
+`get()` uses, so what reconstructs is what deletes. Third review, M2.
+
+**The registry's own description was stale.** The 0.7.15 CHANGELOG said 47
+checkable claims, 33 with a test; the file that shipped beside it held 45 and 31.
+Two claims had been removed and the sentence was not. The count of claims is itself a claim in the
+docs, and nothing checked it — `release_preflight.py :: check_registry_counts`
+now derives it from the file. Third review, M1.
+
+**A preflight check had not run since the day it was written.** Two functions
+were both named `check_claims`; Python keeps the last one, so the older check —
+which verifies no source file advertises bundled neural weights, and that every
+`.npz` the package loads is tracked by git — silently did nothing while the
+report printed a passing line for it. Its own comment notes the untracked-file
+rule has already lost two fixtures. Renamed and re-registered.
+
+---
+
 ## 0.7.15 — engine 3.4.3
 
 **The question's wording outranked the data.** Third and last finding of the
@@ -96,10 +462,13 @@ exist, a return value a reader would misread, and `history` called authoritative
 when it was not — and no test asserted any of them. They were found by an
 outside reviewer reading the docs one at a time, by luck.
 
-`evidence/claims_registry.json` enumerates the 47 checkable claims in the README
-and the public docstrings. Each names a test that would fail if the claim became
-false (33), a results file that measures it, or an explicit waiver saying why it
-is not a behavioural claim (14). `release_preflight.py` refuses to ship when a
+`evidence/claims_registry.json` enumerates the checkable claims in the README
+and the public docstrings — as of 0.7.15, 45 of them, 31 naming a test that would
+fail if the claim became false and 14 carrying an explicit waiver saying why they
+are not behavioural claims. (The registry grows with the docs, so a fixed number
+in a released entry goes stale; that is exactly what M1 below was. The live count
+is in the file, and `check_registry_counts` compares any UNQUALIFIED count in the
+docs against it.) `release_preflight.py` refuses to ship when a
 claim has none of those, or names a test that does not exist.
 
 Building it found four more claims nothing was defending, now tested (suite

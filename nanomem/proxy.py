@@ -30,6 +30,10 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
     # there in the clear, outside the working directory if it asked.
     password: Optional[str] = None
     vault_root: str = "."
+    #: `Access-Control-Allow-Origin: *` on an UNAUTHENTICATED loopback API lets
+    #: any page the operator happens to visit drive it from their browser. Off
+    #: by default from 0.7.18; `run_proxy(allow_cors=True)` restores it.
+    allow_cors: bool = False
     allow_vault_switch: bool = False
 
     def _send_json(self, status_code: int, data: dict):
@@ -37,7 +41,8 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
         self.send_response(status_code)
         self.send_header("Content-Type", "application/json")
         self.send_header("Content-Length", str(len(response_bytes)))
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if MemoryProxyHandler.allow_cors:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
@@ -45,7 +50,8 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
 
     def do_OPTIONS(self):
         self.send_response(200)
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if MemoryProxyHandler.allow_cors:
+            self.send_header("Access-Control-Allow-Origin", "*")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
         self.send_header("Access-Control-Allow-Headers", "Content-Type, Authorization")
         self.end_headers()
@@ -127,6 +133,34 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
         except Exception as e:
             self._send_json(500, {"error": str(e)})
 
+    @staticmethod
+    def _resolve_content_path(raw, root):
+        """Confine a client-supplied CONTENT path to ``root``.
+
+        `/v1/vault/init` has confined its `vault` field since 3.0.3, and
+        `resolve_vault_path`'s docstring explains why: an unauthenticated endpoint
+        that takes a filesystem path from a request body is a filesystem
+        primitive. `/v1/memory/ingest` took `file` and `directory` from the same
+        kind of body and passed them straight through, so the confinement existed
+        and was wired to one handler but not its sibling. `{"file": "/etc/hosts"}`
+        answered `{"status": "success", "chunks_indexed": 1}` and the contents
+        were then readable through `/v1/memory/search` -- an arbitrary file and
+        directory READ, where the documented exposure is "your memories".
+
+        This is the same rule as `resolve_vault_path` minus the suffix check,
+        because the thing being named here is content rather than a vault.
+        """
+        root = os.path.realpath(os.path.abspath(root))
+        name = str(raw or "").strip()
+        if not name:
+            raise ValueError("path must not be empty")
+        if os.path.isabs(name) or name.startswith("~"):
+            raise ValueError("path must be relative to %r, got %r" % (root, name))
+        target = os.path.realpath(os.path.join(root, name))
+        if target != root and not target.startswith(root + os.sep):
+            raise ValueError("path %r resolves outside %r" % (name, root))
+        return target
+
     def _handle_memory_ingest(self):
         try:
             content_length = int(self.headers.get("Content-Length", 0))
@@ -137,12 +171,18 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
             if not file_path and not dir_path:
                 self._send_json(400, {"error": "Field 'file' or 'directory' is required."})
                 return
+            try:
+                resolved = self._resolve_content_path(
+                    file_path or dir_path, MemoryProxyHandler.vault_root)
+            except ValueError as ve:
+                self._send_json(400, {"error": str(ve)})
+                return
             if file_path:
-                count = self.vault.ingest_file(file_path)
+                count = self.vault.ingest_file(resolved)
                 self.vault.flush()
                 self._send_json(200, {"status": "success", "type": "file", "path": file_path, "chunks_indexed": count})
             else:
-                stats = self.vault.ingest_directory(dir_path)
+                stats = self.vault.ingest_directory(resolved)
                 self.vault.flush()
                 self._send_json(200, {"status": "success", "type": "directory", "path": dir_path, **stats})
         except Exception as e:
@@ -337,7 +377,7 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
 def run_proxy(vault_path: str = "memory.dat", port: int = 5000,
               upstream_url: str = "http://localhost:11434", cite: bool = True,
               password: str = None, host: str = "127.0.0.1",
-              allow_vault_switch: bool = False):
+              allow_vault_switch: bool = False, allow_cors: bool = False):
     """Run the memory proxy. LOOPBACK-ONLY by default.
 
     None of these endpoints authenticate, so 3.0.2's ``0.0.0.0`` bind exposed
@@ -350,6 +390,7 @@ def run_proxy(vault_path: str = "memory.dat", port: int = 5000,
     MemoryProxyHandler.vault_root = os.path.realpath(
         os.path.dirname(os.path.abspath(vault_path)) or ".")
     MemoryProxyHandler.allow_vault_switch = bool(allow_vault_switch)
+    MemoryProxyHandler.allow_cors = bool(allow_cors)
     MemoryProxyHandler.upstream_url = upstream_url.rstrip("/")
     MemoryProxyHandler.cite_default = cite
     if host not in ("127.0.0.1", "localhost", "::1"):

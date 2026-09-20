@@ -250,8 +250,24 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         chain = vault.history(args.get("query", ""), max_len=args.get("max_len"))
         if not chain:
             return "Nothing in memory matches that."
-        if len(chain) == 1:
+        # "never changed" IS A CLAIM, AND max_len TRUNCATES. This keyed on
+        # `len(chain) == 1` AFTER the caller's `max_len` had already cut the
+        # chain, so `nanomem_history(max_len=1)` told the agent a fact "has never
+        # changed" about a fact that had changed three times. The consumer here
+        # is a model that cannot check, and the whole point of this tool is to
+        # say what a value HAS BEEN.
+        #
+        # The revision number of the oldest entry shown says which case this is:
+        # a genuine single-value fact starts at revision 1, a truncated view does
+        # not.
+        oldest_shown = int(chain[0].get("revision") or 1)
+        truncated = oldest_shown > 1 or (
+            args.get("max_len") is not None and len(chain) >= int(args["max_len"]))
+        if len(chain) == 1 and not truncated:
             head = "This has one value and has never changed:"
+        elif truncated:
+            head = (f"Showing the {len(chain)} most recent value(s); there are "
+                    f"earlier ones (this view was limited by max_len):")
         else:
             head = f"This has held {len(chain)} values:"
         lines = [
@@ -308,8 +324,38 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
                      + ", ".join(t["name"] for t in TOOLS))
 
 
+#: Tools that only read. Everything else is flushed before its reply is sent.
+_READ_ONLY_TOOLS = frozenset({
+    "nanomem_search", "nanomem_history", "nanomem_as_of",
+    "nanomem_changes", "nanomem_volatility", "nanomem_stats",
+})
+
+
 def run_mcp_server(vault_path: str = "memory.dat"):
     vault = Vault(vault_path)
+
+    # DURABILITY. Through 0.7.17 this server buffered every write and flushed
+    # only in the `finally` below, so `nanomem_add` answered "Stored ..." while
+    # nothing had reached disk: another process saw an empty vault, and a SIGTERM
+    # -- which is how an MCP client stops its servers -- bypassed `finally`
+    # entirely and lost the lot. Measured: add, then SIGTERM, then 0 rows.
+    # An agent memory that confirms a write it did not keep is worse than one
+    # that refuses the write.
+    import signal as _signal
+
+    def _shutdown(_signum, _frame):
+        try:
+            vault.close()
+        finally:
+            raise SystemExit(0)
+
+    for _sig in (_signal.SIGTERM, _signal.SIGINT, _signal.SIGHUP):
+        try:
+            _signal.signal(_sig, _shutdown)
+        except (ValueError, OSError, AttributeError):
+            # Not the main thread, or the platform has no such signal.
+            pass
+
     try:
         for line in sys.stdin:
             line = line.strip()
@@ -339,8 +385,15 @@ def run_mcp_server(vault_path: str = "memory.dat"):
                     result = {"tools": TOOLS}
                 elif method == "tools/call":
                     params = req.get("params", {})
-                    text = dispatch(vault, params.get("name"),
+                    tool_name = params.get("name")
+                    text = dispatch(vault, tool_name,
                                     params.get("arguments", {}) or {})
+                    # Persist BEFORE answering, so "Stored ..." is true when the
+                    # caller reads it rather than whenever the process happens to
+                    # end. Listed by what does NOT need it, so a tool added later
+                    # is durable by default rather than by someone remembering.
+                    if tool_name not in _READ_ONLY_TOOLS:
+                        vault.flush()
                     result = {"content": [{"type": "text", "text": text}]}
                 else:
                     result = {}

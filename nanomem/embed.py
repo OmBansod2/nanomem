@@ -10,6 +10,7 @@ weights -- see `EmbeddingProvider` and `_offline_encode_batch`.
 import os
 import json
 import urllib.request
+import warnings
 import numpy as np
 from typing import List, Optional
 
@@ -41,6 +42,12 @@ class EmbeddingProvider:
     when nothing answers is :meth:`_offline_encode_batch`, which is lexical
     hashing and is spelled out there.
     """
+
+    #: Which encoder served the most recent batch: "model" or "offline-lexical".
+    last_backend: str = "model"
+    #: One warning per process, not one per call.
+    _fallback_announced: bool = False
+
 
     def __init__(self, model: str = DEFAULT_MODEL, base_url: Optional[str] = None,
                  dim: Optional[int] = None):
@@ -84,13 +91,41 @@ class EmbeddingProvider:
             pass
         return OFFLINE_DIM
 
+    #: Texts per HTTP request. A whole document used to go in ONE request against
+    #: a fixed 5 s timeout, so a 20,000-word document (40 chunks) timed out and
+    #: EVERY chunk was silently stored with the lexical fallback -- measured
+    #: 40/40, 120/120 and 240/240 chunks at 20k, 60k and 120k words. The document
+    #: was then unsearchable by meaning, with nothing to say so.
+    REMOTE_BATCH = 16
+    #: Base seconds, plus `PER_TEXT_TIMEOUT` for each text in the request.
+    BASE_TIMEOUT = 5.0
+    PER_TEXT_TIMEOUT = 1.0
+    MAX_TIMEOUT = 120.0
+
     def _remote_embed_batch(self, texts: List[str]):
-        """The daemon call alone. ``None`` when it does not answer usefully."""
+        """The daemon call alone. ``None`` when it does not answer usefully.
+
+        Splits into `REMOTE_BATCH`-sized requests and is ALL-OR-NOTHING: if any
+        request fails the whole call fails, so a single document can never end up
+        with some chunks embedded by the model and some by the lexical fallback.
+        Those vectors are not comparable, and a half-and-half document would be
+        worse than a wholly lexical one because the failure would be invisible.
+        """
+        if len(texts) > self.REMOTE_BATCH:
+            out = []
+            for i in range(0, len(texts), self.REMOTE_BATCH):
+                part = self._remote_embed_batch(texts[i:i + self.REMOTE_BATCH])
+                if part is None:
+                    return None
+                out.append(part)
+            return np.vstack(out)
+        timeout = min(self.MAX_TIMEOUT,
+                      self.BASE_TIMEOUT + self.PER_TEXT_TIMEOUT * len(texts))
         req_data = json.dumps({"model": self.model, "input": texts}).encode("utf-8")
         req = urllib.request.Request(
             self.base_url, data=req_data,
             headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=5) as resp:
+        with urllib.request.urlopen(req, timeout=timeout) as resp:
             data = json.loads(resp.read().decode("utf-8"))
         if "embeddings" not in data:
             return None
@@ -123,6 +158,7 @@ class EmbeddingProvider:
             if vecs is not None:
                 if self._dim is None:
                     self._dim = int(vecs.shape[1])
+                self.last_backend = "model"
                 return vecs
         except EmbeddingWidthError:
             # A WIDTH CONFLICT IS NOT A DAEMON OUTAGE. The blanket `except` below
@@ -136,6 +172,24 @@ class EmbeddingProvider:
             pass
 
         # 2. Air-gapped deterministic semantic fallback (Zero network egress)
+        #
+        # SAY SO. Falling back is right for an air-gapped install, but in a vault
+        # whose other rows were embedded by the model the two are not comparable,
+        # and the row written during an outage becomes unfindable -- measured: a
+        # fact added while the daemon was down did not appear in the results for
+        # its own question, and nothing warned. A memory product that quietly
+        # stores something it can never retrieve is worse than one that fails.
+        if not EmbeddingProvider._fallback_announced:
+            EmbeddingProvider._fallback_announced = True
+            warnings.warn(
+                "nanomem: the embedding endpoint did not answer, so this text was "
+                "encoded with the LEXICAL fallback. It does not model meaning, and "
+                "these vectors are not comparable with rows embedded by the model -- "
+                "a record written now may not be findable later. Check the daemon "
+                "and re-add anything written during the outage; rows carry "
+                "metadata['embed_backend'] so you can find them.",
+                RuntimeWarning, stacklevel=2)
+        self.last_backend = "offline-lexical"
         return self._offline_encode_batch(texts)
 
     def _offline_encode_batch(self, texts: List[str]) -> np.ndarray:

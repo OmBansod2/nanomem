@@ -1,11 +1,11 @@
 {
  "measured_on": {
-  "nanomem": "0.7.15",
-  "engine": "3.4.3",
+  "nanomem": "0.7.18",
+  "engine": "3.4.6",
   "note": "results are stale once `engine` differs from the shipped ENGINE_VERSION; release_preflight.py enforces this"
  },
  "title": "nanomem v3 vs sqlite-vec / Chroma / FAISS -- standardised head-to-head",
- "generated_at": "2026-09-18T11:27:45+0530",
+ "generated_at": "2026-09-21T04:21:55+0530",
  "script": "<repo>/benchmarks/bench_competitors.py",
  "machine": {
   "platform": "macOS-26.5-arm64-arm-64bit",
@@ -15,9 +15,9 @@
   "logical_cpus": 12,
   "ram_bytes": 25769803776,
   "load_avg_at_start": [
-   4.8,
-   7.17,
-   4.72
+   4.06,
+   4.22,
+   3.62
   ]
  },
  "versions": {
@@ -34,8 +34,8 @@
   "OMP_NUM_THREADS": "<unset: engine default>",
   "VECLIB_MAXIMUM_THREADS": "<unset: engine default>",
   "OPENBLAS_NUM_THREADS": "<unset: engine default>",
-  "nanomem": "0.7.15",
-  "nanomem_engine_version": "3.4.3",
+  "nanomem": "0.7.18",
+  "nanomem_engine_version": "3.4.6",
   "nanomem_path": "<repo>/nanomem/__init__.py"
  },
  "protocol": {
@@ -113,26 +113,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711066.12016,
-    "wall_s": 0.039,
+    "started_at": 1789944716.18592,
+    "wall_s": 0.04,
     "latency_ms": {
-     "p50": 0.0513,
-     "p95": 0.0571,
-     "p99": 0.0595,
-     "mean": 0.0507,
-     "min": 0.0456,
-     "max": 0.0614,
+     "p50": 0.0515,
+     "p95": 0.052,
+     "p99": 0.0532,
+     "mean": 0.0516,
+     "min": 0.0509,
+     "max": 0.0549,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
-    "first_query_after_reopen_s": 0.0013,
-    "ingest_s": 0.002,
-    "reopen_s": 0.0034,
+    "first_query_after_reopen_s": 0.0014,
+    "ingest_s": 0.003,
+    "reopen_s": 0.0006,
     "index_bytes": 3655725,
     "index_stores_text": false,
     "config": {
@@ -144,18 +144,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48480256,
-     "peak_bytes": 72466432,
-     "peak_delta_bytes": 23986176,
-     "peak_delta_mb": 22.9,
-     "baseline_rss_bytes": 48480256,
-     "rss_bytes": 72466432,
-     "rss_delta_mb": 22.9
+     "baseline_peak_bytes": 48496640,
+     "peak_bytes": 72433664,
+     "peak_delta_bytes": 23937024,
+     "peak_delta_mb": 22.8,
+     "baseline_rss_bytes": 48496640,
+     "rss_bytes": 72433664,
+     "rss_delta_mb": 22.8
     },
     "load_avg_end": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
     "subprocess_wall_s": 0.1,
     "recall": {
@@ -171,26 +171,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
-    "started_at": 1789711079.207656,
-    "wall_s": 0.351,
+    "started_at": 1789944729.414125,
+    "wall_s": 0.245,
     "latency_ms": {
-     "p50": 0.4027,
-     "p95": 0.4316,
-     "p99": 0.4381,
-     "mean": 0.4044,
-     "min": 0.3625,
-     "max": 0.4455,
+     "p50": 0.3988,
+     "p95": 0.4145,
+     "p99": 0.431,
+     "mean": 0.4011,
+     "min": 0.3945,
+     "max": 0.4549,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0103,
-    "ingest_s": 0.015,
-    "reopen_s": 0.0053,
+    "first_query_after_reopen_s": 0.0015,
+    "ingest_s": 0.012,
+    "reopen_s": 0.0018,
     "index_bytes": 30720045,
     "index_stores_text": false,
     "config": {
@@ -202,20 +202,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122503168,
-     "peak_bytes": 175161344,
-     "peak_delta_bytes": 52658176,
+     "baseline_peak_bytes": 122634240,
+     "peak_bytes": 175226880,
+     "peak_delta_bytes": 52592640,
      "peak_delta_mb": 50.2,
-     "baseline_rss_bytes": 122535936,
-     "rss_bytes": 175161344,
-     "rss_delta_mb": 50.2
+     "baseline_rss_bytes": 122667008,
+     "rss_bytes": 175226880,
+     "rss_delta_mb": 50.1
     },
     "load_avg_end": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
-    "subprocess_wall_s": 0.5,
+    "subprocess_wall_s": 0.4,
     "recall": {
      "evidence_recall_at_4_pct": 70.4,
      "per_doc_recall_at_4_pct": 84.2,
@@ -229,26 +229,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
-    "started_at": 1789711138.278253,
-    "wall_s": 0.685,
+    "started_at": 1789944789.902475,
+    "wall_s": 0.664,
     "latency_ms": {
-     "p50": 1.0901,
-     "p95": 1.1548,
-     "p99": 1.1692,
-     "mean": 1.0941,
-     "min": 1.0036,
-     "max": 1.222,
+     "p50": 1.0971,
+     "p95": 1.1588,
+     "p99": 1.1867,
+     "mean": 1.0983,
+     "min": 1.0025,
+     "max": 1.2086,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0115,
-    "ingest_s": 0.052,
-    "reopen_s": 0.0156,
+    "first_query_after_reopen_s": 0.0037,
+    "ingest_s": 0.054,
+    "reopen_s": 0.0124,
     "index_bytes": 219442221,
     "index_stores_text": false,
     "config": {
@@ -260,18 +260,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 627032064,
-     "peak_bytes": 868597760,
-     "peak_delta_bytes": 241565696,
-     "peak_delta_mb": 230.4,
-     "baseline_rss_bytes": 627048448,
-     "rss_bytes": 868597760,
-     "rss_delta_mb": 230.4
+     "baseline_peak_bytes": 626819072,
+     "peak_bytes": 868302848,
+     "peak_delta_bytes": 241483776,
+     "peak_delta_mb": 230.3,
+     "baseline_rss_bytes": 626835456,
+     "rss_bytes": 868302848,
+     "rss_delta_mb": 230.3
     },
     "load_avg_end": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
     "subprocess_wall_s": 0.9,
     "recall": {
@@ -289,26 +289,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711066.242313,
-    "wall_s": 0.071,
+    "started_at": 1789944716.317141,
+    "wall_s": 0.105,
     "latency_ms": {
-     "p50": 0.083,
-     "p95": 0.0885,
-     "p99": 0.0906,
-     "mean": 0.0833,
-     "min": 0.0754,
-     "max": 0.0941,
+     "p50": 0.0759,
+     "p95": 0.0818,
+     "p99": 0.0852,
+     "mean": 0.0761,
+     "min": 0.0677,
+     "max": 0.0882,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
-    "first_query_after_reopen_s": 0.0003,
-    "ingest_s": 0.022,
-    "reopen_s": 0.0044,
+    "first_query_after_reopen_s": 0.0004,
+    "ingest_s": 0.023,
+    "reopen_s": 0.0048,
     "index_bytes": 2628355,
     "index_stores_text": true,
     "engine_stats": {
@@ -342,7 +342,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__val1190/vault.dat",
      "file_size_mb": 2.507,
      "format_version": 3,
@@ -355,19 +355,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 58704,
-     "process_rss_kb": 58720,
+     "process_peak_rss_kb": 66688,
+     "process_rss_kb": 66528,
      "read_only": false,
      "record_bytes": 796577,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 3.486,
      "resident_arena_used_mb": 3.486,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -380,7 +380,7 @@
      "total_documents": 1190,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "f52d8f1a9d7a9c28c9dc12471334c1cf",
+     "vault_uuid": "cc172b2033b0725f15daf44afc38c2a0",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -390,8 +390,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -402,20 +402,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48152576,
-     "peak_bytes": 60129280,
-     "peak_delta_bytes": 11976704,
-     "peak_delta_mb": 11.4,
-     "baseline_rss_bytes": 48152576,
-     "rss_bytes": 60129280,
-     "rss_delta_mb": 11.4
+     "baseline_peak_bytes": 48398336,
+     "peak_bytes": 68288512,
+     "peak_delta_bytes": 19890176,
+     "peak_delta_mb": 19.0,
+     "baseline_rss_bytes": 48398336,
+     "rss_bytes": 68124672,
+     "rss_delta_mb": 18.8
     },
     "load_avg_end": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "subprocess_wall_s": 0.1,
+    "subprocess_wall_s": 0.2,
     "recall": {
      "evidence_recall_at_4_pct": 68.33,
      "per_doc_recall_at_4_pct": 83.75,
@@ -429,26 +429,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
-    "started_at": 1789711079.682388,
-    "wall_s": 0.478,
+    "started_at": 1789944729.768733,
+    "wall_s": 0.48,
     "latency_ms": {
-     "p50": 0.3946,
-     "p95": 0.4797,
-     "p99": 0.6744,
-     "mean": 0.3854,
-     "min": 0.2234,
-     "max": 0.9258,
+     "p50": 0.3956,
+     "p95": 0.4417,
+     "p99": 0.4788,
+     "mean": 0.3951,
+     "min": 0.3271,
+     "max": 0.5882,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.002,
-    "ingest_s": 0.213,
-    "reopen_s": 0.0368,
+    "first_query_after_reopen_s": 0.0007,
+    "ingest_s": 0.181,
+    "reopen_s": 0.0344,
     "index_bytes": 21978441,
     "index_stores_text": true,
     "engine_stats": {
@@ -482,7 +482,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n10000/vault.dat",
      "file_size_mb": 20.96,
      "format_version": 3,
@@ -495,19 +495,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 170016,
-     "process_rss_kb": 170016,
+     "process_peak_rss_kb": 175984,
+     "process_rss_kb": 175984,
      "read_only": false,
      "record_bytes": 6586287,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 29.297,
      "resident_arena_used_mb": 29.297,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -520,7 +520,7 @@
      "total_documents": 10000,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "d061e917cce5fae6ec7ffd53766c9f05",
+     "vault_uuid": "3968f6a193bac8e200756e31e20c06e0",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -530,8 +530,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -542,18 +542,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122748928,
-     "peak_bytes": 174096384,
-     "peak_delta_bytes": 51347456,
-     "peak_delta_mb": 49.0,
-     "baseline_rss_bytes": 122798080,
-     "rss_bytes": 174096384,
-     "rss_delta_mb": 48.9
+     "baseline_peak_bytes": 122503168,
+     "peak_bytes": 180207616,
+     "peak_delta_bytes": 57704448,
+     "peak_delta_mb": 55.0,
+     "baseline_rss_bytes": 122535936,
+     "rss_bytes": 180207616,
+     "rss_delta_mb": 55.0
     },
     "load_avg_end": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
     "subprocess_wall_s": 0.6,
     "recall": {
@@ -569,26 +569,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
-    "started_at": 1789711139.229142,
-    "wall_s": 2.537,
+    "started_at": 1789944790.812871,
+    "wall_s": 2.605,
     "latency_ms": {
-     "p50": 1.8241,
-     "p95": 2.0686,
-     "p99": 2.1421,
-     "mean": 1.834,
-     "min": 1.5207,
-     "max": 2.2218,
+     "p50": 1.9087,
+     "p95": 2.1781,
+     "p99": 2.2376,
+     "mean": 1.9153,
+     "min": 1.567,
+     "max": 2.2993,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0097,
-    "ingest_s": 1.282,
-    "reopen_s": 0.2553,
+    "first_query_after_reopen_s": 0.0028,
+    "ingest_s": 1.293,
+    "reopen_s": 0.2482,
     "index_bytes": 155886408,
     "index_stores_text": true,
     "engine_stats": {
@@ -622,7 +622,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact__n71433/vault.dat",
      "file_size_mb": 148.665,
      "format_version": 3,
@@ -635,19 +635,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 915008,
-     "process_rss_kb": 915008,
+     "process_peak_rss_kb": 920800,
+     "process_rss_kb": 920800,
      "read_only": false,
      "record_bytes": 45937108,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 209.276,
      "resident_arena_used_mb": 209.276,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -660,7 +660,7 @@
      "total_documents": 71433,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "35b6f98e660f9e50ade800bc9bc52db5",
+     "vault_uuid": "f0c1b47eddee6d6a3d26d87e111622e0",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -670,8 +670,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -682,18 +682,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626900992,
-     "peak_bytes": 936968192,
-     "peak_delta_bytes": 310067200,
-     "peak_delta_mb": 295.7,
-     "baseline_rss_bytes": 626917376,
-     "rss_bytes": 936968192,
-     "rss_delta_mb": 295.7
+     "baseline_peak_bytes": 627032064,
+     "peak_bytes": 942899200,
+     "peak_delta_bytes": 315867136,
+     "peak_delta_mb": 301.2,
+     "baseline_rss_bytes": 627048448,
+     "rss_bytes": 942899200,
+     "rss_delta_mb": 301.2
     },
     "load_avg_end": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
     "subprocess_wall_s": 2.8,
     "recall": {
@@ -711,26 +711,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711066.392079,
-    "wall_s": 0.199,
+    "started_at": 1789944716.506592,
+    "wall_s": 0.24,
     "latency_ms": {
-     "p50": 0.1321,
-     "p95": 0.1426,
-     "p99": 0.1474,
-     "mean": 0.1283,
-     "min": 0.1061,
-     "max": 0.1544,
+     "p50": 0.1179,
+     "p95": 0.1303,
+     "p99": 0.1367,
+     "mean": 0.1189,
+     "min": 0.1067,
+     "max": 0.1424,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
     "first_query_after_reopen_s": 0.0006,
-    "ingest_s": 0.065,
-    "reopen_s": 0.024,
+    "ingest_s": 0.069,
+    "reopen_s": 0.0288,
     "index_bytes": 2628337,
     "index_stores_text": true,
     "engine_stats": {
@@ -764,7 +764,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__val1190/vault.dat",
      "file_size_mb": 2.507,
      "format_version": 3,
@@ -777,19 +777,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 860837,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 1000,
-     "process_peak_rss_kb": 81280,
-     "process_rss_kb": 81280,
+     "process_peak_rss_kb": 87408,
+     "process_rss_kb": 87408,
      "read_only": false,
      "record_bytes": 0,
      "record_mapped_bytes": 796577,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 3.486,
      "resident_arena_used_mb": 3.486,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "auto",
      "routing_mode": "cells",
      "score_scale": "cosine",
@@ -802,7 +802,7 @@
      "total_documents": 1190,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "0cf7b7fc3697f7266cff8254c3dbd793",
+     "vault_uuid": "93b01a9ec8b284353d6ad9e59850c4ca",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -813,9 +813,9 @@
       "blocks_before": 24,
       "blocks_after": 24,
       "reclustered": true,
-      "elapsed_s": 0.036
+      "elapsed_s": 0.038
      },
-     "compact_recluster_s": 0.042,
+     "compact_recluster_s": 0.044,
      "layout_gate": {
       "coverage": 0.9921875,
       "passed": true,
@@ -825,8 +825,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "auto",
      "n_exhaustive": 1000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -837,18 +837,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48513024,
-     "peak_bytes": 83296256,
-     "peak_delta_bytes": 34783232,
-     "peak_delta_mb": 33.2,
-     "baseline_rss_bytes": 48513024,
-     "rss_bytes": 83296256,
-     "rss_delta_mb": 33.2
+     "baseline_peak_bytes": 48349184,
+     "peak_bytes": 89554944,
+     "peak_delta_bytes": 41205760,
+     "peak_delta_mb": 39.3,
+     "baseline_rss_bytes": 48349184,
+     "rss_bytes": 89554944,
+     "rss_delta_mb": 39.3
     },
     "load_avg_end": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
     "subprocess_wall_s": 0.3,
     "recall": {
@@ -864,26 +864,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
-    "started_at": 1789711080.2819462,
-    "wall_s": 1.998,
+    "started_at": 1789944730.351385,
+    "wall_s": 2.078,
     "latency_ms": {
-     "p50": 0.4755,
-     "p95": 0.5261,
-     "p99": 0.5634,
-     "mean": 0.4774,
-     "min": 0.408,
-     "max": 0.6373,
+     "p50": 0.4831,
+     "p95": 0.5289,
+     "p99": 0.5565,
+     "mean": 0.4835,
+     "min": 0.4102,
+     "max": 0.5899,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
     "first_query_after_reopen_s": 0.0009,
-    "ingest_s": 0.795,
-    "reopen_s": 0.27,
+    "ingest_s": 0.805,
+    "reopen_s": 0.2727,
     "index_bytes": 21978535,
     "index_stores_text": true,
     "engine_stats": {
@@ -917,7 +917,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n10000/vault.dat",
      "file_size_mb": 20.96,
      "format_version": 3,
@@ -930,19 +930,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 7126287,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 1000,
-     "process_peak_rss_kb": 368432,
-     "process_rss_kb": 345488,
+     "process_peak_rss_kb": 369904,
+     "process_rss_kb": 344944,
      "read_only": false,
      "record_bytes": 0,
      "record_mapped_bytes": 6586287,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 29.297,
      "resident_arena_used_mb": 29.297,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "auto",
      "routing_mode": "cells",
      "score_scale": "cosine",
@@ -955,7 +955,7 @@
      "total_documents": 10000,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "5be0605a72258988083830c295e4ee3b",
+     "vault_uuid": "ae8df341f31c97d27b791e9e128f268f",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -966,9 +966,9 @@
       "blocks_before": 200,
       "blocks_after": 200,
       "reclustered": true,
-      "elapsed_s": 0.529
+      "elapsed_s": 0.554
      },
-     "compact_recluster_s": 0.58,
+     "compact_recluster_s": 0.604,
      "layout_gate": {
       "coverage": 0.99609375,
       "passed": true,
@@ -978,8 +978,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "auto",
      "n_exhaustive": 1000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -990,20 +990,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122601472,
-     "peak_bytes": 377274368,
-     "peak_delta_bytes": 254672896,
-     "peak_delta_mb": 242.9,
-     "baseline_rss_bytes": 122601472,
-     "rss_bytes": 353812480,
-     "rss_delta_mb": 220.5
+     "baseline_peak_bytes": 122404864,
+     "peak_bytes": 378781696,
+     "peak_delta_bytes": 256376832,
+     "peak_delta_mb": 244.5,
+     "baseline_rss_bytes": 122437632,
+     "rss_bytes": 353255424,
+     "rss_delta_mb": 220.1
     },
     "load_avg_end": [
-     4.22,
-     6.88,
-     4.67
+     3.91,
+     4.18,
+     3.62
     ],
-    "subprocess_wall_s": 2.1,
+    "subprocess_wall_s": 2.2,
     "recall": {
      "evidence_recall_at_4_pct": 69.6,
      "per_doc_recall_at_4_pct": 83.8,
@@ -1017,26 +1017,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
-    "started_at": 1789711141.998112,
-    "wall_s": 35.157,
+    "started_at": 1789944793.637873,
+    "wall_s": 36.117,
     "latency_ms": {
-     "p50": 3.5084,
-     "p95": 3.8178,
-     "p99": 3.9322,
-     "mean": 3.5175,
-     "min": 2.9965,
-     "max": 4.3752,
+     "p50": 3.4858,
+     "p95": 3.723,
+     "p99": 3.8178,
+     "mean": 3.4791,
+     "min": 2.9873,
+     "max": 3.9646,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0042,
-    "ingest_s": 13.553,
-    "reopen_s": 7.1889,
+    "first_query_after_reopen_s": 0.0041,
+    "ingest_s": 14.032,
+    "reopen_s": 7.2206,
     "index_bytes": 155885436,
     "index_stores_text": true,
     "engine_stats": {
@@ -1070,7 +1070,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_router_auto__n71433/vault.dat",
      "file_size_mb": 148.664,
      "format_version": 3,
@@ -1083,19 +1083,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 49794490,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 1000,
-     "process_peak_rss_kb": 2450256,
-     "process_rss_kb": 2100816,
+     "process_peak_rss_kb": 2458816,
+     "process_rss_kb": 2110032,
      "read_only": false,
      "record_bytes": 0,
      "record_mapped_bytes": 45937108,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 209.276,
      "resident_arena_used_mb": 209.276,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "auto",
      "routing_mode": "cells",
      "score_scale": "cosine",
@@ -1108,7 +1108,7 @@
      "total_documents": 71433,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "0198724d352401bd12b59f8ab9deca88",
+     "vault_uuid": "2d00615f650c0f9336b86b528d896c17",
      "vector_dtype": "float16",
      "vector_dtype_on_disk": "float16",
      "window_delta": 0.16
@@ -1119,9 +1119,9 @@
       "blocks_before": 1429,
       "blocks_after": 1429,
       "reclustered": true,
-      "elapsed_s": 11.712
+      "elapsed_s": 12.158
      },
-     "compact_recluster_s": 12.098,
+     "compact_recluster_s": 12.542,
      "layout_gate": {
       "coverage": 1.0,
       "passed": true,
@@ -1131,8 +1131,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "auto",
      "n_exhaustive": 1000,
      "vector_dtype": "float16 on disk, float32 resident arena",
@@ -1143,20 +1143,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626868224,
-     "peak_bytes": 2509062144,
-     "peak_delta_bytes": 1882193920,
-     "peak_delta_mb": 1795.0,
-     "baseline_rss_bytes": 626884608,
-     "rss_bytes": 2151268352,
-     "rss_delta_mb": 1453.8
+     "baseline_peak_bytes": 626524160,
+     "peak_bytes": 2517827584,
+     "peak_delta_bytes": 1891303424,
+     "peak_delta_mb": 1803.7,
+     "baseline_rss_bytes": 626606080,
+     "rss_bytes": 2160705536,
+     "rss_delta_mb": 1463.0
     },
     "load_avg_end": [
-     3.25,
-     5.94,
-     4.54
+     2.88,
+     3.75,
+     3.51
     ],
-    "subprocess_wall_s": 35.4,
+    "subprocess_wall_s": 36.3,
     "recall": {
      "evidence_recall_at_4_pct": 60.8,
      "per_doc_recall_at_4_pct": 78.1,
@@ -1172,25 +1172,25 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711066.674474,
-    "wall_s": 0.304,
+    "started_at": 1789944716.8318899,
+    "wall_s": 0.324,
     "latency_ms": {
-     "p50": 1.0042,
-     "p95": 1.0319,
-     "p99": 1.0664,
-     "mean": 1.0047,
-     "min": 0.959,
-     "max": 1.0839,
+     "p50": 1.0734,
+     "p95": 1.0946,
+     "p99": 1.1142,
+     "mean": 1.0767,
+     "min": 1.0657,
+     "max": 1.2496,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
     "first_query_after_reopen_s": 0.0014,
-    "ingest_s": 0.03,
+    "ingest_s": 0.029,
     "reopen_s": 0.001,
     "index_bytes": 7221248,
     "index_stores_text": true,
@@ -1206,18 +1206,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48185344,
-     "peak_bytes": 64716800,
-     "peak_delta_bytes": 16531456,
-     "peak_delta_mb": 15.8,
-     "baseline_rss_bytes": 48201728,
-     "rss_bytes": 64028672,
-     "rss_delta_mb": 15.1
+     "baseline_peak_bytes": 48562176,
+     "peak_bytes": 64880640,
+     "peak_delta_bytes": 16318464,
+     "peak_delta_mb": 15.6,
+     "baseline_rss_bytes": 48562176,
+     "rss_bytes": 64192512,
+     "rss_delta_mb": 14.9
     },
     "load_avg_end": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
     "subprocess_wall_s": 0.4,
     "recall": {
@@ -1233,26 +1233,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.22,
-     6.88,
-     4.67
+     3.91,
+     4.18,
+     3.62
     ],
-    "started_at": 1789711082.3906481,
-    "wall_s": 3.92,
+    "started_at": 1789944732.5358799,
+    "wall_s": 4.094,
     "latency_ms": {
-     "p50": 6.9534,
-     "p95": 7.7551,
-     "p99": 8.3679,
-     "mean": 7.0676,
-     "min": 6.5466,
-     "max": 12.8421,
+     "p50": 7.4152,
+     "p95": 7.6601,
+     "p99": 7.8155,
+     "mean": 7.4362,
+     "min": 7.2854,
+     "max": 8.0327,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0073,
-    "ingest_s": 0.22,
-    "reopen_s": 0.001,
+    "first_query_after_reopen_s": 0.0079,
+    "ingest_s": 0.204,
+    "reopen_s": 0.0012,
     "index_bytes": 38744064,
     "index_stores_text": true,
     "config": {
@@ -1267,20 +1267,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122667008,
-     "peak_bytes": 178880512,
+     "baseline_peak_bytes": 122273792,
+     "peak_bytes": 178487296,
      "peak_delta_bytes": 56213504,
      "peak_delta_mb": 53.6,
-     "baseline_rss_bytes": 122683392,
-     "rss_bytes": 178192384,
+     "baseline_rss_bytes": 122306560,
+     "rss_bytes": 177799168,
      "rss_delta_mb": 52.9
     },
     "load_avg_end": [
-     4.22,
-     6.88,
-     4.67
+     3.83,
+     4.16,
+     3.61
     ],
-    "subprocess_wall_s": 4.0,
+    "subprocess_wall_s": 4.2,
     "recall": {
      "evidence_recall_at_4_pct": 70.4,
      "per_doc_recall_at_4_pct": 84.2,
@@ -1294,26 +1294,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     3.25,
-     5.94,
-     4.54
+     2.88,
+     3.75,
+     3.51
     ],
-    "started_at": 1789711177.428946,
-    "wall_s": 30.122,
+    "started_at": 1789944829.985277,
+    "wall_s": 29.579,
     "latency_ms": {
-     "p50": 55.091,
-     "p95": 57.13,
-     "p99": 58.8134,
-     "mean": 55.1617,
-     "min": 53.3279,
-     "max": 60.2881,
+     "p50": 54.0009,
+     "p95": 54.5572,
+     "p99": 55.1051,
+     "mean": 54.0753,
+     "min": 53.641,
+     "max": 59.7917,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0553,
-    "ingest_s": 1.356,
-    "reopen_s": 0.0013,
+    "first_query_after_reopen_s": 0.0545,
+    "ingest_s": 1.374,
+    "reopen_s": 0.0014,
     "index_bytes": 270577664,
     "index_stores_text": true,
     "config": {
@@ -1328,20 +1328,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626786304,
-     "peak_bytes": 978993152,
-     "peak_delta_bytes": 352206848,
+     "baseline_peak_bytes": 626999296,
+     "peak_bytes": 979173376,
+     "peak_delta_bytes": 352174080,
      "peak_delta_mb": 335.9,
-     "baseline_rss_bytes": 626802688,
-     "rss_bytes": 905904128,
-     "rss_delta_mb": 266.2
+     "baseline_rss_bytes": 627015680,
+     "rss_bytes": 906477568,
+     "rss_delta_mb": 266.5
     },
     "load_avg_end": [
-     3.63,
-     5.75,
-     4.52
+     2.33,
+     3.54,
+     3.44
     ],
-    "subprocess_wall_s": 30.3,
+    "subprocess_wall_s": 29.8,
     "recall": {
      "evidence_recall_at_4_pct": 60.6,
      "per_doc_recall_at_4_pct": 78.1,
@@ -1357,26 +1357,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.8,
-     7.17,
-     4.72
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711067.05677,
-    "wall_s": 0.776,
+    "started_at": 1789944717.237889,
+    "wall_s": 0.79,
     "latency_ms": {
-     "p50": 0.6079,
-     "p95": 0.6777,
-     "p99": 0.7255,
-     "mean": 0.6104,
-     "min": 0.5231,
-     "max": 0.8362,
+     "p50": 0.6343,
+     "p95": 0.6977,
+     "p99": 0.7083,
+     "mean": 0.6367,
+     "min": 0.5575,
+     "max": 0.7521,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
     "first_query_after_reopen_s": 0.0011,
-    "ingest_s": 0.304,
-    "reopen_s": 0.0016,
+    "ingest_s": 0.303,
+    "reopen_s": 0.0017,
     "index_bytes": 12241742,
     "index_stores_text": true,
     "config": {
@@ -1419,18 +1419,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48185344,
-     "peak_bytes": 149864448,
-     "peak_delta_bytes": 101679104,
-     "peak_delta_mb": 97.0,
-     "baseline_rss_bytes": 48185344,
-     "rss_bytes": 149864448,
-     "rss_delta_mb": 97.0
+     "baseline_peak_bytes": 48316416,
+     "peak_bytes": 150503424,
+     "peak_delta_bytes": 102187008,
+     "peak_delta_mb": 97.5,
+     "baseline_rss_bytes": 48316416,
+     "rss_bytes": 150503424,
+     "rss_delta_mb": 97.5
     },
     "load_avg_end": [
-     4.58,
-     7.08,
-     4.7
+     4.06,
+     4.22,
+     3.62
     ],
     "subprocess_wall_s": 0.9,
     "recall": {
@@ -1446,25 +1446,25 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.22,
-     6.88,
-     4.67
+     3.83,
+     4.16,
+     3.61
     ],
-    "started_at": 1789711086.41122,
-    "wall_s": 4.142,
+    "started_at": 1789944736.729253,
+    "wall_s": 4.072,
     "latency_ms": {
-     "p50": 0.9422,
-     "p95": 1.1241,
-     "p99": 1.1905,
-     "mean": 0.9428,
-     "min": 0.5762,
-     "max": 1.2144,
+     "p50": 0.9775,
+     "p95": 1.1557,
+     "p99": 1.2082,
+     "mean": 0.974,
+     "min": 0.5842,
+     "max": 1.2792,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0016,
-    "ingest_s": 3.275,
+    "first_query_after_reopen_s": 0.0012,
+    "ingest_s": 3.287,
     "reopen_s": 0.0016,
     "index_bytes": 77560624,
     "index_stores_text": true,
@@ -1508,25 +1508,25 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122404864,
-     "peak_bytes": 255066112,
-     "peak_delta_bytes": 132661248,
-     "peak_delta_mb": 126.5,
-     "baseline_rss_bytes": 122437632,
-     "rss_bytes": 255066112,
-     "rss_delta_mb": 126.5
+     "baseline_peak_bytes": 122470400,
+     "peak_bytes": 264945664,
+     "peak_delta_bytes": 142475264,
+     "peak_delta_mb": 135.9,
+     "baseline_rss_bytes": 122503168,
+     "rss_bytes": 264945664,
+     "rss_delta_mb": 135.8
     },
     "load_avg_end": [
-     4.84,
-     6.97,
-     4.72
+     3.61,
+     4.11,
+     3.6
     ],
-    "subprocess_wall_s": 4.3,
+    "subprocess_wall_s": 4.2,
     "recall": {
-     "evidence_recall_at_4_pct": 69.6,
-     "per_doc_recall_at_4_pct": 83.4,
-     "evidence_recall_at_10_pct": 83.6,
-     "per_doc_recall_at_10_pct": 91.1,
+     "evidence_recall_at_4_pct": 69.8,
+     "per_doc_recall_at_4_pct": 83.5,
+     "evidence_recall_at_10_pct": 83.8,
+     "per_doc_recall_at_10_pct": 91.2,
      "n_questions": 500
     }
    },
@@ -1535,27 +1535,27 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     3.63,
-     5.75,
-     4.52
+     2.33,
+     3.54,
+     3.44
     ],
-    "started_at": 1789711207.775903,
-    "wall_s": 33.035,
+    "started_at": 1789944859.7808151,
+    "wall_s": 32.306,
     "latency_ms": {
-     "p50": 1.2943,
-     "p95": 1.6416,
-     "p99": 1.7868,
-     "mean": 1.2905,
-     "min": 0.808,
-     "max": 2.6044,
+     "p50": 1.2513,
+     "p95": 1.5504,
+     "p99": 1.6398,
+     "mean": 1.2431,
+     "min": 0.7906,
+     "max": 1.7045,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0017,
-    "ingest_s": 31.931,
+    "first_query_after_reopen_s": 0.0013,
+    "ingest_s": 31.365,
     "reopen_s": 0.0017,
-    "index_bytes": 512153316,
+    "index_bytes": 512153384,
     "index_stores_text": true,
     "config": {
      "client": "chromadb.PersistentClient (Rust core, the 1.5.9 default)",
@@ -1597,25 +1597,25 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626737152,
-     "peak_bytes": 928104448,
-     "peak_delta_bytes": 301367296,
-     "peak_delta_mb": 287.4,
-     "baseline_rss_bytes": 626753536,
-     "rss_bytes": 926007296,
-     "rss_delta_mb": 285.4
+     "baseline_peak_bytes": 626982912,
+     "peak_bytes": 933675008,
+     "peak_delta_bytes": 306692096,
+     "peak_delta_mb": 292.5,
+     "baseline_rss_bytes": 626999296,
+     "rss_bytes": 931577856,
+     "rss_delta_mb": 290.5
     },
     "load_avg_end": [
-     6.17,
-     6.17,
-     4.72
+     5.3,
+     4.14,
+     3.66
     ],
-    "subprocess_wall_s": 33.3,
+    "subprocess_wall_s": 32.6,
     "recall": {
-     "evidence_recall_at_4_pct": 54.6,
-     "per_doc_recall_at_4_pct": 73.3,
-     "evidence_recall_at_10_pct": 64.2,
-     "per_doc_recall_at_10_pct": 79.3,
+     "evidence_recall_at_4_pct": 55.0,
+     "per_doc_recall_at_4_pct": 73.4,
+     "evidence_recall_at_10_pct": 65.0,
+     "per_doc_recall_at_10_pct": 79.4,
      "n_questions": 500
     }
    }
@@ -1626,26 +1626,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.58,
-     7.08,
-     4.7
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711067.9442298,
-    "wall_s": 0.91,
+    "started_at": 1789944718.143541,
+    "wall_s": 0.914,
     "latency_ms": {
-     "p50": 1.0097,
-     "p95": 1.1652,
-     "p99": 1.23,
-     "mean": 1.0282,
-     "min": 0.9458,
-     "max": 1.2541,
+     "p50": 1.0324,
+     "p95": 1.0609,
+     "p99": 1.1108,
+     "mean": 1.0349,
+     "min": 1.0043,
+     "max": 1.139,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
-    "first_query_after_reopen_s": 0.0011,
-    "ingest_s": 0.373,
-    "reopen_s": 0.0016,
+    "first_query_after_reopen_s": 0.0013,
+    "ingest_s": 0.365,
+    "reopen_s": 0.0017,
     "index_bytes": 12626838,
     "index_stores_text": true,
     "config": {
@@ -1691,18 +1691,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48119808,
-     "peak_bytes": 152158208,
-     "peak_delta_bytes": 104038400,
-     "peak_delta_mb": 99.2,
-     "baseline_rss_bytes": 48119808,
-     "rss_bytes": 152174592,
-     "rss_delta_mb": 99.2
+     "baseline_peak_bytes": 48234496,
+     "peak_bytes": 152322048,
+     "peak_delta_bytes": 104087552,
+     "peak_delta_mb": 99.3,
+     "baseline_rss_bytes": 48234496,
+     "rss_bytes": 152322048,
+     "rss_delta_mb": 99.3
     },
     "load_avg_end": [
-     4.58,
-     7.08,
-     4.7
+     4.06,
+     4.22,
+     3.62
     ],
     "subprocess_wall_s": 1.0,
     "recall": {
@@ -1718,25 +1718,25 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.84,
-     6.97,
-     4.72
+     3.61,
+     4.11,
+     3.6
     ],
-    "started_at": 1789711090.708726,
-    "wall_s": 8.094,
+    "started_at": 1789944740.945472,
+    "wall_s": 8.24,
     "latency_ms": {
-     "p50": 3.7666,
-     "p95": 4.4948,
-     "p99": 4.8458,
-     "mean": 3.7901,
-     "min": 2.8802,
-     "max": 5.2537,
+     "p50": 4.0688,
+     "p95": 4.7111,
+     "p99": 4.8933,
+     "mean": 4.0756,
+     "min": 3.0493,
+     "max": 5.1339,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0051,
-    "ingest_s": 5.839,
+    "first_query_after_reopen_s": 0.0057,
+    "ingest_s": 5.832,
     "reopen_s": 0.0016,
     "index_bytes": 81400368,
     "index_stores_text": true,
@@ -1783,20 +1783,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122503168,
-     "peak_bytes": 266960896,
-     "peak_delta_bytes": 144457728,
-     "peak_delta_mb": 137.8,
-     "baseline_rss_bytes": 122503168,
-     "rss_bytes": 266960896,
-     "rss_delta_mb": 137.8
+     "baseline_peak_bytes": 122404864,
+     "peak_bytes": 265814016,
+     "peak_delta_bytes": 143409152,
+     "peak_delta_mb": 136.8,
+     "baseline_rss_bytes": 122454016,
+     "rss_bytes": 265814016,
+     "rss_delta_mb": 136.7
     },
     "load_avg_end": [
-     4.62,
-     6.85,
-     4.7
+     3.4,
+     4.06,
+     3.58
     ],
-    "subprocess_wall_s": 8.2,
+    "subprocess_wall_s": 8.4,
     "recall": {
      "evidence_recall_at_4_pct": 70.4,
      "per_doc_recall_at_4_pct": 84.2,
@@ -1810,26 +1810,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     6.17,
-     6.17,
-     4.72
+     5.3,
+     4.14,
+     3.66
     ],
-    "started_at": 1789711241.093987,
-    "wall_s": 82.506,
+    "started_at": 1789944892.356343,
+    "wall_s": 80.825,
     "latency_ms": {
-     "p50": 8.486,
-     "p95": 10.9273,
-     "p99": 11.8284,
-     "mean": 8.4754,
-     "min": 3.5646,
-     "max": 12.559,
+     "p50": 8.5416,
+     "p95": 10.9793,
+     "p99": 12.0905,
+     "mean": 8.5445,
+     "min": 3.5193,
+     "max": 13.1,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0101,
-    "ingest_s": 77.778,
-    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.01,
+    "ingest_s": 76.081,
+    "reopen_s": 0.0018,
     "index_bytes": 539394092,
     "index_stores_text": true,
     "config": {
@@ -1875,20 +1875,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 627146752,
-     "peak_bytes": 958971904,
-     "peak_delta_bytes": 331825152,
-     "peak_delta_mb": 316.5,
-     "baseline_rss_bytes": 627179520,
-     "rss_bytes": 956874752,
-     "rss_delta_mb": 314.4
+     "baseline_peak_bytes": 626802688,
+     "peak_bytes": 962641920,
+     "peak_delta_bytes": 335839232,
+     "peak_delta_mb": 320.3,
+     "baseline_rss_bytes": 626819072,
+     "rss_bytes": 960544768,
+     "rss_delta_mb": 318.3
     },
     "load_avg_end": [
-     12.87,
-     8.48,
-     5.74
+     8.73,
+     5.5,
+     4.21
     ],
-    "subprocess_wall_s": 82.8,
+    "subprocess_wall_s": 81.1,
     "recall": {
      "evidence_recall_at_4_pct": 60.6,
      "per_doc_recall_at_4_pct": 78.1,
@@ -1904,26 +1904,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.58,
-     7.08,
-     4.7
+     4.06,
+     4.22,
+     3.62
     ],
-    "started_at": 1789711068.975494,
-    "wall_s": 0.749,
+    "started_at": 1789944719.170013,
+    "wall_s": 0.747,
     "latency_ms": {
-     "p50": 0.6133,
-     "p95": 0.7188,
-     "p99": 0.7978,
-     "mean": 0.6214,
-     "min": 0.5271,
-     "max": 0.8963,
+     "p50": 0.6326,
+     "p95": 0.6906,
+     "p99": 0.7018,
+     "mean": 0.6333,
+     "min": 0.5561,
+     "max": 0.7192,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
     "first_query_after_reopen_s": 0.0008,
-    "ingest_s": 0.297,
-    "reopen_s": 0.0017,
+    "ingest_s": 0.299,
+    "reopen_s": 0.0016,
     "index_bytes": 10848420,
     "index_stores_text": true,
     "config": {
@@ -1968,18 +1968,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48857088,
-     "peak_bytes": 151601152,
-     "peak_delta_bytes": 102744064,
-     "peak_delta_mb": 98.0,
-     "baseline_rss_bytes": 48873472,
-     "rss_bytes": 151617536,
-     "rss_delta_mb": 98.0
+     "baseline_peak_bytes": 48496640,
+     "peak_bytes": 154959872,
+     "peak_delta_bytes": 106463232,
+     "peak_delta_mb": 101.5,
+     "baseline_rss_bytes": 48496640,
+     "rss_bytes": 154959872,
+     "rss_delta_mb": 101.5
     },
     "load_avg_end": [
-     4.58,
-     7.08,
-     4.7
+     3.98,
+     4.2,
+     3.62
     ],
     "subprocess_wall_s": 0.9,
     "recall": {
@@ -1995,25 +1995,25 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.62,
-     6.85,
-     4.7
+     3.37,
+     4.04,
+     3.58
     ],
-    "started_at": 1789711098.938497,
-    "wall_s": 4.227,
+    "started_at": 1789944749.323631,
+    "wall_s": 4.341,
     "latency_ms": {
-     "p50": 0.8943,
-     "p95": 1.0664,
-     "p99": 1.1412,
-     "mean": 0.8942,
-     "min": 0.5576,
-     "max": 1.2732,
+     "p50": 0.9788,
+     "p95": 1.1577,
+     "p99": 1.2085,
+     "mean": 0.9741,
+     "min": 0.5951,
+     "max": 1.343,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
     "first_query_after_reopen_s": 0.0012,
-    "ingest_s": 3.418,
+    "ingest_s": 3.49,
     "reopen_s": 0.0016,
     "index_bytes": 84523172,
     "index_stores_text": true,
@@ -2059,25 +2059,25 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122454016,
-     "peak_bytes": 300892160,
-     "peak_delta_bytes": 178438144,
-     "peak_delta_mb": 170.2,
-     "baseline_rss_bytes": 122486784,
-     "rss_bytes": 300892160,
-     "rss_delta_mb": 170.1
+     "baseline_peak_bytes": 122355712,
+     "peak_bytes": 305266688,
+     "peak_delta_bytes": 182910976,
+     "peak_delta_mb": 174.4,
+     "baseline_rss_bytes": 122388480,
+     "rss_bytes": 305266688,
+     "rss_delta_mb": 174.4
     },
     "load_avg_end": [
-     4.97,
-     6.89,
-     4.73
+     3.37,
+     4.04,
+     3.58
     ],
-    "subprocess_wall_s": 4.4,
+    "subprocess_wall_s": 4.5,
     "recall": {
      "evidence_recall_at_4_pct": 69.8,
-     "per_doc_recall_at_4_pct": 83.6,
+     "per_doc_recall_at_4_pct": 83.5,
      "evidence_recall_at_10_pct": 83.8,
-     "per_doc_recall_at_10_pct": 91.4,
+     "per_doc_recall_at_10_pct": 91.2,
      "n_questions": 500
     }
    },
@@ -2086,26 +2086,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     12.87,
-     8.48,
-     5.74
+     8.73,
+     5.5,
+     4.21
     ],
-    "started_at": 1789711323.877048,
-    "wall_s": 45.521,
+    "started_at": 1789944973.42658,
+    "wall_s": 45.567,
     "latency_ms": {
-     "p50": 1.2545,
-     "p95": 1.5376,
-     "p99": 1.627,
-     "mean": 1.2363,
-     "min": 0.7943,
-     "max": 1.8255,
+     "p50": 1.2458,
+     "p95": 1.5238,
+     "p99": 1.6211,
+     "mean": 1.2373,
+     "min": 0.7899,
+     "max": 1.7395,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.0013,
-    "ingest_s": 44.134,
-    "reopen_s": 0.0017,
+    "first_query_after_reopen_s": 0.0014,
+    "ingest_s": 44.179,
+    "reopen_s": 0.0016,
     "index_bytes": 587716772,
     "index_stores_text": true,
     "config": {
@@ -2150,25 +2150,25 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626819072,
-     "peak_bytes": 1555546112,
-     "peak_delta_bytes": 928727040,
-     "peak_delta_mb": 885.7,
-     "baseline_rss_bytes": 626835456,
-     "rss_bytes": 1552580608,
-     "rss_delta_mb": 882.9
+     "baseline_peak_bytes": 627097600,
+     "peak_bytes": 1563344896,
+     "peak_delta_bytes": 936247296,
+     "peak_delta_mb": 892.9,
+     "baseline_rss_bytes": 627113984,
+     "rss_bytes": 1561247744,
+     "rss_delta_mb": 890.9
     },
     "load_avg_end": [
-     6.79,
-     7.48,
-     5.52
+     7.36,
+     5.57,
+     4.31
     ],
     "subprocess_wall_s": 45.8,
     "recall": {
-     "evidence_recall_at_4_pct": 55.0,
+     "evidence_recall_at_4_pct": 54.6,
      "per_doc_recall_at_4_pct": 73.4,
-     "evidence_recall_at_10_pct": 65.0,
-     "per_doc_recall_at_10_pct": 79.4,
+     "evidence_recall_at_10_pct": 64.2,
+     "per_doc_recall_at_10_pct": 79.2,
      "n_questions": 500
     }
    }
@@ -2179,26 +2179,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.58,
-     7.08,
-     4.7
+     3.98,
+     4.2,
+     3.62
     ],
-    "started_at": 1789711069.834835,
-    "wall_s": 9.02,
+    "started_at": 1789944720.030933,
+    "wall_s": 9.075,
     "latency_ms": {
-     "p50": 32.1665,
-     "p95": 33.0352,
-     "p99": 33.4849,
-     "mean": 32.1702,
-     "min": 30.7283,
-     "max": 33.753,
+     "p50": 32.4461,
+     "p95": 33.0296,
+     "p99": 33.2265,
+     "mean": 32.4328,
+     "min": 31.5155,
+     "max": 33.3407,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
-    "first_query_after_reopen_s": 0.036,
-    "ingest_s": 0.269,
-    "reopen_s": 0.0018,
+    "first_query_after_reopen_s": 0.0353,
+    "ingest_s": 0.265,
+    "reopen_s": 0.0017,
     "index_bytes": 13738724,
     "index_stores_text": true,
     "config": {
@@ -2238,20 +2238,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48201728,
-     "peak_bytes": 191758336,
-     "peak_delta_bytes": 143556608,
-     "peak_delta_mb": 136.9,
-     "baseline_rss_bytes": 48201728,
-     "rss_bytes": 191758336,
-     "rss_delta_mb": 136.9
+     "baseline_peak_bytes": 48463872,
+     "peak_bytes": 192200704,
+     "peak_delta_bytes": 143736832,
+     "peak_delta_mb": 137.1,
+     "baseline_rss_bytes": 48463872,
+     "rss_bytes": 192200704,
+     "rss_delta_mb": 137.1
     },
     "load_avg_end": [
-     4.41,
-     6.96,
-     4.69
+     3.9,
+     4.18,
+     3.61
     ],
-    "subprocess_wall_s": 9.1,
+    "subprocess_wall_s": 9.2,
     "recall": {
      "evidence_recall_at_4_pct": 68.33,
      "per_doc_recall_at_4_pct": 83.75,
@@ -2265,26 +2265,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     4.97,
-     6.89,
-     4.73
+     3.37,
+     4.04,
+     3.58
     ],
-    "started_at": 1789711103.295313,
-    "wall_s": 34.291,
+    "started_at": 1789944753.797249,
+    "wall_s": 35.358,
     "latency_ms": {
-     "p50": 60.3071,
-     "p95": 61.5481,
-     "p99": 62.6287,
-     "mean": 60.3777,
-     "min": 58.3338,
-     "max": 71.4179,
+     "p50": 62.3408,
+     "p95": 63.2997,
+     "p99": 63.7573,
+     "mean": 62.3589,
+     "min": 60.3501,
+     "max": 74.0102,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
     "first_query_after_reopen_s": 0.0656,
-    "ingest_s": 2.486,
-    "reopen_s": 0.0017,
+    "ingest_s": 2.534,
+    "reopen_s": 0.0018,
     "index_bytes": 87470820,
     "index_stores_text": true,
     "config": {
@@ -2324,20 +2324,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122355712,
-     "peak_bytes": 331710464,
-     "peak_delta_bytes": 209354752,
-     "peak_delta_mb": 199.7,
-     "baseline_rss_bytes": 122388480,
-     "rss_bytes": 331710464,
-     "rss_delta_mb": 199.6
+     "baseline_peak_bytes": 122388480,
+     "peak_bytes": 333316096,
+     "peak_delta_bytes": 210927616,
+     "peak_delta_mb": 201.2,
+     "baseline_rss_bytes": 122437632,
+     "rss_bytes": 333316096,
+     "rss_delta_mb": 201.1
     },
     "load_avg_end": [
-     3.84,
-     6.38,
-     4.63
+     3.29,
+     3.96,
+     3.57
     ],
-    "subprocess_wall_s": 34.4,
+    "subprocess_wall_s": 35.5,
     "recall": {
      "evidence_recall_at_4_pct": 70.4,
      "per_doc_recall_at_4_pct": 84.2,
@@ -2351,25 +2351,25 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     6.79,
-     7.48,
-     5.52
+     7.36,
+     5.57,
+     4.31
     ],
-    "started_at": 1789711369.6644962,
-    "wall_s": 164.983,
+    "started_at": 1789945019.249565,
+    "wall_s": 165.521,
     "latency_ms": {
-     "p50": 273.8804,
-     "p95": 277.4967,
-     "p99": 279.2075,
-     "mean": 273.8457,
-     "min": 266.9265,
-     "max": 281.4071,
+     "p50": 274.9803,
+     "p95": 279.7526,
+     "p99": 281.5532,
+     "mean": 275.0028,
+     "min": 267.4293,
+     "max": 285.3329,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
-    "first_query_after_reopen_s": 0.2831,
-    "ingest_s": 21.882,
+    "first_query_after_reopen_s": 0.2742,
+    "ingest_s": 21.872,
     "reopen_s": 0.0019,
     "index_bytes": 591360740,
     "index_stores_text": true,
@@ -2410,20 +2410,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626802688,
-     "peak_bytes": 1326268416,
-     "peak_delta_bytes": 699465728,
-     "peak_delta_mb": 667.1,
-     "baseline_rss_bytes": 626819072,
-     "rss_bytes": 1325219840,
-     "rss_delta_mb": 666.0
+     "baseline_peak_bytes": 626737152,
+     "peak_bytes": 1327923200,
+     "peak_delta_bytes": 701186048,
+     "peak_delta_mb": 668.7,
+     "baseline_rss_bytes": 626753536,
+     "rss_bytes": 1326874624,
+     "rss_delta_mb": 667.7
     },
     "load_avg_end": [
-     1.52,
-     4.87,
-     4.78
+     2.3,
+     4.04,
+     3.89
     ],
-    "subprocess_wall_s": 165.3,
+    "subprocess_wall_s": 165.8,
     "recall": {
      "evidence_recall_at_4_pct": 60.6,
      "per_doc_recall_at_4_pct": 78.1,
@@ -2439,26 +2439,26 @@
     "corpus": "val1190",
     "ok": true,
     "load_avg_start": [
-     4.41,
-     6.96,
-     4.69
+     3.9,
+     4.18,
+     3.61
     ],
-    "started_at": 1789711079.012585,
-    "wall_s": 0.109,
+    "started_at": 1789944729.223317,
+    "wall_s": 0.107,
     "latency_ms": {
-     "p50": 0.0845,
-     "p95": 0.0904,
-     "p99": 0.0973,
-     "mean": 0.0848,
-     "min": 0.0715,
-     "max": 0.1375,
+     "p50": 0.0749,
+     "p95": 0.0813,
+     "p99": 0.0841,
+     "mean": 0.0752,
+     "min": 0.0669,
+     "max": 0.0883,
      "n_timed_queries": 240,
      "n_unique_queries": 120,
      "passes": 2
     },
     "first_query_after_reopen_s": 0.0002,
-    "ingest_s": 0.032,
-    "reopen_s": 0.0054,
+    "ingest_s": 0.024,
+    "reopen_s": 0.0055,
     "index_bytes": 4456195,
     "index_stores_text": true,
     "engine_stats": {
@@ -2492,7 +2492,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__val1190/vault.dat",
      "file_size_mb": 4.25,
      "format_version": 3,
@@ -2505,19 +2505,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 59712,
-     "process_rss_kb": 59712,
+     "process_peak_rss_kb": 66752,
+     "process_rss_kb": 66704,
      "read_only": false,
      "record_bytes": 796577,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 3.486,
      "resident_arena_used_mb": 3.486,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -2530,7 +2530,7 @@
      "total_documents": 1190,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "04c5fc32fc052c12d306c4404c75baf7",
+     "vault_uuid": "657df58d4f5ef7f534771815becdc77b",
      "vector_dtype": "float32",
      "vector_dtype_on_disk": "float32",
      "window_delta": 0.16
@@ -2540,8 +2540,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float32 on disk AND in the resident arena",
@@ -2552,18 +2552,18 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 48988160,
-     "peak_bytes": 61145088,
-     "peak_delta_bytes": 12156928,
-     "peak_delta_mb": 11.6,
-     "baseline_rss_bytes": 48988160,
-     "rss_bytes": 61145088,
-     "rss_delta_mb": 11.6
+     "baseline_peak_bytes": 48513024,
+     "peak_bytes": 68354048,
+     "peak_delta_bytes": 19841024,
+     "peak_delta_mb": 18.9,
+     "baseline_rss_bytes": 48513024,
+     "rss_bytes": 68304896,
+     "rss_delta_mb": 18.9
     },
     "load_avg_end": [
-     4.41,
-     6.96,
-     4.69
+     3.91,
+     4.18,
+     3.62
     ],
     "subprocess_wall_s": 0.2,
     "recall": {
@@ -2579,26 +2579,26 @@
     "corpus": "n10000",
     "ok": true,
     "load_avg_start": [
-     3.84,
-     6.38,
-     4.63
+     3.29,
+     3.96,
+     3.57
     ],
-    "started_at": 1789711137.7303832,
-    "wall_s": 0.443,
+    "started_at": 1789944789.299674,
+    "wall_s": 0.5,
     "latency_ms": {
-     "p50": 0.3858,
-     "p95": 0.4451,
-     "p99": 0.4797,
-     "mean": 0.3742,
-     "min": 0.2312,
-     "max": 0.5313,
+     "p50": 0.3982,
+     "p95": 0.4426,
+     "p99": 0.4689,
+     "mean": 0.3972,
+     "min": 0.3226,
+     "max": 0.4902,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
     "first_query_after_reopen_s": 0.0007,
-    "ingest_s": 0.182,
-    "reopen_s": 0.0396,
+    "ingest_s": 0.192,
+    "reopen_s": 0.0405,
     "index_bytes": 37338441,
     "index_stores_text": true,
     "engine_stats": {
@@ -2632,7 +2632,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n10000/vault.dat",
      "file_size_mb": 35.609,
      "format_version": 3,
@@ -2645,19 +2645,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 169456,
-     "process_rss_kb": 169456,
+     "process_peak_rss_kb": 175568,
+     "process_rss_kb": 175568,
      "read_only": false,
      "record_bytes": 6586287,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 29.297,
      "resident_arena_used_mb": 29.297,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -2670,7 +2670,7 @@
      "total_documents": 10000,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "291f1994151be0828de3091b72c4f599",
+     "vault_uuid": "1f5cd35bd55c66b408f48b27f66dbabc",
      "vector_dtype": "float32",
      "vector_dtype_on_disk": "float32",
      "window_delta": 0.16
@@ -2680,8 +2680,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float32 on disk AND in the resident arena",
@@ -2692,20 +2692,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 122880000,
-     "peak_bytes": 173539328,
-     "peak_delta_bytes": 50659328,
-     "peak_delta_mb": 48.3,
-     "baseline_rss_bytes": 122912768,
-     "rss_bytes": 173539328,
-     "rss_delta_mb": 48.3
+     "baseline_peak_bytes": 122470400,
+     "peak_bytes": 179781632,
+     "peak_delta_bytes": 57311232,
+     "peak_delta_mb": 54.7,
+     "baseline_rss_bytes": 122503168,
+     "rss_bytes": 179781632,
+     "rss_delta_mb": 54.6
     },
     "load_avg_end": [
-     3.84,
-     6.38,
-     4.63
+     3.18,
+     3.93,
+     3.56
     ],
-    "subprocess_wall_s": 0.5,
+    "subprocess_wall_s": 0.6,
     "recall": {
      "evidence_recall_at_4_pct": 70.4,
      "per_doc_recall_at_4_pct": 84.2,
@@ -2719,26 +2719,26 @@
     "corpus": "n71433",
     "ok": true,
     "load_avg_start": [
-     1.52,
-     4.87,
-     4.78
+     2.3,
+     4.04,
+     3.89
     ],
-    "started_at": 1789711534.94767,
-    "wall_s": 2.605,
+    "started_at": 1789945185.060052,
+    "wall_s": 2.68,
     "latency_ms": {
-     "p50": 1.8666,
-     "p95": 2.1379,
-     "p99": 2.2227,
-     "mean": 1.8824,
-     "min": 1.5633,
-     "max": 2.3741,
+     "p50": 1.8798,
+     "p95": 2.1378,
+     "p99": 2.1846,
+     "mean": 1.8878,
+     "min": 1.5403,
+     "max": 2.2254,
      "n_timed_queries": 500,
      "n_unique_queries": 500,
      "passes": 1
     },
     "first_query_after_reopen_s": 0.0027,
-    "ingest_s": 1.306,
-    "reopen_s": 0.2836,
+    "ingest_s": 1.348,
+    "reopen_s": 0.2835,
     "index_bytes": 265607496,
     "index_stores_text": true,
     "engine_stats": {
@@ -2772,7 +2772,7 @@
      "durable": "fsync",
      "embed_dim": 768,
      "encrypted_at_rest": false,
-     "engine_version": "3.4.3",
+     "engine_version": "3.4.6",
      "file_path": "/tmp/nanomem_bench_work/w_nanomem_v3_exact_fp32__n71433/vault.dat",
      "file_size_mb": 253.303,
      "format_version": 3,
@@ -2785,19 +2785,19 @@
      "landmark_bytes": 0,
      "landmarks_per_block": 0,
      "mapped_bytes": 0,
-     "max_boost": 0.7,
+     "max_boost": 1.1,
      "memtable_bytes": 0,
      "memtable_pending": 0,
      "n_exhaustive": 50000,
-     "process_peak_rss_kb": 912448,
-     "process_rss_kb": 912464,
+     "process_peak_rss_kb": 938320,
+     "process_rss_kb": 938320,
      "read_only": false,
      "record_bytes": 45937108,
      "record_mapped_bytes": 0,
      "resident_arena_mapped_mb": 0.0,
      "resident_arena_mb": 209.276,
      "resident_arena_used_mb": 209.276,
-     "revision_lead": 0.2,
+     "revision_lead": 0.6,
      "router": "off",
      "routing_mode": "exhaustive",
      "score_scale": "cosine",
@@ -2810,7 +2810,7 @@
      "total_documents": 71433,
      "tracemalloc_current_kb": null,
      "truncated_tail_bytes": 0,
-     "vault_uuid": "d4a27cd1b32aeb1825dd9daaecf7c9b9",
+     "vault_uuid": "9832a5b67eef755233f3528983e8c803",
      "vector_dtype": "float32",
      "vector_dtype_on_disk": "float32",
      "window_delta": 0.16
@@ -2820,8 +2820,8 @@
     },
     "config": {
      "class": "nanomem.engine.VaultEngine (pre-computed vectors passed to add_fact; no embedder in the loop)",
-     "nanomem_version": "0.7.15",
-     "engine_version": "3.4.3",
+     "nanomem_version": "0.7.18",
+     "engine_version": "3.4.6",
      "router": "off",
      "n_exhaustive": 50000,
      "vector_dtype": "float32 on disk AND in the resident arena",
@@ -2832,20 +2832,20 @@
     },
     "memory": {
      "method": "resource.getrusage(RUSAGE_SELF).ru_maxrss (bytes on darwin) for the peak, `ps -o rss=` for the resident value; baseline taken after the shared vectors/texts are loaded, so the delta is the engine's own footprint",
-     "baseline_peak_bytes": 626720768,
-     "peak_bytes": 934363136,
-     "peak_delta_bytes": 307642368,
-     "peak_delta_mb": 293.4,
-     "baseline_rss_bytes": 626737152,
-     "rss_bytes": 934363136,
-     "rss_delta_mb": 293.4
+     "baseline_peak_bytes": 627015680,
+     "peak_bytes": 960839680,
+     "peak_delta_bytes": 333824000,
+     "peak_delta_mb": 318.4,
+     "baseline_rss_bytes": 627032064,
+     "rss_bytes": 960839680,
+     "rss_delta_mb": 318.3
     },
     "load_avg_end": [
-     1.52,
-     4.87,
-     4.78
+     2.19,
+     3.99,
+     3.87
     ],
-    "subprocess_wall_s": 2.8,
+    "subprocess_wall_s": 2.9,
     "recall": {
      "evidence_recall_at_4_pct": 60.6,
      "per_doc_recall_at_4_pct": 78.1,
@@ -2883,9 +2883,9 @@
      "top10_mean_overlap_pct": 100.0
     },
     "chroma_hnsw_default": {
-     "top10_set_identical_pct": 100.0,
+     "top10_set_identical_pct": 99.17,
      "top4_set_identical_pct": 100.0,
-     "top10_mean_overlap_pct": 100.0
+     "top10_mean_overlap_pct": 99.85
     },
     "chroma_hnsw_tuned": {
      "top10_set_identical_pct": 100.0,
@@ -2934,10 +2934,10 @@
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_hnsw_default": {
-      "queries_disagreeing_with_faiss": 0,
+      "queries_disagreeing_with_faiss": 1,
       "queries_total": 120,
-      "max_cosine_given_up": 0.0,
-      "median_cosine_given_up": 0.0,
+      "max_cosine_given_up": 0.02185,
+      "median_cosine_given_up": 0.02185,
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_hnsw_tuned": {
@@ -2997,9 +2997,9 @@
      "top10_mean_overlap_pct": 100.0
     },
     "chroma_hnsw_default": {
-     "top10_set_identical_pct": 94.8,
-     "top4_set_identical_pct": 97.6,
-     "top10_mean_overlap_pct": 98.82
+     "top10_set_identical_pct": 95.4,
+     "top4_set_identical_pct": 98.0,
+     "top10_mean_overlap_pct": 98.9
     },
     "chroma_hnsw_tuned": {
      "top10_set_identical_pct": 100.0,
@@ -3007,9 +3007,9 @@
      "top10_mean_overlap_pct": 100.0
     },
     "chroma_bruteforce": {
-     "top10_set_identical_pct": 96.0,
-     "top4_set_identical_pct": 98.4,
-     "top10_mean_overlap_pct": 99.03
+     "top10_set_identical_pct": 94.8,
+     "top4_set_identical_pct": 98.2,
+     "top10_mean_overlap_pct": 98.79
     },
     "chroma_legacy_segment_bruteforce": {
      "top10_set_identical_pct": 100.0,
@@ -3048,10 +3048,10 @@
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_hnsw_default": {
-      "queries_disagreeing_with_faiss": 26,
+      "queries_disagreeing_with_faiss": 23,
       "queries_total": 500,
       "max_cosine_given_up": 0.1064,
-      "median_cosine_given_up": 0.01154,
+      "median_cosine_given_up": 0.009893,
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_hnsw_tuned": {
@@ -3062,10 +3062,10 @@
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_bruteforce": {
-      "queries_disagreeing_with_faiss": 20,
+      "queries_disagreeing_with_faiss": 26,
       "queries_total": 500,
       "max_cosine_given_up": 0.1064,
-      "median_cosine_given_up": 0.007273,
+      "median_cosine_given_up": 0.01018,
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_legacy_segment_bruteforce": {
@@ -3112,8 +3112,8 @@
     },
     "chroma_hnsw_default": {
      "top10_set_identical_pct": 77.0,
-     "top4_set_identical_pct": 86.8,
-     "top10_mean_overlap_pct": 93.8
+     "top4_set_identical_pct": 87.2,
+     "top10_mean_overlap_pct": 93.64
     },
     "chroma_hnsw_tuned": {
      "top10_set_identical_pct": 100.0,
@@ -3121,9 +3121,9 @@
      "top10_mean_overlap_pct": 100.0
     },
     "chroma_bruteforce": {
-     "top10_set_identical_pct": 76.2,
-     "top4_set_identical_pct": 87.2,
-     "top10_mean_overlap_pct": 93.52
+     "top10_set_identical_pct": 77.0,
+     "top4_set_identical_pct": 87.0,
+     "top10_mean_overlap_pct": 93.83
     },
     "chroma_legacy_segment_bruteforce": {
      "top10_set_identical_pct": 99.8,
@@ -3165,7 +3165,7 @@
       "queries_disagreeing_with_faiss": 115,
       "queries_total": 500,
       "max_cosine_given_up": 0.1565,
-      "median_cosine_given_up": 0.00704,
+      "median_cosine_given_up": 0.007018,
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_hnsw_tuned": {
@@ -3176,10 +3176,10 @@
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_bruteforce": {
-      "queries_disagreeing_with_faiss": 119,
+      "queries_disagreeing_with_faiss": 115,
       "queries_total": 500,
       "max_cosine_given_up": 0.1565,
-      "median_cosine_given_up": 0.007018,
+      "median_cosine_given_up": 0.008907,
       "all_gaps_within_fp16_perturbation": false
      },
      "chroma_legacy_segment_bruteforce": {
@@ -3232,44 +3232,44 @@
    },
    "p50_query_ms": {
     "winner": "faiss_flat_ip",
-    "value": 0.0513,
+    "value": 0.0515,
     "all": {
-     "faiss_flat_ip": 0.0513,
-     "nanomem_v3_exact": 0.083,
-     "nanomem_v3_router_auto": 0.1321,
-     "sqlitevec_bruteforce": 1.0042,
-     "chroma_hnsw_default": 0.6079,
-     "chroma_hnsw_tuned": 1.0097,
-     "chroma_bruteforce": 0.6133,
-     "chroma_legacy_segment_bruteforce": 32.1665
+     "faiss_flat_ip": 0.0515,
+     "nanomem_v3_exact": 0.0759,
+     "nanomem_v3_router_auto": 0.1179,
+     "sqlitevec_bruteforce": 1.0734,
+     "chroma_hnsw_default": 0.6343,
+     "chroma_hnsw_tuned": 1.0324,
+     "chroma_bruteforce": 0.6326,
+     "chroma_legacy_segment_bruteforce": 32.4461
     }
    },
    "p95_query_ms": {
     "winner": "faiss_flat_ip",
-    "value": 0.0571,
+    "value": 0.052,
     "all": {
-     "faiss_flat_ip": 0.0571,
-     "nanomem_v3_exact": 0.0885,
-     "nanomem_v3_router_auto": 0.1426,
-     "sqlitevec_bruteforce": 1.0319,
-     "chroma_hnsw_default": 0.6777,
-     "chroma_hnsw_tuned": 1.1652,
-     "chroma_bruteforce": 0.7188,
-     "chroma_legacy_segment_bruteforce": 33.0352
+     "faiss_flat_ip": 0.052,
+     "nanomem_v3_exact": 0.0818,
+     "nanomem_v3_router_auto": 0.1303,
+     "sqlitevec_bruteforce": 1.0946,
+     "chroma_hnsw_default": 0.6977,
+     "chroma_hnsw_tuned": 1.0609,
+     "chroma_bruteforce": 0.6906,
+     "chroma_legacy_segment_bruteforce": 33.0296
     }
    },
    "ingest_s": {
     "winner": "faiss_flat_ip",
-    "value": 0.002,
+    "value": 0.003,
     "all": {
-     "faiss_flat_ip": 0.002,
-     "nanomem_v3_exact": 0.022,
-     "nanomem_v3_router_auto": 0.065,
-     "sqlitevec_bruteforce": 0.03,
-     "chroma_hnsw_default": 0.304,
-     "chroma_hnsw_tuned": 0.373,
-     "chroma_bruteforce": 0.297,
-     "chroma_legacy_segment_bruteforce": 0.269
+     "faiss_flat_ip": 0.003,
+     "nanomem_v3_exact": 0.023,
+     "nanomem_v3_router_auto": 0.069,
+     "sqlitevec_bruteforce": 0.029,
+     "chroma_hnsw_default": 0.303,
+     "chroma_hnsw_tuned": 0.365,
+     "chroma_bruteforce": 0.299,
+     "chroma_legacy_segment_bruteforce": 0.265
     }
    },
    "index_bytes": {
@@ -3287,31 +3287,31 @@
     }
    },
    "peak_rss_delta_mb": {
-    "winner": "nanomem_v3_exact",
-    "value": 11.4,
+    "winner": "sqlitevec_bruteforce",
+    "value": 15.6,
     "all": {
-     "faiss_flat_ip": 22.9,
-     "nanomem_v3_exact": 11.4,
-     "nanomem_v3_router_auto": 33.2,
-     "sqlitevec_bruteforce": 15.8,
-     "chroma_hnsw_default": 97.0,
-     "chroma_hnsw_tuned": 99.2,
-     "chroma_bruteforce": 98.0,
-     "chroma_legacy_segment_bruteforce": 136.9
+     "faiss_flat_ip": 22.8,
+     "nanomem_v3_exact": 19.0,
+     "nanomem_v3_router_auto": 39.3,
+     "sqlitevec_bruteforce": 15.6,
+     "chroma_hnsw_default": 97.5,
+     "chroma_hnsw_tuned": 99.3,
+     "chroma_bruteforce": 101.5,
+     "chroma_legacy_segment_bruteforce": 137.1
     }
    },
    "reopen_s": {
-    "winner": "sqlitevec_bruteforce",
-    "value": 0.001,
+    "winner": "faiss_flat_ip",
+    "value": 0.0006,
     "all": {
-     "faiss_flat_ip": 0.0034,
-     "nanomem_v3_exact": 0.0044,
-     "nanomem_v3_router_auto": 0.024,
+     "faiss_flat_ip": 0.0006,
+     "nanomem_v3_exact": 0.0048,
+     "nanomem_v3_router_auto": 0.0288,
      "sqlitevec_bruteforce": 0.001,
-     "chroma_hnsw_default": 0.0016,
-     "chroma_hnsw_tuned": 0.0016,
-     "chroma_bruteforce": 0.0017,
-     "chroma_legacy_segment_bruteforce": 0.0018
+     "chroma_hnsw_default": 0.0017,
+     "chroma_hnsw_tuned": 0.0017,
+     "chroma_bruteforce": 0.0016,
+     "chroma_legacy_segment_bruteforce": 0.0017
     }
    }
   },
@@ -3324,7 +3324,7 @@
      "nanomem_v3_exact": 70.4,
      "nanomem_v3_router_auto": 69.6,
      "sqlitevec_bruteforce": 70.4,
-     "chroma_hnsw_default": 69.6,
+     "chroma_hnsw_default": 69.8,
      "chroma_hnsw_tuned": 70.4,
      "chroma_bruteforce": 69.8,
      "chroma_legacy_segment_bruteforce": 70.4
@@ -3338,52 +3338,52 @@
      "nanomem_v3_exact": 92.0,
      "nanomem_v3_router_auto": 91.5,
      "sqlitevec_bruteforce": 92.0,
-     "chroma_hnsw_default": 91.1,
+     "chroma_hnsw_default": 91.2,
      "chroma_hnsw_tuned": 92.0,
-     "chroma_bruteforce": 91.4,
+     "chroma_bruteforce": 91.2,
      "chroma_legacy_segment_bruteforce": 92.0
     }
    },
    "p50_query_ms": {
     "winner": "nanomem_v3_exact",
-    "value": 0.3946,
+    "value": 0.3956,
     "all": {
-     "faiss_flat_ip": 0.4027,
-     "nanomem_v3_exact": 0.3946,
-     "nanomem_v3_router_auto": 0.4755,
-     "sqlitevec_bruteforce": 6.9534,
-     "chroma_hnsw_default": 0.9422,
-     "chroma_hnsw_tuned": 3.7666,
-     "chroma_bruteforce": 0.8943,
-     "chroma_legacy_segment_bruteforce": 60.3071
+     "faiss_flat_ip": 0.3988,
+     "nanomem_v3_exact": 0.3956,
+     "nanomem_v3_router_auto": 0.4831,
+     "sqlitevec_bruteforce": 7.4152,
+     "chroma_hnsw_default": 0.9775,
+     "chroma_hnsw_tuned": 4.0688,
+     "chroma_bruteforce": 0.9788,
+     "chroma_legacy_segment_bruteforce": 62.3408
     }
    },
    "p95_query_ms": {
     "winner": "faiss_flat_ip",
-    "value": 0.4316,
+    "value": 0.4145,
     "all": {
-     "faiss_flat_ip": 0.4316,
-     "nanomem_v3_exact": 0.4797,
-     "nanomem_v3_router_auto": 0.5261,
-     "sqlitevec_bruteforce": 7.7551,
-     "chroma_hnsw_default": 1.1241,
-     "chroma_hnsw_tuned": 4.4948,
-     "chroma_bruteforce": 1.0664,
-     "chroma_legacy_segment_bruteforce": 61.5481
+     "faiss_flat_ip": 0.4145,
+     "nanomem_v3_exact": 0.4417,
+     "nanomem_v3_router_auto": 0.5289,
+     "sqlitevec_bruteforce": 7.6601,
+     "chroma_hnsw_default": 1.1557,
+     "chroma_hnsw_tuned": 4.7111,
+     "chroma_bruteforce": 1.1577,
+     "chroma_legacy_segment_bruteforce": 63.2997
     }
    },
    "ingest_s": {
     "winner": "faiss_flat_ip",
-    "value": 0.015,
+    "value": 0.012,
     "all": {
-     "faiss_flat_ip": 0.015,
-     "nanomem_v3_exact": 0.213,
-     "nanomem_v3_router_auto": 0.795,
-     "sqlitevec_bruteforce": 0.22,
-     "chroma_hnsw_default": 3.275,
-     "chroma_hnsw_tuned": 5.839,
-     "chroma_bruteforce": 3.418,
-     "chroma_legacy_segment_bruteforce": 2.486
+     "faiss_flat_ip": 0.012,
+     "nanomem_v3_exact": 0.181,
+     "nanomem_v3_router_auto": 0.805,
+     "sqlitevec_bruteforce": 0.204,
+     "chroma_hnsw_default": 3.287,
+     "chroma_hnsw_tuned": 5.832,
+     "chroma_bruteforce": 3.49,
+     "chroma_legacy_segment_bruteforce": 2.534
     }
    },
    "index_bytes": {
@@ -3401,31 +3401,31 @@
     }
    },
    "peak_rss_delta_mb": {
-    "winner": "nanomem_v3_exact",
-    "value": 49.0,
+    "winner": "faiss_flat_ip",
+    "value": 50.2,
     "all": {
      "faiss_flat_ip": 50.2,
-     "nanomem_v3_exact": 49.0,
-     "nanomem_v3_router_auto": 242.9,
+     "nanomem_v3_exact": 55.0,
+     "nanomem_v3_router_auto": 244.5,
      "sqlitevec_bruteforce": 53.6,
-     "chroma_hnsw_default": 126.5,
-     "chroma_hnsw_tuned": 137.8,
-     "chroma_bruteforce": 170.2,
-     "chroma_legacy_segment_bruteforce": 199.7
+     "chroma_hnsw_default": 135.9,
+     "chroma_hnsw_tuned": 136.8,
+     "chroma_bruteforce": 174.4,
+     "chroma_legacy_segment_bruteforce": 201.2
     }
    },
    "reopen_s": {
     "winner": "sqlitevec_bruteforce",
-    "value": 0.001,
+    "value": 0.0012,
     "all": {
-     "faiss_flat_ip": 0.0053,
-     "nanomem_v3_exact": 0.0368,
-     "nanomem_v3_router_auto": 0.27,
-     "sqlitevec_bruteforce": 0.001,
+     "faiss_flat_ip": 0.0018,
+     "nanomem_v3_exact": 0.0344,
+     "nanomem_v3_router_auto": 0.2727,
+     "sqlitevec_bruteforce": 0.0012,
      "chroma_hnsw_default": 0.0016,
      "chroma_hnsw_tuned": 0.0016,
      "chroma_bruteforce": 0.0016,
-     "chroma_legacy_segment_bruteforce": 0.0017
+     "chroma_legacy_segment_bruteforce": 0.0018
     }
    }
   },
@@ -3438,9 +3438,9 @@
      "nanomem_v3_exact": 60.6,
      "nanomem_v3_router_auto": 60.8,
      "sqlitevec_bruteforce": 60.6,
-     "chroma_hnsw_default": 54.6,
+     "chroma_hnsw_default": 55.0,
      "chroma_hnsw_tuned": 60.6,
-     "chroma_bruteforce": 55.0,
+     "chroma_bruteforce": 54.6,
      "chroma_legacy_segment_bruteforce": 60.6
     }
    },
@@ -3452,52 +3452,52 @@
      "nanomem_v3_exact": 84.6,
      "nanomem_v3_router_auto": 84.5,
      "sqlitevec_bruteforce": 84.6,
-     "chroma_hnsw_default": 79.3,
+     "chroma_hnsw_default": 79.4,
      "chroma_hnsw_tuned": 84.6,
-     "chroma_bruteforce": 79.4,
+     "chroma_bruteforce": 79.2,
      "chroma_legacy_segment_bruteforce": 84.6
     }
    },
    "p50_query_ms": {
     "winner": "faiss_flat_ip",
-    "value": 1.0901,
+    "value": 1.0971,
     "all": {
-     "faiss_flat_ip": 1.0901,
-     "nanomem_v3_exact": 1.8241,
-     "nanomem_v3_router_auto": 3.5084,
-     "sqlitevec_bruteforce": 55.091,
-     "chroma_hnsw_default": 1.2943,
-     "chroma_hnsw_tuned": 8.486,
-     "chroma_bruteforce": 1.2545,
-     "chroma_legacy_segment_bruteforce": 273.8804
+     "faiss_flat_ip": 1.0971,
+     "nanomem_v3_exact": 1.9087,
+     "nanomem_v3_router_auto": 3.4858,
+     "sqlitevec_bruteforce": 54.0009,
+     "chroma_hnsw_default": 1.2513,
+     "chroma_hnsw_tuned": 8.5416,
+     "chroma_bruteforce": 1.2458,
+     "chroma_legacy_segment_bruteforce": 274.9803
     }
    },
    "p95_query_ms": {
     "winner": "faiss_flat_ip",
-    "value": 1.1548,
+    "value": 1.1588,
     "all": {
-     "faiss_flat_ip": 1.1548,
-     "nanomem_v3_exact": 2.0686,
-     "nanomem_v3_router_auto": 3.8178,
-     "sqlitevec_bruteforce": 57.13,
-     "chroma_hnsw_default": 1.6416,
-     "chroma_hnsw_tuned": 10.9273,
-     "chroma_bruteforce": 1.5376,
-     "chroma_legacy_segment_bruteforce": 277.4967
+     "faiss_flat_ip": 1.1588,
+     "nanomem_v3_exact": 2.1781,
+     "nanomem_v3_router_auto": 3.723,
+     "sqlitevec_bruteforce": 54.5572,
+     "chroma_hnsw_default": 1.5504,
+     "chroma_hnsw_tuned": 10.9793,
+     "chroma_bruteforce": 1.5238,
+     "chroma_legacy_segment_bruteforce": 279.7526
     }
    },
    "ingest_s": {
     "winner": "faiss_flat_ip",
-    "value": 0.052,
+    "value": 0.054,
     "all": {
-     "faiss_flat_ip": 0.052,
-     "nanomem_v3_exact": 1.282,
-     "nanomem_v3_router_auto": 13.553,
-     "sqlitevec_bruteforce": 1.356,
-     "chroma_hnsw_default": 31.931,
-     "chroma_hnsw_tuned": 77.778,
-     "chroma_bruteforce": 44.134,
-     "chroma_legacy_segment_bruteforce": 21.882
+     "faiss_flat_ip": 0.054,
+     "nanomem_v3_exact": 1.293,
+     "nanomem_v3_router_auto": 14.032,
+     "sqlitevec_bruteforce": 1.374,
+     "chroma_hnsw_default": 31.365,
+     "chroma_hnsw_tuned": 76.081,
+     "chroma_bruteforce": 44.179,
+     "chroma_legacy_segment_bruteforce": 21.872
     }
    },
    "index_bytes": {
@@ -3508,7 +3508,7 @@
      "nanomem_v3_exact": 155886408,
      "nanomem_v3_router_auto": 155885436,
      "sqlitevec_bruteforce": 270577664,
-     "chroma_hnsw_default": 512153316,
+     "chroma_hnsw_default": 512153384,
      "chroma_hnsw_tuned": 539394092,
      "chroma_bruteforce": 587716772,
      "chroma_legacy_segment_bruteforce": 591360740
@@ -3516,29 +3516,29 @@
    },
    "peak_rss_delta_mb": {
     "winner": "faiss_flat_ip",
-    "value": 230.4,
+    "value": 230.3,
     "all": {
-     "faiss_flat_ip": 230.4,
-     "nanomem_v3_exact": 295.7,
-     "nanomem_v3_router_auto": 1795.0,
+     "faiss_flat_ip": 230.3,
+     "nanomem_v3_exact": 301.2,
+     "nanomem_v3_router_auto": 1803.7,
      "sqlitevec_bruteforce": 335.9,
-     "chroma_hnsw_default": 287.4,
-     "chroma_hnsw_tuned": 316.5,
-     "chroma_bruteforce": 885.7,
-     "chroma_legacy_segment_bruteforce": 667.1
+     "chroma_hnsw_default": 292.5,
+     "chroma_hnsw_tuned": 320.3,
+     "chroma_bruteforce": 892.9,
+     "chroma_legacy_segment_bruteforce": 668.7
     }
    },
    "reopen_s": {
     "winner": "sqlitevec_bruteforce",
-    "value": 0.0013,
+    "value": 0.0014,
     "all": {
-     "faiss_flat_ip": 0.0156,
-     "nanomem_v3_exact": 0.2553,
-     "nanomem_v3_router_auto": 7.1889,
-     "sqlitevec_bruteforce": 0.0013,
+     "faiss_flat_ip": 0.0124,
+     "nanomem_v3_exact": 0.2482,
+     "nanomem_v3_router_auto": 7.2206,
+     "sqlitevec_bruteforce": 0.0014,
      "chroma_hnsw_default": 0.0017,
-     "chroma_hnsw_tuned": 0.0017,
-     "chroma_bruteforce": 0.0017,
+     "chroma_hnsw_tuned": 0.0018,
+     "chroma_bruteforce": 0.0016,
      "chroma_legacy_segment_bruteforce": 0.0019
     }
    }

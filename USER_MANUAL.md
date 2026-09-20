@@ -233,7 +233,7 @@ because inside the engine it is *slower* for the same recall: p50 3.604 ms versu
 
 * **`score` is now a cosine.** It used to be a squashed non-linear value. Hits
   carry both `score` (cosine plus explicit, documented boosts, bounded by
-  `stats()['max_boost']` = 0.70) and `cosine` (the plain cosine). Thresholds
+  `stats()['max_boost']` = 1.10) and `cosine` (the plain cosine). Thresholds
   calibrated against the old scale must be re-tuned: 0.25 → 0.42, 0.32 → 0.53,
   0.35 → 0.58. `nanomem.engine.legacy_score_to_cosine()` converts any other
   threshold. The shipped call sites are already retuned.
@@ -343,8 +343,10 @@ python3 -m nanomem.cli stats --vault company.dat
 6. **The write gate is English-only.** Its features and its training data are
    English chat; a non-English statement of fact can be rejected.
 7. **`durable="full"` (F_FULLFSYNC) is implemented but unmeasured.**
-8. **No MCP server ships in this package.** `mcp.py` is not part of
-   `nanomem_standalone/nanomem/`.
+8. **An MCP server DOES ship**, and this line used to say the opposite.
+   `nanomem/mcp.py` is in both the wheel and the sdist and exposes 7 tools over
+   stdio (`nanomem_add`, `nanomem_search`, `nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats`). Run it with `python -m nanomem.mcp --vault memory.dat`.
+   The claim was false from the release that added the module until 0.7.18.
 
 ---
 

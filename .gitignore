@@ -1,15 +1,9 @@
-__pycache__/
-*.py[cod]
-.pytest_cache/
-build/
-dist/
-*.egg-info/
-*.whl
-# runtime vaults and their sidecars are user data, never source
+
+# Vault files are DATA, not source. A stray probe artifact in the package
+# directory must never be published by a mirror sync.
 *.dat
-*.dat.v2.bak
-*.dat.tmp-*
-*.arena
-.DS_Store
-.venv/
-venv/
+*.dat.arena
+dist/
+build/
+*.egg-info/
+__pycache__/
