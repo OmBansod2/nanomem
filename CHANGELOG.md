@@ -6,6 +6,41 @@ number below is from one of those files.
 
 ---
 
+## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.
+
+The library is what 0.7.24 was. The minor version moves for three reasons that
+are real rather than ceremonial, and one check is added.
+
+* **The licence changed** in 0.7.23, from AGPL-3.0-or-later to Apache-2.0. That
+  is the kind of change a version number is supposed to signal, and 0.7.23 was
+  never published.
+* **`search` changed its return type** in 0.7.24, from `list` to a `list`
+  subclass. Nothing breaks -- that is tested at the edges, including `pickle`,
+  `copy.deepcopy` and `json.dumps` -- but a caller reading the number deserves
+  to be told the shape moved.
+* **The MCP server became the front door** in 0.7.23, with its own command and a
+  README written around it rather than around the storage engine. 0.7.20 through
+  0.7.24 is not a patch series; it is a different thing to install.
+
+### The release gate no longer passes a document that lost most of itself
+
+`release_preflight.py` printed PREFLIGHT PASSED on a README that had just lost
+roughly 380 lines -- "Run the demo", "Run the tests", the CLI section and more --
+to an unbounded string replacement while 0.7.23 was being prepared. Every check
+it had asked whether claims still RESOLVED, and the survivors did. Nothing asked
+whether the rest was still there. It was caught by reading a diffstat, which is
+not a gate.
+
+`check_docs_are_intact` adds the two cheapest guards that would have caught it: a
+byte floor for each of the 8 shipped documents, set well under its current size,
+and the list of 12 sections the README is supposed to have. Both were verified to
+FAIL before being trusted -- deleting the "Run the demo" heading is reported by
+name, and truncating the file to a third reports the byte count against the floor.
+
+A gate that has never been shown to fail is not evidence of anything.
+
+---
+
 ## 0.7.24 — engine 3.4.6 (unchanged: this reports, it does not re-rank)
 
 A search result now says whether it is the whole answer.

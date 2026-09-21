@@ -283,6 +283,72 @@ def check_sdist(ver):
         NOTES.append(f"{base} carries the suite and both assets")
 
 
+#: What the shipped documents must still contain. A number here is a FLOOR, in
+#: bytes, set well below the current size -- it is there to catch a document
+#: losing a third of itself, not to freeze its length.
+_DOC_FLOORS = {
+    "README.md": 18000,
+    "BENCHMARKS.md": 10000,
+    "USER_MANUAL.md": 14000,
+    "USER_MANUAL_DEVELOPER.md": 30000,
+    "USER_MANUAL_PERSONAL.md": 8000,
+    "SERVICES_AND_API_SPECIFICATION.md": 14000,
+    "MULTIHOP_REASONING_AND_TOPOLOGY_GUIDE.md": 9000,
+    "CHANGELOG.md": 60000,
+}
+
+#: Sections the README promises. Losing one is losing a feature's documentation.
+_README_SECTIONS = (
+    "## Quickstart",
+    "## Or use it from Python",
+    "## It tells you when the answer is cut short",
+    "## Tell it what an attribute is",
+    "## Run the demo",
+    "## Run the tests",
+    "## Use it from your own script",
+    "## What makes it different from a vector store",
+    "## Building RAG on it",
+    "## CLI",
+    "## What it does, measured",
+    "## Documentation",
+)
+
+
+def check_docs_are_intact():
+    """A document must not quietly lose most of itself.
+
+    THIS CHECK EXISTS BECAUSE THE GATE MISSED IT. While 0.7.23 was being
+    prepared, an unbounded string replacement deleted roughly 380 lines of
+    README -- "Run the demo", "Run the tests", the CLI section and more -- and
+    `release_preflight.py` printed PREFLIGHT PASSED on the result. Every check
+    it had was about whether the claims still RESOLVED, and the surviving ones
+    did; nothing asked whether the rest was still there. It was caught by reading
+    a diffstat, which is not a gate.
+
+    Two cheap guards, both of which would have caught it: a byte floor per
+    shipped document, set well under its current size, and the list of sections
+    the README is supposed to have.
+    """
+    for name, floor in sorted(_DOC_FLOORS.items()):
+        path = os.path.join(HERE, name)
+        if not os.path.exists(path):
+            bad(f"{name} is missing")
+            continue
+        size = os.path.getsize(path)
+        if size < floor:
+            bad(f"{name} is {size} bytes, below its floor of {floor} -- a "
+                f"document does not normally lose that much; check the diff "
+                f"before lowering this number")
+    readme = read("README.md")
+    missing = [h for h in _README_SECTIONS if h not in readme]
+    if missing:
+        bad("README.md has lost section(s): " + ", ".join(missing))
+    if not missing:
+        NOTES.append("all %d shipped documents are above their size floor and "
+                     "the README still has its %d sections"
+                     % (len(_DOC_FLOORS), len(_README_SECTIONS)))
+
+
 def check_readme_links():
     """PyPI renders README as the project page but does NOT resolve relative
     links: `](USER_MANUAL.md)` resolves against pypi.org and 404s. Seven of
@@ -773,6 +839,7 @@ def main():
     ver = check_versions()
     check_test_count()
     check_metadata(offline)
+    check_docs_are_intact()
     check_readme_links()
     check_readme_sample()
     check_wheel(ver)

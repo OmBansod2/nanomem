@@ -155,7 +155,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.7.24 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.0 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
