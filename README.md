@@ -136,6 +136,36 @@ every time carries nothing. The count is still on `r.n_above_floor` either way.
 The counts are free: the scan is exhaustive, so both numbers already existed on
 the line that applies `top_k` and were being discarded.
 
+## It marks answers that are no longer true
+
+A timestamp says when a record was *written*. It cannot say whether it is still
+*true* — a fact written ten years ago can be current, and one written last week
+can already be dead. The difference is whether a later record replaced it, which
+is what the revision chain knows.
+
+Search for a fact that has changed and you get several of its values, because
+that is what a chain is. Each one now says where it stands:
+
+```python
+for h in vault.search("where do I work", top_k=3):
+    print(h["superseded"], h["text"])
+# False  I switched again, I work at Globex now.
+# True   I moved, I work at Initech.
+# True   I work at Acme Corp.
+```
+
+`ask()` puts that in the prompt, so the model is told which facts are dead
+before it writes; the MCP tool marks them in the text an assistant reads:
+
+```
+[2] (2025-08-17) [SUPERSEDED - replaced 8 months ago; this was true
+    when written, not now]: I moved, I work at Initech.
+```
+
+A ten-year-old fact that never changed is marked with nothing. `superseded` is
+`None` — not `False` — for a record in no chain, because there "nothing replaced
+it" is unknown rather than true.
+
 ## Tell it what an attribute is
 
 `metadata={"entity": "employer"}` is doing real work above, and it is worth a
@@ -155,7 +185,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.8.0 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.1 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
@@ -194,7 +224,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-815 tests, no network needed.
+825 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

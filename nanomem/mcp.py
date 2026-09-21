@@ -54,7 +54,10 @@ TOOLS = [
     {
         "name": "nanomem_search",
         "description": ("Search persistent long-term memory for relevant past facts "
-                        "and context. If the result is not the whole answer -- more "
+                        "and context. A result marked SUPERSEDED was true when it "
+                        "was written and is NOT true now -- do not answer with it, "
+                        "use it only to say what something USED to be. If the result "
+                        "is not the whole answer -- more "
                         "memories matched than fit, or parts of a multi-part question "
                         "got nothing -- the reply says so on its last line. Believe "
                         "that line: it is counted, not estimated."),
@@ -261,9 +264,17 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
                             min_score=float(args.get("min_score", 0.0)))
         if not hits:
             return "No relevant memories found."
-        body = "\n\n".join(
-            f"[{i + 1}] ({h.get('source')}, {_fmt_when(h['timestamp'])}): {h['text']}"
-            for i, h in enumerate(hits))
+        # AND WHETHER IT IS STILL TRUE. A search over a changing fact returns
+        # several of its values -- that is what a revision chain is -- and the
+        # model reading this cannot tell which one still holds. nanomem knows.
+        from .vault import staleness_label
+
+        def _line(i, h):
+            mark = staleness_label(h)
+            return ("[%d] (%s, %s)%s: %s"
+                    % (i + 1, h.get("source"), _fmt_when(h["timestamp"]),
+                       (" [" + mark + "]") if mark else "", h["text"]))
+        body = "\n\n".join(_line(i, h) for i, h in enumerate(hits))
         # SAY WHEN THIS IS NOT THE WHOLE ANSWER. The consumer is a model that
         # cannot look behind the result: three documents for an eight-part
         # question read exactly like three documents that answered it. This is

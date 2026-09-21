@@ -196,6 +196,45 @@ class SearchResults(list):
             len(self), ", truncated" if self.truncated else "")
 
 
+def staleness_label(hit, now=None) -> str:
+    """"" for a value that still holds, a warning for one that does not.
+
+    A timestamp says WHEN a record was written, never whether it is STILL TRUE.
+    A fact written ten years ago can be current; one written last week can
+    already be dead. The difference is whether a LATER record exists about the
+    same attribute, which is what the revision group knows and a date cannot.
+
+    Three cases, and the third is the one that keeps this honest:
+
+    * replaced          -- a later record in its group superseded it, and when.
+    * current           -- nothing later, and the caller DECLARED the entity, so
+                           the grouping is theirs rather than the tagger's guess.
+    * not marked        -- nothing later, but the entity was auto-detected. The
+                           tagger groups 0 of 100 narratively-phrased chains
+                           (evidence/temporal_drift_results.json), so "nothing
+                           replaced it" is weaker here and is not claimed.
+    """
+    superseded = hit.get("superseded")
+    if superseded is None:
+        return ""
+    if not superseded:
+        return ""
+    at = hit.get("superseded_at")
+    if not at:
+        return "SUPERSEDED - a later record replaced this value"
+    age = max(0.0, (time.time() if now is None else float(now)) - float(at))
+    days = age / 86400.0
+    if days < 1:
+        when = "today"
+    elif days < 45:
+        when = "%.0f days ago" % days
+    elif days < 730:
+        when = "%.0f months ago" % (days / 30.44)
+    else:
+        when = "%.1f years ago" % (days / 365.25)
+    return "SUPERSEDED - replaced %s; this was true when written, not now" % when
+
+
 def _within(path: str, root: str) -> bool:
     """True when `path` really lives under `root`, following every link first."""
     rp = os.path.realpath(path)
@@ -1805,7 +1844,13 @@ class Vault:
             # from 8 of 8, and the model writing it cannot tell either. Empty
             # string when nothing informative was cut.
             "retrieval": getattr(candidates, "summary", {}),
-            "incomplete": bool(getattr(candidates, "explain", lambda: "")())
+            "incomplete": bool(getattr(candidates, "explain", lambda: "")()),
+            # Which citations are no longer true. Free: the chain already knew.
+            "stale_citations": [
+                {"n": i + 1, "id": c.get("id"), "text": c.get("text", "")[:120],
+                 "superseded_at": c.get("superseded_at"),
+                 "note": staleness_label(c)}
+                for i, c in enumerate(candidates) if c.get("superseded")]
         }
 
 
@@ -2688,11 +2733,18 @@ class Vault:
                 else:
                     context_snippets.append(f"• {short_text}")
                 break
+            # THE LABEL GOES IN THE PROMPT. Retrieval routinely returns several
+            # values of one changing fact -- that is what a revision chain IS --
+            # and the model has no way to tell which of them still holds. It was
+            # being handed three employers and left to guess. nanomem already
+            # knows; it just was not saying.
+            stale = staleness_label(c)
+            mark = (" [" + stale + "]") if stale else ""
             if cite:
                 src = c.get("source", "knowledge_base")
-                context_snippets.append(f"[{i+1}] (Source: {src}): {c['text']}")
+                context_snippets.append(f"[{i+1}] (Source: {src}){mark}: {c['text']}")
             else:
-                context_snippets.append(f"• {c['text']}")
+                context_snippets.append(f"• {c['text']}{mark}")
             total_ctx_words += c_words
 
         context_str = "\n".join(context_snippets)
@@ -2704,12 +2756,16 @@ class Vault:
         if cite:
             system_instructions = (
                 "You are a helpful, precise assistant. Answer the user prompt using ONLY the provided facts. "
-                "Cite facts using bracketed numbers like [1] or [2] where appropriate."
+                "Cite facts using bracketed numbers like [1] or [2] where appropriate. "
+                "A fact marked SUPERSEDED was true when it was written and is NOT true now -- "
+                "do not answer with it. Use it only to say what something USED to be, and say so."
             )
         else:
             system_instructions = (
                 "You are a helpful, precise assistant. Answer the user prompt naturally and conversationally using ONLY the provided facts. "
-                "Do not include bracketed citation numbers or source references."
+                "Do not include bracketed citation numbers or source references. "
+                "A fact marked SUPERSEDED was true when written and is NOT true now -- "
+                "do not answer with it, except to say what something used to be."
             )
 
         target_base = (base_url or self.llm_base_url or "http://localhost:11434").rstrip("/")

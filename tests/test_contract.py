@@ -12,8 +12,12 @@ from conftest import D, unit_rows
 from nanomem.engine import (VaultEngine, matches_filter, legacy_score,
                             legacy_score_to_cosine)
 
+# The EXACT key set of a search hit. This is a contract, and the equality below
+# is deliberate: adding a key is a decision, not a convenience. `superseded` and
+# `superseded_at` were added in 0.8.1 -- a hit now says whether a LATER record in
+# its own group replaced it, which a timestamp cannot express.
 RESULT_KEYS = {"id", "doc_id", "text", "source", "metadata", "score", "cosine",
-               "timestamp", "revision"}
+               "timestamp", "revision", "superseded", "superseded_at"}
 
 
 # --- constructor -----------------------------------------------------------
@@ -154,6 +158,12 @@ def test_search_result_shape(vault_path):
         assert isinstance(h["source"], str) and isinstance(h["metadata"], dict)
         assert isinstance(h["score"], float) and isinstance(h["cosine"], float)
         assert isinstance(h["revision"], int) and isinstance(h["timestamp"], float)
+        # None is a real value here: it means the record is in no revision group,
+        # so whether anything replaced it is UNKNOWN rather than False.
+        assert h["superseded"] in (True, False, None)
+        assert h["superseded_at"] is None or isinstance(h["superseded_at"], float)
+        if h["superseded"] is not True:
+            assert h["superseded_at"] is None
     assert [h["score"] for h in hits] == sorted((h["score"] for h in hits), reverse=True)
     json.dumps(hits)                                          # proxy/server do this
     again = e.search("document number 3", V[3], top_k=5)

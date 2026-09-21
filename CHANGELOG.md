@@ -6,6 +6,82 @@ number below is from one of those files.
 
 ---
 
+## 0.8.1 — engine 3.4.6 (unchanged: this adds fields, it does not re-rank)
+
+A search hit now says whether it is still true.
+
+### A timestamp cannot answer this
+
+Every record already carried a timestamp, and a timestamp says WHEN something was
+written -- never whether it still holds. A fact written ten years ago can be
+perfectly current (a blood type); one written last week can already be dead.
+
+Telling them apart needs a different question: **is there a later record about
+the SAME attribute?** That is the revision group, and nanomem has computed it on
+every write since 3.0. `history()` reported it. `search()` did not.
+
+So `ask()` retrieved three statements about one changing fact -- which is what a
+revision chain IS -- and handed all three to a model with nothing to say which
+one held. The model guessed. That is the failure this library's README opens on,
+committed at the last possible moment before the answer is written.
+
+### What a model now reads
+
+    [1] (user_input, 2026-01-24): I switched again, I work at Globex now.
+
+    [2] (user_input, 2025-08-17) [SUPERSEDED - replaced 8 months ago; this was
+        true when written, not now]: I moved, I work at Initech.
+
+    [3] (user_input, 2024-07-13) [SUPERSEDED - replaced 13 months ago; this was
+        true when written, not now]: I work at Acme Corp.
+
+And a ten-year-old blood type, never restated, is marked with nothing at all --
+which is the point.
+
+Search hits gain `superseded` and `superseded_at`. `ask()` puts the label in the
+PROMPT, tells the model in its system instruction that a SUPERSEDED fact is not
+an answer, and returns `stale_citations`. The MCP `nanomem_search` tool marks the
+lines a model reads, and says so in its own tool description.
+
+### Three states, and the third is what keeps it honest
+
+    False   nothing later in its group -- this is the value now
+    True    replaced, and `superseded_at` says when
+    None    the record is in NO group, so this is UNKNOWN, not "current"
+
+The tagger groups 0 of 100 narratively-phrased chains
+(`evidence/temporal_drift_results.json`). For an ungrouped record, "nothing
+replaced it" is not knowable, and claiming it would be exactly the overclaim this
+feature exists to remove.
+
+### `superseded_at` is the immediate successor, not the newest
+
+Caught while testing. "Replaced 8 months ago" is a statement about when THIS
+value stopped being the answer, which is when the NEXT one arrived. Reporting the
+newest instead dates every superseded value in a chain to the same moment: a
+three-value employer chain said Acme was replaced 240 days ago, when Initech
+replaced it at 400.
+
+### Cost
+
+Computed only for the rows being returned, so it is bounded by `top_k` rather
+than by the corpus. Measured A/B on one 5,000-record vault with 200 revision
+groups, 60 runs each:
+
+    top_k=3    0.310 ms -> 0.250 ms   (-0.059 ms: below the noise floor)
+    top_k=50   0.417 ms -> 0.581 ms   (+0.164 ms)
+
+Free at the sizes anyone uses; a sixth of a millisecond at fifty.
+
+### Contract
+
+`tests/test_contract.py` asserts the EXACT key set of a search hit, so adding two
+keys failed it. That is the test doing its job -- adding a key to a documented
+result shape is a decision, not a convenience -- and it was updated deliberately
+rather than loosened.
+
+---
+
 ## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.
 
 The library is what 0.7.24 was. The minor version moves for three reasons that

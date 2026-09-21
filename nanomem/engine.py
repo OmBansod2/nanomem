@@ -2208,18 +2208,26 @@ class VaultEngine:
                 return []
             idx = _select_top_k(final, rows, k)
 
+            # IS THIS STILL TRUE? Computed only for the rows being returned,
+            # so the cost is bounded by `top_k` and not by the corpus.
+            sup = self._supersession([ent[i] for i in idx],
+                                     [rv[i] for i in idx],
+                                     [tsv[i] for i in idx])
             hits = []
-            for i in idx:
+            for n_i, i in enumerate(idx):
                 r = int(rows[i])
                 rec = self._row_record(r)
                 doc_id = (self.arena.ids[r] if r < MT_BASE
                           else self._mt.items[r - MT_BASE]["id"])
+                superseded, superseded_at = sup[n_i]
                 hits.append({"id": str(doc_id), "doc_id": str(doc_id),
                              "text": rec.get("text", ""),
                              "source": rec.get("source", "unknown"),
                              "metadata": dict(rec.get("metadata") or {}),
                              "score": float(final[i]), "cosine": float(cos[i]),
-                             "timestamp": float(tsv[i]), "revision": int(rv[i])})
+                             "timestamp": float(tsv[i]), "revision": int(rv[i]),
+                             "superseded": superseded,
+                             "superseded_at": superseded_at})
             return hits
 
     def _resolve_intent(self, query_text):
@@ -3048,6 +3056,73 @@ class VaultEngine:
             rv[j] = item["revision"]
             tsv[j] = item["timestamp"]
         return ent, rv, tsv
+
+    def _supersession(self, ent_ids, revs, tss):
+        """For each hit: has a LATER record replaced it in its own group?
+
+        A timestamp says WHEN a record was written, not whether it is still
+        true. A fact written ten years ago can be current (a blood type); one
+        written last week can already be dead. Telling those apart needs the
+        question "is there a later record about the SAME attribute", which is
+        what the revision group answers and a date cannot.
+
+        `history()` already reports this, positionally, for the chain it
+        assembles. `search()` did not, so `ask()` handed a model three
+        statements about one attribute with no indication which of them still
+        held -- the exact failure this library's README opens on.
+
+        Returns ``(superseded, superseded_at)`` per hit:
+
+        * ``(False, None)``  nothing later in its group -- this is the value now.
+        * ``(True, ts)``     replaced; ``ts`` is when the replacement was written.
+        * ``(None, None)``   the record carries NO entity, so it is in no group.
+          Not "current": UNKNOWN. The tagger groups 0 of 100 narratively-phrased
+          chains (evidence/temporal_drift_results.json), so an ungrouped record
+          may well have been superseded by a write nobody grouped with it, and
+          claiming otherwise would be the overclaim this method exists to stop.
+
+        Ordering matches `entities.temporal_order`: lexicographic on
+        ``(revision, timestamp)`` with REVISION primary, so a record restated
+        out of chronological order resolves the same way here as it does there.
+        """
+        wanted = sorted({int(e) for e in ent_ids if int(e) >= 0})
+        chains = {}
+        if wanted:
+            n = int(self.arena.n_rows)
+            if n:
+                a_ent = np.asarray(self.arena.entity_id[:n])
+                sel = np.flatnonzero(np.isin(a_ent, wanted))
+                if sel.size:
+                    a_rev = np.asarray(self.arena.rev[:n])[sel]
+                    a_ts = np.asarray(self.arena.ts[:n])[sel]
+                    e_sel = a_ent[sel]
+                    for pos in range(sel.size):
+                        chains.setdefault(int(e_sel[pos]), []).append(
+                            (int(a_rev[pos]), float(a_ts[pos])))
+            for item in self._mt.items[:self._mt.n]:
+                e = int(item.get("entity_id", -1))
+                if e in wanted:
+                    chains.setdefault(e, []).append(
+                        (int(item.get("revision", 1)),
+                         float(item.get("timestamp", 0.0))))
+        for e in chains:
+            chains[e].sort()
+        out = []
+        for e, rv, ts in zip(ent_ids, revs, tss):
+            e = int(e)
+            if e < 0:
+                out.append((None, None))
+                continue
+            here = (int(rv), float(ts))
+            # THE IMMEDIATE SUCCESSOR, NOT THE NEWEST. "Replaced 8 months ago"
+            # is a statement about when THIS value stopped being the answer,
+            # which is when the NEXT one arrived. Reporting the newest instead
+            # dates every superseded value in a chain to the same moment: a
+            # three-value employer chain said Acme was replaced 240 days ago
+            # when Initech replaced it at 400.
+            nxt = next((c for c in chains.get(e, ()) if c > here), None)
+            out.append((False, None) if nxt is None else (True, nxt[1]))
+        return out
 
     def _entity_ids_containing(self, index, norm):
         """Every interned entity id whose key has ``norm`` as one of its parts.

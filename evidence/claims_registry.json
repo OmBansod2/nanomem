@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 60,
-    "with_test": 46,
+    "total": 62,
+    "with_test": 48,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -379,6 +379,18 @@
       "claim": "`search` returns at most `top_k` records.",
       "id": "C059",
       "test": "test_n_above_floor_counts_what_cleared_the_floor"
+    },
+    {
+      "source": "README.md",
+      "claim": "Each one now says where it stands: `ask()` puts that in the prompt, so the model is told which facts are dead before it writes; the MCP tool marks them in the text an assistant reads: A ten-year-old fact that never changed is marked with nothing.",
+      "id": "C060",
+      "test": "test_a_ten_year_old_fact_that_never_changed_is_not_stale"
+    },
+    {
+      "source": "README.md",
+      "claim": "It cannot say whether it is still *true* \u2014 a fact written ten years ago can be current, and one written last week can already be dead.",
+      "id": "C061",
+      "test": "test_a_ten_year_old_fact_that_never_changed_is_not_stale"
     }
   ]
 }

@@ -302,6 +302,7 @@ _README_SECTIONS = (
     "## Quickstart",
     "## Or use it from Python",
     "## It tells you when the answer is cut short",
+    "## It marks answers that are no longer true",
     "## Tell it what an attribute is",
     "## Run the demo",
     "## Run the tests",
