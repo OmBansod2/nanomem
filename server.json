@@ -1,0 +1,34 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.OmBansod2/nanomem",
+  "title": "nanomem",
+  "description": "Memory that knows when a remembered fact has been replaced, not just when it was written.",
+  "repository": {
+    "url": "https://github.com/OmBansod2/nanomem",
+    "source": "github"
+  },
+  "version": "0.8.1",
+  "packages": [
+    {
+      "registryType": "pypi",
+      "identifier": "nanomem",
+      "version": "0.8.1",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "NANOMEM_VAULT",
+          "description": "Path to the memory vault file. Defaults to ~/.nanomem/memory.dat.",
+          "isRequired": false
+        },
+        {
+          "name": "NANOMEM_PASSWORD",
+          "description": "Passphrase to encrypt the vault at rest. Leave UNSET for a plaintext vault; setting it to an empty string is refused rather than silently producing one.",
+          "isRequired": false,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

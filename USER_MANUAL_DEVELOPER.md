@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.8.0 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.1 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.8.0 3.4.6
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.8.1 3.4.6
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.

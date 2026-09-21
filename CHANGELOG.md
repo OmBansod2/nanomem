@@ -6,6 +6,23 @@ number below is from one of those files.
 
 ---
 
+## 0.8.1 — engine 3.4.6 (unchanged). Listed in the MCP Registry.
+
+No library change. `modelcontextprotocol/servers` has retired its README list of
+third-party servers in favour of the [MCP Registry](https://registry.modelcontextprotocol.io/),
+and the registry proves ownership of a PyPI package by finding an
+`mcp-name: <server name>` string in the package's own description -- which is the
+README, and which PyPI will not let you edit after a release.
+
+So this version exists to carry that one line. It is a metadata release and the
+code is byte-identical to 0.8.0.
+
+* `server.json` declares the server for the registry, including
+  `NANOMEM_VAULT` and `NANOMEM_PASSWORD`. It ships in the sdist.
+* The README carries `<!-- mcp-name: io.github.OmBansod2/nanomem -->`.
+
+---
+
 ## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.
 
 ### A search hit now says whether it is still true

@@ -49,3 +49,6 @@ include chat.py
 include demo.py
 include demo_stale.py
 include release_preflight.py
+
+# The MCP Registry reads this; it is metadata about the published server.
+include server.json

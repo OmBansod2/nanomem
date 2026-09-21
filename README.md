@@ -1,3 +1,5 @@
+<!-- mcp-name: io.github.OmBansod2/nanomem -->
+
 # nanomem
 
 [![CI](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml/badge.svg)](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml)
@@ -185,7 +187,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.8.0 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.1 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
