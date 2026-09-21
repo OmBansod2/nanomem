@@ -693,12 +693,20 @@ class Vault:
         lines_per_chunk: int = 50,
         overlap_lines: int = 10,
         metadata: Optional[Any] = None,
-        source: Optional[str] = None
+        source: Optional[str] = None,
+        _already_purged: bool = False
     ) -> int:
         """
         Ingest an entire code, markdown, or text file into memory.
         Preserves exact code formatting, indentation, and line numbers for coding agents.
         Supports custom document-level or section-level metadata and source references.
+
+        RE-INGESTING A FILE REPLACES IT. Ingesting the same path twice used to
+        APPEND a second set of chunks carrying the same ids, so a re-indexed
+        repository held every file twice, every id named two rows, and the
+        PREVIOUS version of each file stayed searchable -- on a library whose
+        purpose is not answering with the stale value. A file whose content has
+        not changed since it was indexed is skipped without re-embedding it.
         """
         if isinstance(metadata, dict):
             _reject_reserved_metadata(metadata)
@@ -736,6 +744,18 @@ class Vault:
         import hashlib as _hashlib
         file_doc_id = "doc_" + _hashlib.md5(
             os.path.abspath(file_path).encode("utf-8")).hexdigest()[:10]
+        # REPLACE, OR SKIP IF NOTHING CHANGED. `ingest_directory` does this once
+        # for the whole tree and passes `_already_purged=True`, because doing it
+        # per file would be one full vault rewrite per file.
+        if not _already_purged:
+            prior = [r for r in self.get_all_records()
+                     if (r.get("metadata") or {}).get("parent_id") == file_doc_id]
+            if prior:
+                if all((r.get("metadata") or {}).get("parent_sha256") == file_fp
+                       for r in prior):
+                    return len(prior)          # identical content, already indexed
+                self.delete(ids=[str(r.get("id")) for r in prior])
+
         stride = max(1, lines_per_chunk - overlap_lines)
         code_exts = {
             ".py", ".ts", ".js", ".tsx", ".jsx", ".rs", ".go", ".cpp", ".c", ".h", ".hpp",
@@ -933,11 +953,49 @@ class Vault:
             self.engine.reserve_additional_rows(
                 max(len(targets), est_bytes // self.BYTES_PER_CHUNK_ESTIMATE))
 
+        # ONE SCAN AND ONE PURGE FOR THE WHOLE TREE. Re-indexing a repository is
+        # the documented workflow for this method, and it used to double the
+        # vault every time. Doing the replace inside `ingest_file` would be
+        # correct but would cost one full rewrite per changed file, so the set is
+        # resolved here and removed in a single call.
+        import hashlib as _hashlib
+        prior_by_parent: Dict[str, List[Dict[str, Any]]] = {}
+        for r in self.get_all_records():
+            pid = (r.get("metadata") or {}).get("parent_id")
+            if pid:
+                prior_by_parent.setdefault(str(pid), []).append(r)
+
+        stale_ids: List[str] = []
+        unchanged = set()
+        if prior_by_parent:
+            for full_path in targets:
+                doc_id = "doc_" + _hashlib.md5(
+                    os.path.abspath(full_path).encode("utf-8")).hexdigest()[:10]
+                prior = prior_by_parent.get(doc_id)
+                if not prior:
+                    continue
+                try:
+                    with open(full_path, "r", encoding="utf-8", errors="replace") as fh:
+                        fp = _doc_fingerprint(fh.read())
+                except Exception:
+                    continue
+                if all((r.get("metadata") or {}).get("parent_sha256") == fp
+                       for r in prior):
+                    unchanged.add(full_path)   # skip it: no delete, no re-embed
+                else:
+                    stale_ids.extend(str(r.get("id")) for r in prior)
+        if stale_ids:
+            self.delete(ids=stale_ids)
+
         total_files = 0
         total_chunks = 0
+        skipped_unchanged = 0
         for full_path in targets:
+            if full_path in unchanged:
+                skipped_unchanged += 1
+                continue
             try:
-                n = self.ingest_file(full_path)
+                n = self.ingest_file(full_path, _already_purged=True)
                 if n > 0:
                     total_files += 1
                     total_chunks += n
@@ -945,6 +1003,8 @@ class Vault:
                 continue
 
         out = {"files_indexed": total_files, "chunks_indexed": total_chunks}
+        if skipped_unchanged:
+            out["skipped_unchanged"] = skipped_unchanged
         if confine_root is not None:
             # Reported rather than silent: a caller who pointed this at a tree with
             # links out deserves to know something was declined, not to wonder why

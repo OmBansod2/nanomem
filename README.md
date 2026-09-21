@@ -108,7 +108,7 @@ closed cleanly was never written.
 
 ---
 
-Package 0.7.21 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.7.22 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -139,7 +139,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-782 tests, no network needed.
+786 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

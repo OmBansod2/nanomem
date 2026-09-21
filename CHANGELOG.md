@@ -6,6 +6,79 @@ number below is from one of those files.
 
 ---
 
+## 0.7.22 — engine 3.4.6 (unchanged)
+
+The first defect found by the fuzzer instead of by a reviewer, and it was in the
+method this library tells coding agents to use.
+
+### Re-indexing a repository doubled it and kept the old version searchable
+
+`ingest_file` APPENDED. Ingesting the same path twice wrote a second set of
+chunks carrying the same ids, so:
+
+    after 1st ingest : rows=3 distinct_ids=3
+    after 2nd ingest : rows=6 distinct_ids=3
+    rows of STALE content still present: 3
+    get(id)          -> one of two rows carrying that id
+    delete(id=...)   -> 2
+    search("<old content>") -> still finds the PREVIOUS version of the file
+
+`ingest_directory` is documented as "recursively indexes an entire codebase or
+repository for coding agents". Re-indexing after edits is not an edge case, it is
+the workflow. Every re-index doubled the vault, gave every row an id that named
+two rows, and left the previous version of every file answering searches -- on a
+library whose entire premise is not answering with the value that is no longer
+true.
+
+Re-ingesting a path now REPLACES its rows, and a file whose content has not
+changed is skipped without re-embedding it:
+
+    1st index                  {'files_indexed': 3, 'chunks_indexed': 9}   9 rows
+    re-index, nothing changed  {'files_indexed': 0, 'skipped_unchanged': 3} 9 rows
+    re-index, one file changed {'files_indexed': 1, 'skipped_unchanged': 2} 9 rows
+                               stale content gone, other two files untouched
+
+The replace is resolved ONCE for a whole tree and removed in a single call.
+Doing it inside `ingest_file` would be correct and would cost one full vault
+rewrite per changed file; `ingest_directory` scans once, compares each target's
+fingerprint against what is stored, and purges the stale set together. A
+re-index of an unchanged tree now does no deletes and no embedding at all, which
+makes it fast as a side effect of making it correct.
+
+### The fuzzer earned its keep in about four seconds
+
+0.7.21 shipped `tests/test_write_path_fuzz.py` with an operation set covering
+`add`, `add_batch`, `update`, `delete`, `compact` and `export(purge)`. It did not
+cover ingest -- which is why it could not have found round 7's CRITICAL, and I
+said so when shipping it. Adding `ingest_file`, `ingest_directory`, and
+delete/update of an ingested chunk surfaced the defect above on the second seed.
+
+Two new invariants did the work, and both were needed:
+
+* **An id must name one row.** The model is keyed by id, so two rows sharing an
+  id COLLAPSE into a single model entry and every other assertion passes while
+  the vault holds two rows a caller cannot tell apart. Without this check the
+  fuzzer runs straight past the exact defect it was extended to find.
+* **A row must stay in the file it came from, and reads must agree with it.**
+  The sharpest half of round 7's critical involved no destructive call at all:
+  `get()` resolved an id through the arena index (last wins) and `update()`
+  through a linear scan (first wins), so reading a chunk, editing it and writing
+  it back moved content between files.
+
+Verified by reverting the 0.7.21 id fix and re-running: the fuzzer fails on
+round 7's defect and prints the minimal sequence -- `ingest_file(d2/config.txt)`,
+`ingest_file(d3/config.txt)` -- two directories, one basename. Restored, green.
+
+At scale with ingest in the operation set: **30,967 operations across 400 seeds,
+0 failures** (`scratch/refound/fuzz_write_paths_results.json`, stamped 0.7.22 /
+engine 3.4.6).
+
+That is the point of the thing. Rounds 4 through 7 each found this defect class
+by hand, one spelling at a time. This one was found by generation, before anyone
+reported it.
+
+---
+
 ## 0.7.21 — engine 3.4.6 (unchanged: nothing in the engine or in ranking moved)
 
 Seventh black-box review. It found that 0.7.20's own new guard had the defect

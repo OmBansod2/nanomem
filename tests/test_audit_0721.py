@@ -262,3 +262,88 @@ def test_a_merged_chain_stays_chronological_even_though_revisions_repeat(tmp_pat
     assert current[0]["text"] == "I work at Initech"
     assert a.forget_superseded(keep=1)["kept"] == 1
     assert [r["text"] for r in a.get_all_records()] == ["I work at Initech"]
+
+
+# --------------------------------------------------------------------------
+# Found by the fuzzer once it gained ingest coverage (0.7.22), not by review.
+# Re-ingesting a file APPENDED a second set of chunks carrying the same ids.
+# --------------------------------------------------------------------------
+def _write_lines(path, tag, n=120):
+    with open(path, "w") as fh:
+        fh.write("\n".join("%s line %03d content" % (tag, i) for i in range(1, n + 1)))
+
+
+def test_reingesting_a_changed_file_replaces_it_instead_of_duplicating_it(tmp_path):
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    f = str(repo / "config.txt")
+    v = Vault(str(tmp_path / "v.dat"))
+
+    _write_lines(f, "V1")
+    v.ingest_file(f)
+    first = v.get_all_records()
+    assert len(first) == len({str(r["id"]) for r in first})
+
+    _write_lines(f, "V2")
+    v.ingest_file(f)
+    rows = v.get_all_records()
+    ids = [str(r["id"]) for r in rows]
+    assert len(ids) == len(set(ids)), "re-ingest duplicated every id: %s" % sorted(ids)
+    text = " ".join(r.get("text", "") for r in rows)
+    assert "V2 line" in text, "the new content was not indexed"
+    assert "V1 line" not in text, "the previous version of the file is still in the vault"
+
+
+def test_the_previous_version_of_a_reindexed_file_is_not_searchable(tmp_path):
+    """The failure that matters on a library whose job is not answering stale."""
+    repo = tmp_path / "repo"
+    repo.mkdir()
+    f = str(repo / "notes.txt")
+    v = Vault(str(tmp_path / "v.dat"))
+    _write_lines(f, "OLDVALUE")
+    v.ingest_file(f)
+    _write_lines(f, "NEWVALUE")
+    v.ingest_file(f)
+    hits = v.search("OLDVALUE line 003", top_k=5)
+    assert not any("OLDVALUE line" in h.get("text", "") for h in hits), \
+        "a superseded version of the file still answers a search"
+
+
+def test_reindexing_an_unchanged_tree_reindexes_nothing(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    _write_lines(str(repo / "pkg" / "a.txt"), "A")
+    _write_lines(str(repo / "pkg" / "b.txt"), "B")
+    v = Vault(str(tmp_path / "v.dat"))
+    first = v.ingest_directory(str(repo))
+    assert first["files_indexed"] == 2
+
+    again = v.ingest_directory(str(repo))
+    assert again["files_indexed"] == 0, "it re-embedded files that had not changed"
+    assert again.get("skipped_unchanged") == 2
+    rows = v.get_all_records()
+    assert len(rows) == len({str(r["id"]) for r in rows})
+
+
+def test_reindexing_a_tree_replaces_only_the_file_that_changed(tmp_path):
+    repo = tmp_path / "repo"
+    (repo / "pkg").mkdir(parents=True)
+    (repo / "docs").mkdir(parents=True)
+    _write_lines(str(repo / "pkg" / "config.txt"), "A")
+    _write_lines(str(repo / "docs" / "config.txt"), "B")   # same basename, other dir
+    _write_lines(str(repo / "pkg" / "util.txt"), "C")
+    v = Vault(str(tmp_path / "v.dat"))
+    v.ingest_directory(str(repo))
+    before = len(v.get_all_records())
+
+    _write_lines(str(repo / "pkg" / "util.txt"), "C2")
+    out = v.ingest_directory(str(repo))
+    assert out["files_indexed"] == 1
+    assert out.get("skipped_unchanged") == 2
+
+    rows = v.get_all_records()
+    text = " ".join(r.get("text", "") for r in rows)
+    assert len(rows) == before, "row count drifted on re-index"
+    assert len(rows) == len({str(r["id"]) for r in rows})
+    assert "C2 line" in text and "C line" not in text
+    assert "A line" in text and "B line" in text, "an untouched file was disturbed"
