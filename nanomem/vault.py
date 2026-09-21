@@ -164,9 +164,20 @@ def _is_dense_script(text: str, threshold: float = 0.2) -> bool:
 #: document nobody added, and `delete(id="TICKET-42")` removed both. Filtering on
 #: these keys is supported and documented; SETTING them is refused.
 RESERVED_METADATA_KEYS = frozenset({
-    "parent_id", "chunk_index", "chunk_total", "is_chunked",
+    "id", "parent_id", "chunk_index", "chunk_total", "is_chunked",
     "parent_sha256", "embed_backend",
 })
+
+#: Why each one is refused, so the error can say something useful.
+_RESERVED_WHY = {
+    "id": ("it is read as the DOCUMENT id, so three different documents tagged "
+           "{'id': 'ticket-4711'} all came back under that one handle -- `get` "
+           "returned only the newest, `exists` said True, and `delete(id=...)` "
+           "removed all three. Pass `id=` to choose a document's id; that is "
+           "what it is for"),
+}
+_RESERVED_DEFAULT_WHY = ("they link a split document's chunks, and overriding them "
+                         "makes unrelated records read back as one document")
 
 
 def _jsonable_metadata(meta):
@@ -196,12 +207,12 @@ def _reject_reserved_metadata(meta) -> None:
         return
     clash = sorted(RESERVED_METADATA_KEYS & set(meta))
     if clash:
+        why = _RESERVED_WHY.get(clash[0], _RESERVED_DEFAULT_WHY)
         raise ValueError(
-            "metadata key(s) %s are written by nanomem itself and cannot be set "
-            "by a caller: they link a split document's chunks, and overriding "
-            "them makes unrelated records read back as one document. Rename the "
-            "field (for example %r -> %r). Filtering on these keys is still "
-            "supported." % (", ".join(repr(k) for k in clash), clash[0], "my_" + clash[0]))
+            "metadata key(s) %s are read by nanomem itself and cannot be set by a "
+            "caller: %s. Rename the field (for example %r -> %r). Filtering on "
+            "these keys is still supported."
+            % (", ".join(repr(k) for k in clash), why, clash[0], "my_" + clash[0]))
 
 
 def _doc_fingerprint(text: str) -> str:
@@ -503,7 +514,15 @@ class Vault:
         _reject_reserved_metadata(metadata)
         meta = _jsonable_metadata(dict(metadata or {}))
         import hashlib
-        doc_id = str(id or meta.get("id") or f"doc_{hashlib.md5(clean_text.encode('utf-8')).hexdigest()[:10]}")
+        # NOT `meta.get("id")`. That was an undocumented side channel which
+        # overrode both halves of this method's documented contract -- that the
+        # id is "a function of the TEXT alone", and that `id=` is how you supply
+        # one. `id` is now a reserved key, refused above, so a caller who means
+        # "my ticket number" gets told to rename the field instead of silently
+        # losing two of their three documents. `add_batch` still reads it: that
+        # is the round-trip path for merge and split, where the metadata being
+        # replayed is nanomem's own.
+        doc_id = str(id or f"doc_{hashlib.md5(clean_text.encode('utf-8')).hexdigest()[:10]}")
         meta["id"] = doc_id
         # DO NOT WRITE BACK INTO THE CALLER'S DICT. Until 0.7.18 this set
         # `metadata["id"]` on the object the caller passed in, so reusing one dict

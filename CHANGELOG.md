@@ -6,6 +6,79 @@ number below is from one of those files.
 
 ---
 
+## 0.7.19 — engine 3.4.6 (unchanged: nothing in ranking or storage moved)
+
+Fifth black-box review. One HIGH, and it is the residue of a 0.7.18 CRITICAL that
+I fixed only half of.
+
+**A metadata key named `id` still collapsed distinct documents onto one handle.**
+0.7.18 stopped `add()` WRITING `metadata["id"]` back into the caller's dict. It
+did not stop `add()` READING it, and `id` never joined the six reserved keys. So
+a caller tagging support tickets got this:
+
+```
+ids = [v.add(t, metadata={"id": "ticket-4711"}) for t in (three different texts)]
+ids            -> ['ticket-4711', 'ticket-4711', 'ticket-4711']
+get(...)       -> only the newest of the three
+delete(id=...) -> removes all three
+```
+
+Both halves of this method's documented contract were overridden by an
+undocumented side channel: that the id is "a function of the TEXT alone", and
+that `id=` is how you supply one. `id` is now reserved, and the error names the
+parameter to use instead. `add_batch` still reads it -- that is the round-trip
+path for merge and split, where the metadata being replayed is nanomem's own, and
+a test pins that it keeps working.
+
+**A test of mine asserted the defect as a guarantee.** 0.7.18's
+`test_an_explicit_id_is_still_honoured` checked that `metadata={"id": ...}` set
+the document id. It passed, and it was wrong. Corrected, with the reason written
+into it.
+
+### Said more than it could know
+
+* **`nanomem_history` reported "This has one value and has never changed"** about
+  an employer changed two days ago, with both rows in the vault and
+  `nanomem_changes` showing both. 0.7.18 fixed this sentence for `max_len`
+  truncation; here the TAGGER is what truncated the chain, which the README
+  measures at 0/100 on narrative phrasing when no entity was declared. The
+  limitation is documented; asserting the opposite to a model that cannot check
+  was not. The claim is now made only for a DECLARED chain, and an undeclared one
+  says what it actually knows and points at `nanomem_changes`.
+* **Two shipped documents gave opposite instructions about `entity`.** The README
+  says declare it; `USER_MANUAL_DEVELOPER.md` said "Do not set
+  `metadata["entity"]` by hand". Both numbers behind them are real and are of
+  different things -- a tag that is merely PLAUSIBLE is worse than none (59.2 %
+  against 90.5 %, `evidence/temporal_bench_results.json`), and a tag the
+  application is SURE of beats detection on the phrasing the tagger is worst at
+  (0 of 100 chains grouped, `evidence/grouping_signal_results.json`). The manual
+  now says that instead of contradicting the README.
+* **"It returns what an exhaustive fp32 cosine scan returns" was stated
+  unqualified**, immediately above a default (`decompose=True`) that splits a
+  multi-clause question and scans each clause. The exactness claim is about the
+  scan, and it holds; which TEXT is scanned depends on `decompose`. Measured
+  here: 1 of 5 multi-clause queries differ in their top-4 set, 0 of 3
+  single-topic ones. Both halves are now stated, and both are pinned by tests.
+
+### Shipped what it told you to run
+
+`server.py`, `chat.py` and `demo.py` were in neither the wheel nor the sdist,
+while `SERVICES_AND_API_SPECIFICATION.md` documents an entire REST surface whose
+first line is `python3 server.py`. They now ship in the SDIST -- not the wheel, a
+top-level `server.py` in `site-packages` would collide with anything else that
+has one -- and the spec says where to get them. A stale `"max_boost": 0.7` in one
+of its JSON examples is now 1.1.
+
+### Three findings the reviewer nearly filed, and did not
+
+Recorded because the discipline is the point: a `history` miss that was query
+ambiguity (four other phrasings resolve correctly); a `score` of 1.2633 against
+`max_boost` 1.10, which is correct once you measure the BOOST rather than the
+score (max 0.56); and "400 tokens missing", which was their own check iterating
+an empty `chunk_ids` on documents that were never split.
+
+---
+
 ## 0.7.18 — engine 3.4.6
 
 **Fourteen dimensions of the package were audited against their own

@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 49,
-    "with_test": 35,
+    "total": 50,
+    "with_test": 36,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -109,9 +109,15 @@
     },
     {
       "source": "README.md",
-      "claim": "It returns what an exhaustive fp32 cosine scan returns \u2014 0 of 120 top-4 order differences on a 1,190-document corpus (`evidence/exactness_v3r2.json`) \u2014 and its latency therefore grows with the corpus.",
-      "id": "C015",
-      "test": "test_a_declared_chain_does_not_lose_rank_one_to_its_own_past"
+      "claim": "For the text it scans, it returns what an exhaustive fp32 cosine scan returns \u2014 0 of 120 top-4 order differences on a 1,190-document corpus (`evidence/exactness_v3r2.json`) \u2014 and its latency therefore grows with the corpus.",
+      "id": "C017",
+      "test": "test_decompose_false_matches_an_exhaustive_scan"
+    },
+    {
+      "source": "README.md",
+      "claim": "**Which text it scans depends on `decompose`, which defaults to True.** A multi-clause question is split and each sub-query is scanned exhaustively, then the best hits are interleaved \u2014 so the result is the exhaustive answer to each clause, not the exhaustive top-k of the whole sentence, and for a multi-clause question the two differ.",
+      "id": "C018",
+      "test": "test_decompose_true_answers_each_clause_instead"
     },
     {
       "source": "README.md",

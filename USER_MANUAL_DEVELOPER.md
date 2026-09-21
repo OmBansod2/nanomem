@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.18 · engine 3.4.6 · container format 3 · arena cache format 3.
+Package 0.7.19 · engine 3.4.6 · container format 3 · arena cache format 3.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.18 3.4.6
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.19 3.4.6
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -224,15 +224,24 @@ vault.search("Where is the server?", temporal_direction="current")     # revisio
 vault.search("Where was the server?", temporal_direction="historical") # revision 1
 ```
 
-> **Do not set `metadata["entity"]` by hand.** The example above is the shape of
-> the data, not a recommendation. Measured on the fixture-free temporal set,
-> writing facts with an explicit entity tag scores **59.2 %** against **90.5 %**
-> for writing them with no tag at all and letting the engine detect one
-> (`evidence/temporal_bench_results.json`). Earlier revisions of this
-> manual recommended the tag; following that advice makes the engine worse. The
-> tag remains supported because a caller that has a *reliable* extractor can
-> still beat detection — but it overrides the engine's own grouping, so a tag
-> that is merely plausible is worse than none.
+> **Declare `metadata["entity"]` only where your application KNOWS it.** This box
+> read "Do not set `metadata["entity"]` by hand" through 0.7.18, which flatly
+> contradicted the README's "if your application knows its own attributes,
+> declare them" — a reader following one was disobeying the other. The two
+> measurements behind them are both real and are of different things:
+>
+> * A tag that is merely PLAUSIBLE is worse than none. On the fixture-free
+>   temporal set, writing facts with an explicit entity tag scores **59.2 %**
+>   against **90.5 %** for no tag at all (`evidence/temporal_bench_results.json`).
+>   The tag overrides the engine's own grouping, so guessing at it is costly.
+> * A tag the application is SURE of beats detection, and the gap is large on the
+>   phrasing the tagger is worst at: the lexical tagger groups 70 of 100 chains
+>   on canonical phrasing and **0 of 100** on narrative phrasing
+>   (`evidence/grouping_signal_results.json`), where a declared chain resolves
+>   (`evidence/revision_lead_cap_results.json`).
+>
+> So: a schema field, a form field, a column name — declare it. A heuristic you
+> ran over free text — do not. The example above is the shape of the data.
 
 Revision groups are scoped by `(user_id, project, entity)`. On the release's own
 generic probes the current revision is ranked first in 14 of 16 cases against 3
@@ -781,7 +790,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**693 tests**, no network required, nothing skipped when a local embedder is
+**697 tests**, no network required, nothing skipped when a local embedder is
 running. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 

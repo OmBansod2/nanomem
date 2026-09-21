@@ -173,7 +173,7 @@ Returns `Vault.stats()` verbatim. The values are measured, not constants:
   "router": "off",
   "routing_mode": "exhaustive",
   "n_exhaustive": 50000,
-  "max_boost": 0.7,
+  "max_boost": 1.1,
   "integrity_errors": [],
   "truncated_tail_bytes": 0 }
 ```
@@ -243,6 +243,13 @@ Passthrough to the upstream server.
 ---
 
 ## 4. Direct REST server (port 8080)
+
+`server.py` is in the SOURCE DISTRIBUTION and the repository, not in the wheel —
+a top-level `server.py` installed into `site-packages` would collide with any
+other package that has one. Get it with
+`pip download --no-binary :all: nanomem` and unpack, or clone the repo. It did
+not ship in either artifact before 0.7.18, so this section described a file the
+package did not contain.
 
 ```bash
 python3 server.py --host 127.0.0.1 --port 8080

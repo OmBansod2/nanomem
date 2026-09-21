@@ -6,9 +6,12 @@ third-party runtime dependency is `numpy`; everything else is the Python standar
 library.
 
 Retrieval is an **exact linear scan** over the whole corpus below
-`n_exhaustive` (default 50,000 documents). It returns the same documents an
-exhaustive fp32 cosine scan returns — that is measured, not asserted — and its
-latency therefore grows with the corpus. There is no sub-linear index in this
+`n_exhaustive` (default 50,000 documents). For the text it scans it returns the
+same documents an exhaustive fp32 cosine scan returns — that is measured, not
+asserted — and its latency therefore grows with the corpus. The default
+`decompose=True` splits a multi-clause question and scans each clause, so for
+such a question the result is the exhaustive answer to each clause rather than to
+the whole sentence; `decompose=False` scans the string as one query. There is no sub-linear index in this
 release and no fixed millisecond guarantee. Every number below comes from a
 results JSON produced by a script in this repository, and the file is named.
 

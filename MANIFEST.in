@@ -38,3 +38,13 @@ prune build
 prune dist
 prune .pytest_cache
 prune nanomem.egg-info
+
+# The scripts the documentation tells you to run. They are NOT in the wheel --
+# a top-level `server.py` in site-packages would collide with anything else that
+# has one -- but SERVICES_AND_API_SPECIFICATION.md documents a whole REST surface
+# in terms of `server.py`, and `python server.py` is the first line of it. An
+# sdist that does not carry them describes software it does not contain.
+include server.py
+include chat.py
+include demo.py
+include release_preflight.py

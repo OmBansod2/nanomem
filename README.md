@@ -107,7 +107,7 @@ closed cleanly was never written.
 
 ---
 
-Package 0.7.18 · engine 3.4.6 · container format 3 · arena cache format 3.
+Package 0.7.19 · engine 3.4.6 · container format 3 · arena cache format 3.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -138,7 +138,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-693 tests, no network needed.
+697 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -377,10 +377,18 @@ python3 -m nanomem.cli rekey --vault company.dat --new-password-stdin
 
 ## What it does, measured
 
-Search is an **exact linear scan**. It returns what an exhaustive fp32 cosine
-scan returns — 0 of 120 top-4 order differences on a 1,190-document corpus
-(`evidence/exactness_v3r2.json`) — and its latency therefore grows with
-the corpus.
+Search is an **exact linear scan**. For the text it scans, it returns what an
+exhaustive fp32 cosine scan returns — 0 of 120 top-4 order differences on a
+1,190-document corpus (`evidence/exactness_v3r2.json`) — and its latency
+therefore grows with the corpus.
+
+**Which text it scans depends on `decompose`, which defaults to True.** A
+multi-clause question is split and each sub-query is scanned exhaustively, then
+the best hits are interleaved — so the result is the exhaustive answer to each
+clause, not the exhaustive top-k of the whole sentence, and for a multi-clause
+question the two differ. That is the point of decomposition: a two-part question
+gets both parts answered. Pass `decompose=False` when you want the whole string
+treated as one query and the exactness claim above to apply end to end.
 
 | Corpus | p50 | recall@4 | same as exhaustive numpy? | same as FAISS flat? | index | RSS per doc |
 | ---: | ---: | ---: | :---: | :---: | ---: | ---: |

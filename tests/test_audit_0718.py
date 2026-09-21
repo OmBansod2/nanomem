@@ -6,6 +6,8 @@ fixed, and every test below fails if its fix is reverted.
 import re
 import warnings
 
+import numpy as np
+
 import pytest
 
 from nanomem import vault as vault_mod
@@ -49,15 +51,54 @@ def test_add_does_not_mutate_the_caller_s_metadata_dict(tmp_path):
 
 
 def test_an_explicit_id_is_still_honoured(tmp_path):
-    """The control: not writing back must not stop a caller SUPPLYING an id,
-    by argument or in the metadata."""
+    """The control: not writing back must not stop a caller SUPPLYING an id.
+
+    This test ALSO asserted that `metadata={"id": ...}` set the document id,
+    which encoded a defect as a guarantee: the fifth review showed three
+    different documents tagged `{"id": "ticket-4711"}` collapsing onto that one
+    handle. `id=` is the documented way and is what is asserted here; the
+    metadata spelling is refused, and that is asserted below.
+    """
     v = Vault(str(tmp_path / "e.dat"))
     assert v.add("a fact.", id="chosen_id") == "chosen_id"
-    assert v.add("another fact.", metadata={"id": "meta_id"}) == "meta_id"
     v.flush()
     assert v.get("chosen_id")["text"] == "a fact."
-    assert v.get("meta_id")["text"] == "another fact."
     v.close()
+
+
+def test_an_id_in_metadata_is_refused_rather_than_silently_used(tmp_path):
+    """`add()` documents its id as "a function of the TEXT alone" and `id=` as
+    the way to supply one. Reading `metadata["id"]` was an undocumented side
+    channel that overrode both: a caller tagging support tickets with
+    `{"id": "ticket-4711"}` stored three rows under one handle, and `get`
+    returned only the newest of them."""
+    v = Vault(str(tmp_path / "mi.dat"))
+    with pytest.raises(ValueError) as e:
+        v.add("Customer cannot log in.", metadata={"id": "ticket-4711"})
+    assert "id=" in str(e.value), "the error should name the documented parameter"
+    # the same intent, expressed in a field of the caller's own
+    ids = [v.add(t, metadata={"ticket_id": "ticket-4711"}) for t in
+           ("Customer cannot log in.", "Reset link expired.", "Resolved.")]
+    v.flush()
+    assert len(set(ids)) == 3
+    v.close()
+
+
+def test_merge_still_replays_nanomems_own_metadata(tmp_path):
+    """The control that must NOT flip: `add_batch` is the round-trip path for
+    merge and split, where the metadata being replayed is nanomem's own and
+    legitimately carries `id`. Reserving the key in `add()` must not break it."""
+    a = Vault(str(tmp_path / "a.dat"))
+    a.add("a fact in the donor vault.")
+    a.flush()
+    a.close()
+    b = Vault(str(tmp_path / "b.dat"))
+    b.add("a fact already here.")
+    b.flush()
+    report = b.merge(str(tmp_path / "a.dat"))
+    assert report["added"] >= 1, report
+    assert len(b.get_all_records()) == 2
+    b.close()
 
 
 def test_the_documented_id_rule_holds_for_identical_text(tmp_path):
@@ -496,4 +537,57 @@ def test_split_by_key_keeps_distinct_values_in_distinct_vaults(tmp_path, offline
     result = v.split_by_key("team", str(out))
     assert len(result) == 3, "distinct values merged: %r" % (result,)
     assert all(n == 1 for n in result.values()), result
+    v.close()
+
+
+# ---------------------------------------------------------------------------
+# what "returns what an exhaustive scan returns" covers
+# ---------------------------------------------------------------------------
+_FACTS = [
+    "The staging port is 8443.", "The database host is pg-3.",
+    "Backups run at 02:00 UTC.", "The on-call rota is in PagerDuty.",
+    "The API key rotates on Fridays.", "Deploys are frozen in December.",
+    "The load balancer is HAProxy.", "Logs are kept for 30 days.",
+    "The VPN gateway is gw-2.", "TLS certs renew in March.",
+]
+
+
+def _exhaustive_top_k(v, query, k):
+    """A brute-force fp32 cosine scan over the vault's OWN stored vectors."""
+    qv = v.embedder.embed(query)
+    rows = v.get_all_records(include_embeddings=True)
+    scored = sorted(
+        ((float(np.dot(np.asarray(r["embedding"], dtype=np.float32), qv)), r["id"])
+         for r in rows), reverse=True)
+    return [i for _, i in scored[:k]]
+
+
+def test_decompose_false_matches_an_exhaustive_scan(tmp_path, offline_embedder):
+    """The claim the README makes about the SCAN. With the whole string treated
+    as one query, the result must be the exhaustive top-k of that string."""
+    v = Vault(str(tmp_path / "ex.dat"))
+    for f in _FACTS:
+        v.add(f)
+    v.flush()
+    for q in ("what is the staging port", "which database host do we use",
+              "when do backups run", "where is the vpn gateway"):
+        got = [h["id"] for h in v.search(q, top_k=4, decompose=False, min_score=-1.0)]
+        assert got == _exhaustive_top_k(v, q, 4), q
+    v.close()
+
+
+def test_decompose_true_answers_each_clause_instead(tmp_path, offline_embedder):
+    """And the scoping the README now states: the DEFAULT path splits a
+    multi-clause question and scans each clause, so its result is the exhaustive
+    answer to each clause rather than to the whole sentence. Stating the exactness
+    claim unqualified, next to a default that decomposes, read as a promise about
+    the default path."""
+    v = Vault(str(tmp_path / "dc.dat"))
+    for f in _FACTS:
+        v.add(f)
+    v.flush()
+    q = "what is the staging port and which database host do we use"
+    both = [h["text"] for h in v.search(q, top_k=4, decompose=True, min_score=-1.0)]
+    assert any("8443" in t for t in both), both
+    assert any("pg-3" in t for t in both), both
     v.close()

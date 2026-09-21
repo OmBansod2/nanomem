@@ -263,8 +263,20 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         oldest_shown = int(chain[0].get("revision") or 1)
         truncated = oldest_shown > 1 or (
             args.get("max_len") is not None and len(chain) >= int(args["max_len"]))
-        if len(chain) == 1 and not truncated:
+        # "NEVER CHANGED" IS ONLY KNOWABLE FOR A DECLARED CHAIN. A one-entry
+        # history can also mean the TAGGER did not group a restatement -- which
+        # the README measures at 0/100 on narrative phrasing when no entity was
+        # declared. The limitation is documented; asserting the opposite to a
+        # model that cannot check is not. Measured: two employers in the vault,
+        # `nanomem_changes` showing both, and this line saying the fact had never
+        # changed.
+        declared = bool((chain[0].get("metadata") or {}).get("entity_declared"))
+        if len(chain) == 1 and not truncated and declared:
             head = "This has one value and has never changed:"
+        elif len(chain) == 1 and not truncated:
+            head = ("One value is grouped under this. The entity was not declared, "
+                    "so a restatement worded differently may not have been grouped "
+                    "with it -- use nanomem_changes to see every write:")
         elif truncated:
             head = (f"Showing the {len(chain)} most recent value(s); there are "
                     f"earlier ones (this view was limited by max_len):")
