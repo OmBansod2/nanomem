@@ -790,7 +790,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**825 tests**, no network required, and nothing skipped in a repository checkout.
+**832 tests**, no network required, and nothing skipped in a repository checkout.
 The published sdist skips a few: those tests read measurement JSON from
 `scratch/refound/`, which is not part of the distribution, and they skip with that
 reason rather than fail. `BENCHMARKS.md` quotes the sdist's own number. There is no `test_security.py`; earlier documentation told you to run

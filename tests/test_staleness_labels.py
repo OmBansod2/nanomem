@@ -148,3 +148,59 @@ def test_the_label_reaches_the_prompt_the_model_reads(chain, monkeypatch):
     v.ask("where do I work", top_k=3)
     assert any("SUPERSEDED" in m for m in captured["marks"])
     assert any(m == "" for m in captured["marks"]), "everything was marked stale"
+
+
+# --------------------------------------------------------------------------
+# The revision GROUP is (user_id, project, entity), not the entity alone.
+# Found while checking whether a team-chat bot could use this: a fact tagged
+# `deploy_tool` in one project marked a record tagged `deploy_tool` in ANOTHER
+# project as superseded, while history() -- which scopes by group -- returned a
+# chain of 1 for those same rows. Two surfaces of one library disagreeing.
+# --------------------------------------------------------------------------
+E = "deploy_tool"
+
+
+def _pair(tmp_path, name, meta_a, meta_b):
+    now = time.time()
+    v = Vault(str(tmp_path / name))
+    v.add("we deploy with jenkins", metadata=meta_a, timestamp=now - 300 * DAY)
+    v.add("we deploy with argocd now, not jenkins", metadata=meta_b, timestamp=now - 30 * DAY)
+    v.flush()
+    hits = v.search("how do we deploy", top_k=3, decompose=False)
+    old = next(h for h in hits
+               if "jenkins" in h["text"] and "argocd" not in h["text"])
+    return v, old
+
+
+@pytest.mark.parametrize("label,meta_a,meta_b,expected", [
+    ("same scope, no user_id (the shared-channel pattern)",
+     {"entity": E, "project": "eng"}, {"entity": E, "project": "eng"}, True),
+    ("different users in one project must not supersede each other",
+     {"entity": E, "user_id": "alice", "project": "eng"},
+     {"entity": E, "user_id": "bob", "project": "eng"}, False),
+    ("different projects must not contaminate each other",
+     {"entity": E, "project": "eng"}, {"entity": E, "project": "design"}, False),
+    ("no scoping at all -- ordinary personal use",
+     {"entity": E}, {"entity": E}, True),
+])
+def test_supersession_is_scoped_to_the_revision_group(tmp_path, label, meta_a,
+                                                      meta_b, expected):
+    _, old = _pair(tmp_path, "g_%d.dat" % abs(hash(label)), meta_a, meta_b)
+    assert old["superseded"] is expected, label
+
+
+@pytest.mark.parametrize("meta_a,meta_b", [
+    ({"entity": E, "project": "eng"}, {"entity": E, "project": "eng"}),
+    ({"entity": E, "user_id": "alice", "project": "eng"},
+     {"entity": E, "user_id": "bob", "project": "eng"}),
+    ({"entity": E, "project": "eng"}, {"entity": E, "project": "design"}),
+])
+def test_search_and_history_agree_about_what_was_replaced(tmp_path, meta_a, meta_b):
+    """The cross-surface invariant. If history() assembles a chain of one, then
+    nothing replaced that record, and search() must not say otherwise."""
+    v, old = _pair(tmp_path, "agree_%d.dat" % abs(hash(str(meta_a) + str(meta_b))),
+                   meta_a, meta_b)
+    chain_len = len(v.history("how do we deploy"))
+    assert old["superseded"] is (chain_len > 1), (
+        "history() says chain=%d but search() says superseded=%s"
+        % (chain_len, old["superseded"]))

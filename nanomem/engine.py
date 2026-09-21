@@ -2210,7 +2210,7 @@ class VaultEngine:
 
             # IS THIS STILL TRUE? Computed only for the rows being returned,
             # so the cost is bounded by `top_k` and not by the corpus.
-            sup = self._supersession([ent[i] for i in idx],
+            sup = self._supersession(self._group_ids(rows[idx]),
                                      [rv[i] for i in idx],
                                      [tsv[i] for i in idx])
             hits = []
@@ -3057,7 +3057,7 @@ class VaultEngine:
             tsv[j] = item["timestamp"]
         return ent, rv, tsv
 
-    def _supersession(self, ent_ids, revs, tss):
+    def _supersession(self, group_ids, revs, tss):
         """For each hit: has a LATER record replaced it in its own group?
 
         A timestamp says WHEN a record was written, not whether it is still
@@ -3084,13 +3084,22 @@ class VaultEngine:
         Ordering matches `entities.temporal_order`: lexicographic on
         ``(revision, timestamp)`` with REVISION primary, so a record restated
         out of chronological order resolves the same way here as it does there.
+
+        KEYED ON THE REVISION GROUP, NOT THE BARE ENTITY. The group id interns
+        ``(user_id, project, entity)``; the entity id interns the tag alone.
+        Using the tag meant a record tagged `deploy_tool` in one project marked
+        a record tagged `deploy_tool` in ANOTHER project as superseded, and one
+        user's value marked another user's. `history()` scopes by group and
+        returned a chain of 1 for those same rows, so the two surfaces
+        contradicted each other -- measured while checking whether a team-chat
+        bot could use this, which is exactly the shape that breaks.
         """
-        wanted = sorted({int(e) for e in ent_ids if int(e) >= 0})
+        wanted = sorted({int(e) for e in group_ids if int(e) >= 0})
         chains = {}
         if wanted:
             n = int(self.arena.n_rows)
             if n:
-                a_ent = np.asarray(self.arena.entity_id[:n])
+                a_ent = np.asarray(self.arena.group_id[:n])
                 sel = np.flatnonzero(np.isin(a_ent, wanted))
                 if sel.size:
                     a_rev = np.asarray(self.arena.rev[:n])[sel]
@@ -3100,7 +3109,7 @@ class VaultEngine:
                         chains.setdefault(int(e_sel[pos]), []).append(
                             (int(a_rev[pos]), float(a_ts[pos])))
             for item in self._mt.items[:self._mt.n]:
-                e = int(item.get("entity_id", -1))
+                e = int(item.get("group_id", -1))
                 if e in wanted:
                     chains.setdefault(e, []).append(
                         (int(item.get("revision", 1)),
@@ -3108,7 +3117,7 @@ class VaultEngine:
         for e in chains:
             chains[e].sort()
         out = []
-        for e, rv, ts in zip(ent_ids, revs, tss):
+        for e, rv, ts in zip(group_ids, revs, tss):
             e = int(e)
             if e < 0:
                 out.append((None, None))

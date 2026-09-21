@@ -83,6 +83,24 @@ keys failed it. That is the test doing its job -- adding a key to a documented
 result shape is a decision, not a convenience -- and it was updated deliberately
 rather than loosened.
 
+#### Scoped to the revision group, not the bare entity tag
+
+Caught before release by asking whether a team-chat bot could use this. The
+revision group interns `(user_id, project, entity)`; the entity id interns the
+tag alone. Keying supersession on the tag meant a record tagged `deploy_tool` in
+ONE project marked a record tagged `deploy_tool` in ANOTHER as superseded, and
+one user's value marked another user's -- while `history()`, which scopes by
+group, returned a chain of 1 for those same rows. Two surfaces of one library
+disagreeing about the same records.
+
+    same project, no user_id      chain=2   superseded=True    correct
+    different users, one project  chain=1   superseded=False   was True
+    different projects            chain=1   superseded=False   was True
+
+`tests/test_staleness_labels.py` now pins the cross-surface invariant directly:
+if `history()` assembles a chain of one, nothing replaced that record, and
+`search()` must not say otherwise.
+
 ### Why the version is 0.8.0
 
 The library is what 0.7.24 was. The minor version moves for three reasons that
