@@ -92,6 +92,110 @@ MAX_SUB_QUERIES = 8
 _LEGACY_CHUNK_ID_PATTERN = r"^(?P<name>[^@]+):(?P<span>\d+-\d+)$"
 
 
+class SearchResults(list):
+    """The hits, plus whether they are the WHOLE answer.
+
+    `search` returns at most `top_k` records and said nothing about what it left
+    behind. An eight-clause question answered by three documents looked exactly
+    like an eight-clause question with three answers, and a caller had no way to
+    tell those apart -- `vault.py` already carried a comment about this shape
+    ("a caller could not tell 'only 50 matched' from 'we truncated you'") for the
+    special case of the old hard cap, and the general case stayed open.
+
+    This is a `list`, so every existing caller keeps working: index it, iterate
+    it, `len()` it, `json.dumps()` it. What is added is `summary`, and the
+    shortcuts below.
+
+    ``truncated``
+        More records cleared the floor than were returned.
+    ``n_above_floor``
+        How many passed the filter, ``as_of`` and ``min_score``. ``None`` for a
+        decomposed query, where de-duplicating candidates ACROSS sub-queries is
+        not something the scan already computed -- see ``sub_queries`` for the
+        per-clause numbers, which are exact, and ``n_distinct_found`` for a true
+        lower bound.
+    ``unanswered_sub_queries``
+        Clauses of a composite question that got no slot at all. This is the
+        number that answers "3 of 8".
+
+    The counts are free: the scan is exhaustive, so both were already computed
+    where ``top_k`` is applied and were being thrown away.
+    """
+
+    __slots__ = ("summary",)
+
+    def __init__(self, hits=(), summary=None):
+        super().__init__(hits)
+        self.summary = dict(summary or {})
+
+    @property
+    def truncated(self):
+        return bool(self.summary.get("truncated"))
+
+    @property
+    def returned(self):
+        return int(self.summary.get("returned", len(self)))
+
+    @property
+    def n_above_floor(self):
+        return self.summary.get("n_above_floor")
+
+    @property
+    def n_distinct_found(self):
+        return self.summary.get("n_distinct_found", len(self))
+
+    @property
+    def sub_queries(self):
+        return self.summary.get("sub_queries", [])
+
+    @property
+    def unanswered_sub_queries(self):
+        return self.summary.get("unanswered_sub_queries", [])
+
+    @property
+    def floor(self):
+        """The ``min_score`` the caller asked for. 0.0 means there was none."""
+        return self.summary.get("floor", 0.0)
+
+    def explain(self) -> str:
+        """One line a human or a model can read. Empty when nothing useful was cut.
+
+        THE FLOOR CLAUSE ONLY SPEAKS WHEN THERE IS A FLOOR. With the default
+        ``min_score=0.0`` every record in the vault clears it, so
+        ``n_above_floor`` is the corpus size and "showing 3 of 101" is true of
+        every query ever asked -- including one whose answer really is a single
+        record. A signal that fires every time carries nothing, and saying
+        "incomplete" about a complete answer is the defect this whole field
+        exists to remove, committed one level up.
+
+        ``n_above_floor`` is still reported on the summary either way, because
+        it is exact and a caller may want it. It is the PROSE that is gated.
+        """
+        parts = []
+        if self.truncated and (self.floor or 0.0) > 0.0:
+            n = self.n_above_floor
+            if n is not None:
+                parts.append("showing %d of %d records scoring at or above your "
+                             "min_score of %.2f" % (len(self), n, self.floor))
+            else:
+                parts.append("showing %d of at least %d matching records"
+                             % (len(self), self.n_distinct_found))
+        missing = self.unanswered_sub_queries
+        if missing:
+            total = len(self.sub_queries) or (len(missing) + 1)
+            parts.append("%d of %d parts of the question got no result: %s"
+                         % (len(missing), total,
+                            "; ".join(repr(m) for m in missing[:4])))
+        if not parts:
+            return ""
+        return ("This answer is incomplete -- " + ", and ".join(parts)
+                + ". Raise top_k to see more.")
+
+    def __repr__(self):
+        return "SearchResults(%d hits%s)" % (
+            len(self), ", truncated" if self.truncated else "")
+
+
 def _within(path: str, root: str) -> bool:
     """True when `path` really lives under `root`, following every link first."""
     rp = os.path.realpath(path)
@@ -1220,7 +1324,7 @@ class Vault:
         than query-only and removed (DECISIONS 4.7).
         """
         if multihop:
-            return self.search_multihop(
+            _mh = self.search_multihop(
                 query=query,
                 top_k=top_k,
                 filter=filter,
@@ -1231,6 +1335,14 @@ class Vault:
                 beam_width=beam_width,
                 as_of=as_of
             )
+            return SearchResults(_mh, {
+                "query": str(query).strip(), "top_k": top_k, "multihop": True,
+                "decomposed": False, "returned": len(_mh),
+                # The hop path scans twice with a budget per hop; one "above the
+                # floor" count would not describe it, so it is reported as
+                # unknown rather than invented.
+                "n_above_floor": None, "n_distinct_found": len(_mh),
+                "truncated": None, "sub_queries": [], "unanswered_sub_queries": []})
 
 
         # ASKING FOR NOTHING GETS NOTHING, AND ASKING FOR MORE THAN 50 GETS IT.
@@ -1246,7 +1358,11 @@ class Vault:
         else:
             safe_top_k = int(top_k)
             if safe_top_k <= 0:
-                return []
+                return SearchResults([], {
+                    "query": str(query).strip(), "top_k": safe_top_k,
+                    "decomposed": False, "returned": 0, "n_above_floor": None,
+                    "n_distinct_found": 0, "truncated": False,
+                    "sub_queries": [], "unanswered_sub_queries": []})
         # A QUESTION ASKED AFTER WORD 100 USED TO BE THROWN AWAY.
         # This was `" ".join(words[:100])`, which discarded everything past the
         # hundredth word of a query and said nothing. It is the shape people
@@ -1266,7 +1382,11 @@ class Vault:
         # goes, and the model's own limit is the only one left.
         clean_query = str(query).strip()
         if not clean_query:
-            return []
+            return SearchResults([], {
+                "query": "", "top_k": safe_top_k, "decomposed": False,
+                "returned": 0, "n_above_floor": 0, "n_distinct_found": 0,
+                "truncated": False, "sub_queries": [],
+                "unanswered_sub_queries": []})
 
         sub_queries = self.decompose_query(clean_query) if decompose else [clean_query]
 
@@ -1290,21 +1410,32 @@ class Vault:
 
         if len(sub_queries) == 1:
             q_vec = self.embedder.embed(clean_query)
-            return self.engine.search(
+            budget: Dict[str, Any] = {}
+            hits = self.engine.search(
                 query_text=clean_query,
                 query_vec=q_vec,
                 top_k=safe_top_k,
                 metadata_filter=filter,
                 min_score=min_score,
                 temporal_direction=temporal_direction,
-                as_of=as_of
+                as_of=as_of,
+                _budget=budget
             )
+            above = int(budget.get("n_above_floor", len(hits)))
+            return SearchResults(hits, {
+                "query": clean_query, "top_k": safe_top_k, "decomposed": False,
+                "floor": float(min_score),
+                "returned": len(hits), "n_above_floor": above,
+                "n_distinct_found": above, "truncated": above > len(hits),
+                "sub_queries": [], "unanswered_sub_queries": []})
 
         # Multi-query beam execution with round-robin interleaving
         sub_vecs = self.embedder.embed_batch(sub_queries)
         sub_hits = []
+        sub_budgets: List[Dict[str, Any]] = []
         per_k = max(2, safe_top_k)
         for idx, sq in enumerate(sub_queries):
+            sub_budget: Dict[str, Any] = {}
             hits = self.engine.search(
                 query_text=sq,
                 query_vec=sub_vecs[idx],
@@ -1312,8 +1443,12 @@ class Vault:
                 metadata_filter=filter,
                 min_score=min_score,
                 temporal_direction=temporal_direction,
-                as_of=as_of
+                as_of=as_of,
+                _budget=sub_budget
             )
+            sub_budgets.append({
+                "query": sq,
+                "n_above_floor": int(sub_budget.get("n_above_floor", len(hits)))})
             sub_hits.append((sq, hits))
 
         merged_results: List[Dict[str, Any]] = []
@@ -1355,7 +1490,33 @@ class Vault:
                 h["sub_query"] = sq
                 merged_results.append(h)
 
-        return merged_results[:safe_top_k]
+        final = merged_results[:safe_top_k]
+
+        # WHICH CLAUSES GOT NOTHING. This is the number that answers "3 of 8":
+        # every merged hit carries the sub-query it came from, so a clause absent
+        # from the RETURNED slice got no slot. Reported only -- the allocation is
+        # unchanged, because changing which records come back for
+        # `decompose=True` (the default) would be a ranking change, and nothing
+        # in ranking moves here.
+        answered = {h.get("sub_query") for h in final}
+        unanswered = [sq for sq in sub_queries if sq not in answered]
+        for _b in sub_budgets:
+            got = sum(1 for h in final if h.get("sub_query") == _b["query"])
+            _b["returned"] = got
+            _b["answered"] = got > 0
+            _b["truncated"] = _b["n_above_floor"] > got
+        return SearchResults(final, {
+            "query": clean_query, "top_k": safe_top_k, "decomposed": True,
+            "floor": float(min_score),
+            "returned": len(final),
+            # Not computable from what the scan already did: candidates would have
+            # to be de-duplicated ACROSS sub-queries, which no single mask
+            # describes. The per-clause counts below ARE exact.
+            "n_above_floor": None,
+            "n_distinct_found": len(merged_results),
+            "truncated": len(merged_results) > safe_top_k or bool(unanswered),
+            "sub_queries": sub_budgets,
+            "unanswered_sub_queries": unanswered})
 
     def history(self, query: str, max_len: Optional[int] = None,
                 min_score: float = 0.0) -> List[Dict[str, Any]]:
@@ -1638,7 +1799,13 @@ class Vault:
         return {
             "question": question,
             "answer": answer,
-            "citations": candidates if cite else []
+            "citations": candidates if cite else [],
+            # WHAT THE ANSWER WAS BUILT FROM, AND WHAT IT WAS NOT. An answer
+            # synthesised from 3 of 8 clauses reads exactly like one synthesised
+            # from 8 of 8, and the model writing it cannot tell either. Empty
+            # string when nothing informative was cut.
+            "retrieval": getattr(candidates, "summary", {}),
+            "incomplete": bool(getattr(candidates, "explain", lambda: "")())
         }
 
 

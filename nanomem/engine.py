@@ -2049,8 +2049,14 @@ class VaultEngine:
                metadata_filter: Optional[Dict[str, Any]] = None,
                min_score: float = 0.0,
                temporal_direction: str = "current",
-               as_of: Optional[float] = None) -> List[Dict[str, Any]]:
+               as_of: Optional[float] = None,
+               _budget: Optional[Dict[str, Any]] = None) -> List[Dict[str, Any]]:
         """Rank stored records against a query vector.
+
+        ``_budget``, when a dict is passed, is filled with ``n_above_floor`` (how
+        many records passed the filter, ``as_of`` and ``min_score``) and
+        ``returned``. It is how :meth:`Vault.search` reports truncation, and it
+        is free: both numbers already exist where ``top_k`` is applied.
 
         Returns at most ``top_k`` fresh dicts sorted by ``score`` descending, with
         keys ``id, doc_id, text, source, metadata, score, cosine, timestamp,
@@ -2110,6 +2116,12 @@ class VaultEngine:
         matches measured on cosine ALONE, which dropped boosted records that
         should have led.)
         """
+        if _budget is not None:
+            # Defaults, so the six early returns below leave a truthful sink
+            # rather than an unset one.
+            _budget.setdefault("n_above_floor", 0)
+            _budget.setdefault("returned", 0)
+
         with self._lock:
             self._reload_if_modified()
             if top_k is None or int(top_k) <= 0:
@@ -2181,7 +2193,17 @@ class VaultEngine:
                                             query_text, temporal_direction, intent,
                                             personal, base)
 
-            k = int(min(top_k, int(mask.sum())))
+            # HOW MANY CLEARED THE FLOOR, NOT JUST HOW MANY FIT. The scan is
+            # exhaustive, so `mask.sum()` -- the candidates that passed the
+            # filter, `as_of` and `min_score` -- is already computed on this very
+            # line to bound `k`. It was then discarded, which is why a caller
+            # could not tell "only 3 matched" from "3 of 40 matched and you were
+            # cut off". Handing it back costs nothing that was not already paid.
+            n_above_floor = int(mask.sum())
+            k = int(min(top_k, n_above_floor))
+            if _budget is not None:
+                _budget["n_above_floor"] = n_above_floor
+                _budget["returned"] = max(0, k)
             if k <= 0:
                 return []
             idx = _select_top_k(final, rows, k)

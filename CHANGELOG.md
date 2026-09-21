@@ -6,6 +6,101 @@ number below is from one of those files.
 
 ---
 
+## 0.7.24 — engine 3.4.6 (unchanged: this reports, it does not re-rank)
+
+A search result now says whether it is the whole answer.
+
+### The defect this closes
+
+`search` returns at most `top_k` records and said nothing about what it left
+behind. Three documents answering three clauses of an eight-clause question
+looked exactly like three documents answering all eight, and the caller -- often
+a model, which cannot look behind the result -- had no way to tell those apart.
+
+`vault.py` already carried a comment about this shape, for the narrow case of the
+old hard cap: *"a caller could not tell 'only 50 matched' from 'we truncated
+you'"*. The cap went in 0.7.x. The general case stayed open until now.
+
+This is the same family as the two claims fixed in 0.7.21: `nanomem_history`
+saying a fact "has never changed" while holding a truncated chain, and announcing
+"there are earlier ones" about a chain shown in full. An assertion about what
+does not exist, made from a view that could not see it.
+
+### What it costs: nothing that was not already paid
+
+The scan is exhaustive. `mask.sum()` -- the records that passed the filter,
+`as_of` and `min_score` -- is computed on the very line that bounds `top_k`, and
+was then thrown away. Handing it back is two dict assignments. Measured on 5,000
+records, 60 runs each: **0.169 ms without the sink, 0.150 ms with it**. The
+difference is negative, which is to say it is below the noise floor of the
+measurement, not a speedup.
+
+### What is reported
+
+`search` returns a `SearchResults`, which IS a `list` -- index it, iterate it,
+`len()` it, `json.dumps()` it, exactly as before. Every existing caller is
+untouched and 815 tests pass. What is added:
+
+    r.truncated                 more cleared the floor than were returned
+    r.n_above_floor             how many passed filter, as_of and min_score
+    r.unanswered_sub_queries    clauses of a composite question that got NOTHING
+    r.explain()                 one line, or "" when nothing informative was cut
+
+`ask()` carries the same thing as `retrieval` and `incomplete`, and the MCP
+`nanomem_search` tool appends the line to the text a model reads.
+
+### The floor clause only speaks when there is a floor
+
+Found while testing this, in this release's own code. With the default
+`min_score=0.0` EVERY record clears the floor, so `n_above_floor` is the corpus
+size and "showing 3 of 101" is true of every query ever asked -- including one
+whose answer really is a single record. A signal that fires every time carries
+nothing, and calling a complete answer incomplete is the defect this feature
+exists to remove, committed one level up.
+
+So the prose is gated on an actual floor. The number is still on the summary
+either way, because it is exact and a caller may want it. Measured:
+
+    narrow query, no floor            -> silent
+    narrow query, min_score=0.6       -> silent (its one match WAS returned)
+    broad query, min_score=0.6, k=3   -> "showing 3 of 21 ... at or above 0.60"
+    broad query, min_score=0.6, k=40  -> silent (all 21 returned)
+    8 clauses, top_k=3                -> "5 of 8 parts got no result: ..."
+    8 clauses, top_k=16               -> silent (8 of 8 answered)
+
+It discriminates in both directions, which is the only thing that makes it worth
+reading.
+
+### What was asked for and deliberately NOT built
+
+The proposal this came from also asked for `top_k="auto"`, choosing k from the
+largest gap in the sorted scores. Measured against this library's actual ranking,
+it does not work, for three reasons, and the reasons are worth recording:
+
+* **The largest gap is the boost boundary, not the corpus boundary.** nanomem
+  ranks by `score` = cosine + boosts, and `stats()['max_boost']` is 1.10 while
+  the knee the proposal measured was 0.166. On a revision chain plus filler, the
+  largest score gap was **0.516** -- five times the largest cosine gap (0.095) --
+  sitting exactly where boosts stop. `top_k="auto"` would return the size of the
+  boosted revision group, whatever the question was: 3 for an eight-clause
+  question, which is the bug it was meant to fix.
+* **Cosine is not monotone in the returned order**, so a knee in the sorted
+  cosines cannot be used as a cut in the ranking. Measured on that same chain,
+  rank 1 had cosine 0.532 and rank 2 had 0.635 -- the current value worded
+  FURTHER from the question than the superseded one, which is this library's
+  entire premise working correctly.
+* **A gap rule always fires.** Asked "what is the capital of france" against a
+  vault containing nothing of the kind, it picked k=1 and returned "The company
+  offsite is in Lisbon this year" at cosine 0.457.
+
+The proposal also asked that each sub-query be GUARANTEED a slot. That changes
+which records come back for `decompose=True`, the default -- a ranking change,
+which by this project's rules bumps `ENGINE_VERSION` and invalidates all 13
+benchmark results. The half that is free was taken instead: sub-queries that got
+no slot are REPORTED, and the allocation is untouched.
+
+---
+
 ## 0.7.23 — engine 3.4.6 (unchanged). Apache-2.0, and the MCP server is the front door.
 
 No defect fixes. Two decisions about who this is for.

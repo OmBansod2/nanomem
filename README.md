@@ -103,6 +103,39 @@ index to rebuild. Search is **exact** — a full cosine scan, not an approximate
 index — so recall is 100% by construction and every interesting question is
 about time rather than ranking.
 
+## It tells you when the answer is cut short
+
+`search` returns at most `top_k` records. It now also tells you what it left
+behind, which matters most when the caller is a model that cannot look:
+
+```python
+r = vault.search("revenue of every company in every year", top_k=3, min_score=0.6)
+
+len(r)                      # 3   — it is a list; every existing caller is unchanged
+r.truncated                 # True
+r.n_above_floor             # 21  — how many cleared your min_score
+r.explain()                 # "This answer is incomplete -- showing 3 of 21 records
+                            #  scoring at or above your min_score of 0.60. ..."
+```
+
+For a multi-part question, the useful number is which parts got nothing at all:
+
+```python
+r = vault.search("What is Acme revenue? ... What port does staging use?")
+r.unanswered_sub_queries    # the clauses that got no slot
+```
+
+`explain()` returns `""` when nothing informative was cut, so it is safe to
+append unconditionally — and the MCP `nanomem_search` tool does exactly that.
+
+**It only speaks when there is a `min_score`.** With the default `0.0` every
+record clears the floor, so "showing 3 of 101" would be true of every query ever
+asked, including one whose answer really is a single record. A signal that fires
+every time carries nothing. The count is still on `r.n_above_floor` either way.
+
+The counts are free: the scan is exhaustive, so both numbers already existed on
+the line that applies `top_k` and were being discarded.
+
 ## Tell it what an attribute is
 
 `metadata={"entity": "employer"}` is doing real work above, and it is worth a
@@ -122,7 +155,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.7.23 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.7.24 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
@@ -161,7 +194,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-797 tests, no network needed.
+815 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

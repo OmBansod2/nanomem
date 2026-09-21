@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 57,
-    "with_test": 43,
+    "total": 60,
+    "with_test": 46,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -361,6 +361,24 @@
       "claim": "The vault defaults to `~/.nanomem/memory.dat`; set `NANOMEM_VAULT`, or pass `--vault /some/path.dat`, to put it elsewhere.",
       "id": "C056",
       "test": "test_vault_path_resolution_order"
+    },
+    {
+      "source": "nanomem/mcp.py",
+      "claim": "Only return memories scoring at or above this cosine.",
+      "id": "C057",
+      "test": "test_the_mcp_tool_schema_offers_a_floor"
+    },
+    {
+      "source": "nanomem/mcp.py",
+      "claim": "With the default 0.0 every record clears it, so the tool cannot tell you how many RELEVANT memories it could not fit; set a floor (0.5-0.7 is typical) and it will say so.",
+      "id": "C058",
+      "test": "test_the_floor_clause_is_silent_when_there_is_no_floor"
+    },
+    {
+      "source": "README.md",
+      "claim": "`search` returns at most `top_k` records.",
+      "id": "C059",
+      "test": "test_n_above_floor_counts_what_cleared_the_floor"
     }
   ]
 }

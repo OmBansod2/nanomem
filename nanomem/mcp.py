@@ -53,12 +53,21 @@ TOOLS = [
     },
     {
         "name": "nanomem_search",
-        "description": "Search persistent long-term memory for relevant past facts and context.",
+        "description": ("Search persistent long-term memory for relevant past facts "
+                        "and context. If the result is not the whole answer -- more "
+                        "memories matched than fit, or parts of a multi-part question "
+                        "got nothing -- the reply says so on its last line. Believe "
+                        "that line: it is counted, not estimated."),
         "inputSchema": {
             "type": "object",
             "properties": {
                 "query": {"type": "string", "description": "The search query."},
                 "top_k": {"type": "integer", "description": "Number of results to return.", "default": 3},
+                "min_score": {"type": "number", "default": 0.0, "description":
+                    "Only return memories scoring at or above this cosine. With "
+                    "the default 0.0 every record clears it, so the tool cannot "
+                    "tell you how many RELEVANT memories it could not fit; set a "
+                    "floor (0.5-0.7 is typical) and it will say so."},
             },
             "required": ["query"],
         },
@@ -248,12 +257,21 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
                 else f"Stored as {entity!r}: {text!r}")
 
     if tool_name == "nanomem_search":
-        hits = vault.search(args.get("query", ""), top_k=int(args.get("top_k", 3)))
+        hits = vault.search(args.get("query", ""), top_k=int(args.get("top_k", 3)),
+                            min_score=float(args.get("min_score", 0.0)))
         if not hits:
             return "No relevant memories found."
-        return "\n\n".join(
+        body = "\n\n".join(
             f"[{i + 1}] ({h.get('source')}, {_fmt_when(h['timestamp'])}): {h['text']}"
             for i, h in enumerate(hits))
+        # SAY WHEN THIS IS NOT THE WHOLE ANSWER. The consumer is a model that
+        # cannot look behind the result: three documents for an eight-part
+        # question read exactly like three documents that answered it. This is
+        # the same class as `nanomem_history` claiming a fact "has never
+        # changed" while holding a truncated chain -- an assertion about what
+        # does not exist, made from a view that could not see it.
+        note = hits.explain()
+        return body + ("\n\n" + note if note else "")
 
     if tool_name == "nanomem_history":
         # ASK FOR THE WHOLE CHAIN, THEN TRUNCATE HERE. Passing `max_len` down left

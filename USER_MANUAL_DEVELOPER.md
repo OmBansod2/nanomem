@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.23 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.7.24 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.23 3.4.6
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.24 3.4.6
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -790,7 +790,7 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**797 tests**, no network required, and nothing skipped in a repository checkout.
+**815 tests**, no network required, and nothing skipped in a repository checkout.
 The published sdist skips a few: those tests read measurement JSON from
 `scratch/refound/`, which is not part of the distribution, and they skip with that
 reason rather than fail. `BENCHMARKS.md` quotes the sdist's own number. There is no `test_security.py`; earlier documentation told you to run
