@@ -6,6 +6,59 @@ number below is from one of those files.
 
 ---
 
+## 0.7.20 — engine 3.4.6 (unchanged)
+
+Three write paths that lost data the caller had not asked to lose, and the
+process defect underneath them.
+
+**`delete(where={})` erased the whole vault.** `_matches_filter(meta, {})` is
+vacuously true, and an empty dict is exactly what you get when the filter was
+BUILT and every condition dropped out. `delete()` with no arguments already
+deleted nothing; this spelling deleted everything. It is now refused, loudly,
+because a caller who really means "remove it all" should say so in a way that
+reads like it.
+
+**`delete(source="notes.txt")` also deleted `meeting_notes.txt`.** The source
+test included `clean_src in src_str` and `fp_str.endswith(clean_src)` -- a
+substring match on a DELETE. The caller named one file and lost two, with nothing
+in the return value to say so. Matching is now by name: exact source, exact
+filename, exact path, `ingest_file`'s `"{basename}:{start}-{end}"` prefix, or the
+basename of a path. Naming an ingested file still removes all of it.
+
+**`update()` re-dated the record, which then destroyed the newer values.** The
+row was rewritten with `time.time()` unconditionally, so relabelling a
+300-day-old record's `source` -- changing nothing else -- moved it 300 days
+forward, made it the answer to "where do I work" ahead of two newer values, and
+then `forget_superseded(keep=1)` permanently deleted both of those and reported
+success.
+
+That is this library's own reason to exist, failing. The README opens on an
+assistant "confidently repeating an address you left two years ago"; there was a
+one-line path that produced exactly that. `update` is documented as an IN-PLACE
+update by id, and a record's timestamp is when the fact was written, not when its
+row was last touched. `add()` is how you record a new value at a new time.
+
+### The process defect, which matters more than the three
+
+0.7.19 put the reserved-metadata-key guard on `add()` and nowhere else. The same
+defect therefore still walked in through `add_batch`: three records carrying
+`{"id": "ticket-4711"}` collapsed onto one handle, exactly as they had through
+`add()`. Measured across the four public write surfaces, the guard held on one.
+
+A library whose job is not losing data cannot have a validation rule that holds
+on one of four doors. `add`, `add_batch`, `update` and `ingest_file` now all pass
+their caller-supplied metadata through the same check, and the replay paths
+(merge, split, export, the chunk writers) declare themselves explicitly rather
+than being inferred. `tests/test_write_path_safety.py` asserts it over the
+SURFACES rather than over one call, so a fifth write path added later fails that
+test until it is listed.
+
+This is the third round in a row where a defect was found in the previous round's
+fix. Recorded here rather than in a commit message, because the pattern is the
+useful part.
+
+---
+
 ## 0.7.19 — engine 3.4.6 (unchanged: nothing in ranking or storage moved)
 
 Fifth black-box review. One HIGH, and it is the residue of a 0.7.18 CRITICAL that

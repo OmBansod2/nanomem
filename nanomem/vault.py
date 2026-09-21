@@ -600,6 +600,8 @@ class Vault:
         Preserves exact code formatting, indentation, and line numbers for coding agents.
         Supports custom document-level or section-level metadata and source references.
         """
+        if isinstance(metadata, dict):
+            _reject_reserved_metadata(metadata)
         if not os.path.exists(file_path):
             raise FileNotFoundError(f"File not found: {file_path}")
 
@@ -721,7 +723,7 @@ class Vault:
                     })
 
         if chunks:
-            self.add_batch(chunks, batch_size=32)
+            self.add_batch(chunks, batch_size=32, _replaying_stored_records=True)
         return len(chunks)
 
     def ingest_directory(
@@ -804,7 +806,8 @@ class Vault:
     def add_batch(
         self,
         records: List[Dict[str, Any]],
-        batch_size: int = 64
+        batch_size: int = 64,
+        _replaying_stored_records: bool = False
     ) -> int:
         """
         High-throughput batch ingestion for books, datasets, and corpora.
@@ -813,6 +816,18 @@ class Vault:
         """
         if not records:
             return 0
+        # THE SAME GUARD `add()` HAS. A reserved key reaching storage through
+        # this door does exactly what it does through that one: three records
+        # carrying {"id": "ticket-4711"} collapsed onto one handle. The guard
+        # landed on `add()` alone in 0.7.19 -- which is how a fix ends up
+        # covering one of four write surfaces.
+        #
+        # `_replaying_stored_records` is set ONLY by merge, split, export and the
+        # chunk writers, where the metadata is nanomem's own and legitimately
+        # carries these keys.
+        if not _replaying_stored_records:
+            for _r in records:
+                _reject_reserved_metadata(_r.get("metadata"))
 
         total = len(records)
         # What was HANDED IN, versus what actually reached the vault. `total` is
@@ -1560,6 +1575,7 @@ class Vault:
         Updates metadata and increments the record revision.
         Returns True if the record was found and updated, False otherwise.
         """
+        _reject_reserved_metadata(metadata)
         clean_id = str(id).strip()
         if not clean_id:
             return False
@@ -1631,7 +1647,20 @@ class Vault:
             "source": new_source,
             "metadata": cur_meta,
             "embedding": new_emb,
-            "timestamp": time.time(),
+            # KEEP WHEN IT WAS WRITTEN. This was `time.time()`, so ANY update --
+            # including relabelling a `source` and touching nothing else --
+            # re-dated the record to now. Measured: relabelling a 300-day-old
+            # row moved it 300 days forward, which made it the answer to "where
+            # do I work" ahead of two newer values, after which
+            # `forget_superseded(keep=1)` permanently deleted both of them and
+            # reported success. That is the README's opening scenario -- an
+            # assistant confidently repeating an address you left two years ago --
+            # produced by the library itself.
+            #
+            # `update` is documented as an IN-PLACE update by id. A record's
+            # timestamp is when the fact was written, not when its row was last
+            # touched; `add()` is how you record a new value at a new time.
+            "timestamp": float(target_rec.get("timestamp") or time.time()),
             "revision": int(target_rec.get("revision", 1)) + 1
         }
 
@@ -1742,7 +1771,7 @@ class Vault:
             existing_signatures.add(sig)
 
         if to_insert:
-            self.add_batch(to_insert, batch_size=64)
+            self.add_batch(to_insert, batch_size=64, _replaying_stored_records=True)
 
         return {
             "incoming": len(incoming),
@@ -1844,6 +1873,22 @@ class Vault:
                     if " ".join(rebuilt.split()) == " ".join(want.split()):
                         text_ids.add(pid)
 
+        # AN EMPTY FILTER IS A PROGRAMMING ERROR, NOT "EVERYTHING".
+        # `_matches_filter(meta, {})` is vacuously true, so `delete(where={})`
+        # erased the whole vault -- and an empty dict is what you get when the
+        # filter was BUILT and every condition dropped out. `delete()` with no
+        # arguments already deletes nothing; this is the same intent expressed
+        # through a variable, and it must not be the one spelling that wipes the
+        # file. Refused loudly rather than ignored, because a caller who really
+        # means "remove everything" should say so in a way that reads like it.
+        if where is not None and not where:
+            raise ValueError(
+                "delete(where={}) would match every record and erase the whole "
+                "vault. An empty filter is almost always a filter that was built "
+                "and came out empty. Pass a filter with at least one condition, "
+                "or if you really mean to remove everything, delete the vault "
+                "file itself.")
+
         kept = []
         deleted_count = 0
         for r in all_recs:
@@ -1880,13 +1925,22 @@ class Vault:
                 fn_str = str(meta.get("filename", ""))
                 fp_str = str(meta.get("file_path", ""))
                 clean_src = str(source).strip()
+                # NAMES, NOT SUBSTRINGS. `clean_src in src_str` and
+                # `fp_str.endswith(clean_src)` meant `delete(source="notes.txt")`
+                # also deleted everything from `meeting_notes.txt` -- measured,
+                # two rows deleted where one was named. For a delete, a loose
+                # match is data loss, and the caller has no way to see what else
+                # it caught. `ingest_file` writes `"{basename}:{start}-{end}"`,
+                # so that one prefix form stays; matching a path compares the
+                # basename rather than the tail of the string.
                 checks.append(clean_src == src_str or
                               clean_src == fn_str or
+                              clean_src == fp_str or
                               src_str.startswith(f"{clean_src}:") or
-                              clean_src in src_str or
-                              fp_str.endswith(clean_src))
+                              (fp_str and os.path.basename(fp_str) == clean_src))
             if where is not None:
                 checks.append(bool(self.engine._matches_filter(meta, where)))
+
             drop = bool(checks) and all(checks)
 
             if drop:
@@ -1988,7 +2042,7 @@ class Vault:
             return 0
 
         with self._sibling(target_vault_path, target_password) as target:
-            target.add_batch(matching, batch_size=64)
+            target.add_batch(matching, batch_size=64, _replaying_stored_records=True)
             target.flush()
 
         if purge:
@@ -2035,7 +2089,7 @@ class Vault:
 
         if target_vault_path:
             with self._sibling(target_vault_path) as target:
-                target.add_batch(matching, batch_size=64)
+                target.add_batch(matching, batch_size=64, _replaying_stored_records=True)
                 target.flush()
 
         self._rebuild(remaining)
@@ -2058,7 +2112,7 @@ class Vault:
             return 0
 
         with self._sibling(target_vault_path) as target:
-            return target.add_batch(matching, batch_size=64)
+            return target.add_batch(matching, batch_size=64, _replaying_stored_records=True)
 
     def split_by_date(
         self,
@@ -2083,7 +2137,7 @@ class Vault:
             return 0
 
         with self._sibling(target_vault_path) as target:
-            return target.add_batch(matching, batch_size=64)
+            return target.add_batch(matching, batch_size=64, _replaying_stored_records=True)
 
     def split_by_key(self, metadata_key: str, output_dir: str) -> Dict[str, int]:
         """
@@ -2124,7 +2178,7 @@ class Vault:
         for grp_name, recs in groups.items():
             target_path = os.path.join(output_dir, f"{grp_name}.dat")
             with self._sibling(target_path) as target:
-                count = target.add_batch(recs, batch_size=64)
+                count = target.add_batch(recs, batch_size=64, _replaying_stored_records=True)
                 results[grp_name] = count
         return results
 
