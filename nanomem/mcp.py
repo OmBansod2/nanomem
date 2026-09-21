@@ -464,6 +464,20 @@ def run_mcp_server(vault_path: str = "memory.dat"):
                     }
                 elif method == "tools/list":
                     result = {"tools": TOOLS}
+                # ANSWER THE SHAPE THE SPEC ASKS FOR, EVEN WHEN IT IS EMPTY.
+                # These fell through to `{}` below, which is missing the array
+                # the method is defined to return. `capabilities` does not
+                # advertise resources or prompts -- this server has none, and
+                # claiming otherwise would be a lie -- but registries and
+                # inspectors introspect by CALLING all three regardless, and a
+                # reply without its declared field reads as a broken server
+                # rather than an empty one.
+                elif method == "resources/list":
+                    result = {"resources": []}
+                elif method == "resources/templates/list":
+                    result = {"resourceTemplates": []}
+                elif method == "prompts/list":
+                    result = {"prompts": []}
                 elif method == "tools/call":
                     params = req.get("params", {})
                     tool_name = params.get("name")

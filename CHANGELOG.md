@@ -21,6 +21,39 @@ code is byte-identical to 0.8.0.
   `NANOMEM_VAULT` and `NANOMEM_PASSWORD`. It ships in the sdist.
 * The README carries `<!-- mcp-name: io.github.OmBansod2/nanomem -->`.
 
+### And one real fix, found while doing that
+
+`awesome-mcp-servers` now requires a Glama listing, and Glama builds the server
+in a sandbox and introspects it: `tools/list`, `resources/list`,
+`prompts/list`. A server that fails introspection keeps its page but is
+withheld from search, categories and recommendations.
+
+Through 0.8.0 the last two fell through to a bare `{}` -- a reply missing the
+array the method is DEFINED to return. `capabilities` correctly does not
+advertise resources or prompts, because this server has none, but an inspector
+calls all three regardless, and a reply without its declared field reads as a
+broken server rather than an empty one. `resources/list`,
+`resources/templates/list` and `prompts/list` now answer with their empty
+arrays, and a test drives each one.
+
+Capabilities still do not claim resources or prompts, and a second test pins
+that: answering the call is not the same as advertising the feature.
+
+A `Dockerfile` is added for registries and inspectors that build a server to
+introspect it. Nothing about using nanomem needs it -- `pip install nanomem`
+and one line of client config is the normal path. It builds from the repository
+rather than PyPI, so what is inspected is what is in the commit, and uses the
+exec form of ENTRYPOINT so SIGTERM reaches the server: this server flushes on
+SIGTERM, and through 0.7.17 a client stopping it that way lost the session.
+
+Verified without Docker, which is not running on the build machine: the exact
+`pip install .` the image runs, then the full introspection sequence against
+the installed console script with no embedding endpoint reachable -- all four
+list methods return their arrays, `tools/call` stores a record, stdout stays
+pure JSON, stderr is empty, and SIGTERM exits 0 with the write on disk. The
+container layer itself is untested here; Glama's build is its first real
+exercise.
+
 ---
 
 ## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.

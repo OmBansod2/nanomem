@@ -323,3 +323,47 @@ def test_metadata_is_no_longer_accepted_and_dropped(vault_path, offline_embedder
     rec = v.get_all_records()[0]
     assert (rec.get("metadata") or {}).get("entity") == "employer"
     v.close()
+
+
+# --------------------------------------------------------------------------
+# Registries and inspectors introspect by CALLING every list method, whether or
+# not the server advertises that capability. Through 0.8.0 `resources/list` and
+# `prompts/list` fell through to a bare `{}` -- a reply missing the array the
+# method is defined to return, which reads as a broken server rather than an
+# empty one. Found while preparing the Glama listing that awesome-mcp-servers
+# now requires, where a failed introspection withholds the listing entirely.
+# --------------------------------------------------------------------------
+@pytest.mark.parametrize("method,field", [
+    ("tools/list", "tools"),
+    ("resources/list", "resources"),
+    ("resources/templates/list", "resourceTemplates"),
+    ("prompts/list", "prompts"),
+])
+def test_every_list_method_returns_its_declared_array(monkeypatch, vault_path,
+                                                      offline_embedder, method, field):
+    replies = _serve(monkeypatch, vault_path, [
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                               "clientInfo": {"name": "inspector", "version": "1"}}}),
+        json.dumps({"jsonrpc": "2.0", "id": 2, "method": method}),
+    ])
+    result = next(r for r in replies if r.get("id") == 2)["result"]
+    assert field in result, "%s returned %r, missing %r" % (method, result, field)
+    assert isinstance(result[field], list)
+
+
+def test_capabilities_do_not_claim_resources_or_prompts(monkeypatch, vault_path,
+                                                        offline_embedder):
+    """Answering the call is not the same as advertising the capability.
+
+    This server has no resources and no prompts. It replies correctly when asked
+    -- see above -- but must not announce features it does not have.
+    """
+    replies = _serve(monkeypatch, vault_path, [
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                               "clientInfo": {"name": "c", "version": "1"}}}),
+    ])
+    caps = replies[0]["result"]["capabilities"]
+    assert "tools" in caps
+    assert "resources" not in caps and "prompts" not in caps

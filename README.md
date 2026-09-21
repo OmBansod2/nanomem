@@ -234,7 +234,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-832 tests, no network needed.
+837 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

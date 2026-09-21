@@ -52,3 +52,4 @@ include release_preflight.py
 
 # The MCP Registry reads this; it is metadata about the published server.
 include server.json
+include Dockerfile
