@@ -1,7 +1,7 @@
 # Evidence
 
-The 116 files this package's documentation cites, so every claim can be
-checked rather than taken on trust. Results are JSON as the measuring script wrote
+The 80 files behind the claims this package's documentation makes, so every claim
+can be checked rather than taken on trust. Results are JSON as the measuring script wrote
 them; the scripts that produced them are here too, so a number can be re-measured
 rather than merely re-read.
 
@@ -12,10 +12,16 @@ missed. `BENCHMARKS.md` is the curated view; this is what it is built from.
 
 ## How to read one
 
-Every results file carries a `measured_on` block naming the nanomem and engine
-version it was produced under. `release_preflight.py` refuses to publish a release
-whose engine differs from the one a cited file was measured on, so a number here
-describes the build that shipped with it, or the release is blocked.
+Results files added from 0.7.15 on carry a `measured_on` block naming the nanomem
+and engine version they were produced under. **3 of the 59 JSON files here do**;
+under `benchmarks/`, 13 of 13 do. `release_preflight.py` refuses to publish a
+release whose engine differs from the one a STAMPED file was measured on, and
+refuses any unstamped file under `benchmarks/`. It does not yet require a stamp on
+the older files here, so an unstamped file in this directory records the build it
+was measured on only in its own `date` field.
+
+This paragraph claimed every file carried a stamp through 0.7.20. It did not, and
+counting was the whole point of the directory.
 
 Local paths have been replaced with `<repo>/`. No number was altered: the
 publishing step parses each file, rewrites only string values and keys, and
@@ -136,4 +142,4 @@ asserts the full list of numbers is unchanged before writing.
 | `refresh_benchmarks.py` | 13 KiB |
 | `train_write_classifier.py` | 24 KiB |
 
-_74 files, 4.0 MiB._
+_80 files, 4.2 MiB._

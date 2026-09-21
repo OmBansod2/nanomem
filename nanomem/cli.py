@@ -278,8 +278,18 @@ def _main():
     # A READ against a vault that is not there is an error, not an empty result.
     # Listed by command so a WRITE still creates a vault on demand, which is how
     # `nanomem add` is meant to work.
-    if args.command in ("search", "history", "changes", "stats", "inspect", "forget"):
+    if args.command in ("search", "history", "changes", "stats", "inspect", "forget",
+                        "rekey"):
         _require_vault(v_path)
+
+    # `split` and `merge` READ a source vault named POSITIONALLY, so it is not
+    # `v_path` and the list above could never have covered it. A typo'd source
+    # CREATED a 256-byte vault, printed "[nanomem] Copied 0 records into
+    # '<target>'." on stdout -- naming a target that was never written -- and
+    # exited 0, so `nanomem split old.dat --target archive.dat && rm old.dat`
+    # carried on.
+    if args.command in ("split", "merge"):
+        _require_vault(args.source)
 
     if args.command == "init":
         v_path = _resolve_vault(args, must_exist=False)
@@ -328,14 +338,25 @@ def _main():
 
     elif args.command == "history":
         with Vault(v_path, password=pw) as v:
-            chain = v.history(args.query, max_len=args.max_len)
-            if not chain:
+            # ASK FOR THE WHOLE CHAIN, THEN TRUNCATE FOR DISPLAY. Passing
+            # `max_len` down meant `-n 1` returned one row and the next line read
+            # that truncation as the answer: a four-value employer chain printed
+            # "has one value and has never changed" above a value two years stale.
+            # 0.7.19 fixed exactly this sentence in mcp.py and the fix never
+            # reached here. The count now comes from what the vault holds, and the
+            # head says so when it is showing less than that.
+            full = v.history(args.query)
+            if not full:
                 print(f"[nanomem] Nothing in '{v_path}' matches '{args.query}'.")
                 return
-            if len(chain) == 1:
+            chain = full[-int(args.max_len):] if args.max_len else full
+            if len(full) == 1:
                 print(f"\n[nanomem] '{args.query}' has one value and has never changed:")
+            elif len(chain) < len(full):
+                print(f"\n[nanomem] '{args.query}' has held {len(full)} values "
+                      f"(showing the {len(chain)} most recent):")
             else:
-                print(f"\n[nanomem] '{args.query}' has held {len(chain)} values:")
+                print(f"\n[nanomem] '{args.query}' has held {len(full)} values:")
             for h in chain:
                 tag = "superseded" if h["superseded"] else "current"
                 print(f"  {_fmt_when(h['timestamp'])}  [{tag:^10}] {h['text']}")
@@ -408,7 +429,7 @@ def _main():
                 n = v.export(args.target, purge=purge)
                 print(f"[nanomem] {act} {n} records into '{args.target}'.")
             else:
-                print("[nanomem] Error: Specify --source-doc, --key, --before, or --target.")
+                _fail("Specify --source-doc, --key, --before, or --target.")
 
     elif args.command == "forget":
         with Vault(v_path, password=pw) as v:

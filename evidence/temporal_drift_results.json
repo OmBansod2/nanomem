@@ -1,0 +1,115 @@
+{
+  "step": "coverage extension only -- no knob tuned, no fix shipped",
+  "spec": "design/drifting_phrasing_spec.md (pre-registered before generation)",
+  "date": "2026-09-17",
+  "quarantine": {
+    "barrier": "quarantine_guard.enforce() installed as first action",
+    "proven": "by construction; atime never cited",
+    "files": [
+      "clean_chat_benchmark_persona4.json",
+      "clean_chat_benchmark_heldout.json",
+      "clean_chat_embeds_heldout.npz"
+    ]
+  },
+  "validity": {
+    "drifting": {
+      "label": "drifting",
+      "chains": 100,
+      "newest_not_closest": 97,
+      "newest_not_closest_pct": 97.0,
+      "floor_would_delete_newest": 77,
+      "floor_would_delete_newest_pct": 77.0,
+      "GROUP_COS_DELTA": 0.06,
+      "mean_gap": 0.1453
+    },
+    "control": {
+      "label": "control (announced/silent, existing generator)",
+      "chains": 100,
+      "newest_not_closest": 57,
+      "newest_not_closest_pct": 57.0,
+      "floor_would_delete_newest": 8,
+      "floor_would_delete_newest_pct": 8.0,
+      "GROUP_COS_DELTA": 0.06,
+      "mean_gap": 0.0176
+    },
+    "checks": {
+      "V1_newest_not_closest_ge_60pct": true,
+      "V2_floor_would_delete_ge_40pct": true,
+      "V3_control_fails_both": true,
+      "all_passed": true
+    }
+  },
+  "arms": {
+    "exact_cosine_floor": {
+      "arm": "exact_cosine_floor",
+      "n": 100,
+      "top1": 2,
+      "top1_pct": 2.0,
+      "top3": 65,
+      "top3_pct": 65.0
+    },
+    "nanomem_default": {
+      "arm": "nanomem_default (shipped, group_floor_sim=0.0)",
+      "n": 100,
+      "top1": 10,
+      "top1_pct": 10.0,
+      "top3": 65,
+      "top3_pct": 65.0
+    }
+  },
+  "decision": {
+    "preregistered_bar": "nanomem top-1 >= 95%% on drifting current_value questions",
+    "nanomem_top1_pct": 10.0,
+    "gap_is_real": true,
+    "verdict": "GAP CONFIRMED (10.0% vs the pre-registered 95% bar). The pre-registered sentence continued '... so step 2, a group_floor_sim sweep, is justified'. The gap half of that stands. The sweep half does NOT: diagnostics run after the decision show a tagged revision group forms in 0 of 100 chains, so there is nothing for that knob to act on. Step 2 is retargeted at tag recall. This is a change of TARGET after seeing diagnostics, not a change of BAR -- the bar was met on its own terms and is recorded above unchanged.",
+    "existing_benchmark_current_value_top1": 100.0,
+    "note": "the existing benchmark reports 100.0%% on current_value; this arm is the same question type on a phrasing distribution its generator cannot produce",
+    "verdict_as_preregistered": "GAP CONFIRMED -- step 2 (pre-registered group_floor_sim sweep) is justified"
+  },
+  "arms_note": "both arms score on the SAME questions and vectors; nanomem runs at shipped defaults on a reopened vault via bench_temporal.run_nanomem",
+  "root_cause": {
+    "headline": "the primary defect on drifting phrasings is the ENTITY TAGGER, not the relevance floor. The revision group never forms, so there is nothing for the floor to filter and nothing for the revision lead to order.",
+    "tagger": {
+      "chains_where_every_member_got_the_same_real_tag": {
+        "drifting": "0/100",
+        "control": "70/100"
+      },
+      "revision_docs_left_untagged_pct": {
+        "drifting": 55.0,
+        "control": 22.9
+      },
+      "chains_whose_revision_counter_never_incremented_pct": {
+        "drifting": 88.0,
+        "control": 25.0
+      },
+      "note": "revision numbers are per (user_id, project, entity). When each restatement gets a different tag, or None, every one of them is revision 1 of its own separate fact, so temporal_order has nothing to sort.",
+      "junk_entities_invented_from_narrative": [
+        "handset_finally_died",
+        "diagnosi"
+      ],
+      "junk_caveat": "these two were read directly off a vault; the automated junk detector used was crude and also flagged legitimate names like building_badge_number, so only the two confirmed by inspection are claimed"
+    },
+    "cosine_window_cannot_rescue_it": {
+      "WINDOW_SIM": 0.6,
+      "mean_cosine_between_newest_and_group_best": 0.5679,
+      "p50": 0.5475,
+      "p90": 0.6675,
+      "why": "the vocabulary-free path requires members to look like each other at >= 0.60. On drifting phrasings they do not, so the untagged fallback closes too."
+    },
+    "floor_is_second_order": {
+      "diagnostic": "fraction of chains where the newest would survive a given group_floor_sim",
+      "0.55": "49/100",
+      "0.60": "24/100",
+      "0.65": "13/100",
+      "0.70": "3/100",
+      "why": "group_floor_sim keeps members resembling the group's BEST member. With mean mutual similarity 0.5679, rescuing even half the chains needs 0.55 -- low enough that the floor stops filtering anything, which is the cost the earlier sweeps measured. The knob's premise, that restatements resemble one another, does not hold here."
+    }
+  },
+  "step2_recommendation_revised": {
+    "was": "a pre-registered group_floor_sim sweep",
+    "now": "a group_floor_sim sweep would largely have been wasted: it can only help where a tagged group exists, and on this distribution one forms in 0 of 100 chains. The sweep is NOT the next step.",
+    "target_instead": "entity-tag recall on narrative restatements -- whether a sentence that announces a change without naming the attribute ('Ported the line over the weekend, so reach me on X instead.') can be attached to the attribute it revises. That is a tagger question, and it is upstream of every knob measured so far.",
+    "caveat": "this arm is harder than the live repro (mean query gap 0.1452 vs the repro's 0.1031) partly because revision 0 uses the `first` template, which mirrors the question's own wording and sits far above every narrative restatement. That is realistic chat, not an artifact, but it means 10.0% is a lower bound on a hard slice rather than an estimate of production accuracy."
+  },
+  "what_this_step_did_not_do": "no knob was tuned, no default changed, no fix shipped. The pre-registered decision rule was met on its own terms and the diagnostics were added to aim the next step, not to move the bar."
+}

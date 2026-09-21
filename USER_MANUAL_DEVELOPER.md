@@ -5,7 +5,7 @@ third-party runtime dependency. Search is an **exact linear scan** over the
 corpus — it returns what an exhaustive fp32 cosine scan returns, and its latency
 grows with the corpus.
 
-Package 0.7.20 · engine 3.4.6 · container format 3 · arena cache format 3.
+Package 0.7.21 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 Every performance number in this manual comes from a results JSON in
 `evidence/` produced by a script in this repository, and the file is named
@@ -31,7 +31,7 @@ Check what you actually imported:
 
 ```python
 import nanomem
-print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.20 3.4.6
+print(nanomem.__version__, nanomem.ENGINE_VERSION)   # 0.7.21 3.4.6
 ```
 
 If that prints `0.1.0`, an older editable install is shadowing this package.
@@ -235,9 +235,9 @@ vault.search("Where was the server?", temporal_direction="historical") # revisio
 >   against **90.5 %** for no tag at all (`evidence/temporal_bench_results.json`).
 >   The tag overrides the engine's own grouping, so guessing at it is costly.
 > * A tag the application is SURE of beats detection, and the gap is large on the
->   phrasing the tagger is worst at: the lexical tagger groups 70 of 100 chains
->   on canonical phrasing and **0 of 100** on narrative phrasing
->   (`evidence/grouping_signal_results.json`), where a declared chain resolves
+>   phrasing the tagger is worst at: every member of a chain gets the same correct
+>   tag in 70 of 100 chains on canonical phrasing and **0 of 100** on narrative
+>   phrasing (`evidence/temporal_drift_results.json`), where a declared chain resolves
 >   (`evidence/revision_lead_cap_results.json`).
 >
 > So: a schema field, a form field, a column name — declare it. A heuristic you
@@ -790,8 +790,10 @@ nanomem's.
 cd nanomem_standalone && python3 -m pytest -q
 ```
 
-**705 tests**, no network required, nothing skipped when a local embedder is
-running. There is no `test_security.py`; earlier documentation told you to run
+**782 tests**, no network required, and nothing skipped in a repository checkout.
+The published sdist skips a few: those tests read measurement JSON from
+`scratch/refound/`, which is not part of the distribution, and they skip with that
+reason rather than fail. `BENCHMARKS.md` quotes the sdist's own number. There is no `test_security.py`; earlier documentation told you to run
 one and it never existed.
 
 ---

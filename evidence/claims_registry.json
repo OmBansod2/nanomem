@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 50,
-    "with_test": 36,
+    "total": 56,
+    "with_test": 42,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -53,9 +53,9 @@
     },
     {
       "source": "README.md",
-      "claim": "That handle is then unusable: your encoder is still the model you named, so every call raises until you reopen with one of the file's width.",
+      "claim": "That handle is then only partly usable: your encoder is still the model you named, so every call that needs a NEW vector -- `add`, `update(text=)`, `search`, `history` -- raises until you reopen with one of the file's width.",
       "id": "C007",
-      "test": "test_a_width_mismatched_handle_raises_on_every_call"
+      "test": "test_a_width_mismatched_handle_raises_on_calls_that_need_a_new_vector"
     },
     {
       "source": "README.md",
@@ -319,6 +319,42 @@
       "id": "C047",
       "test": null,
       "waived": "restates C042 for the MCP surface"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "NANOMEM_PASSWORD set but empty is refused rather than silently creating a plaintext vault; unsetting the variable is how you mean 'no encryption'.",
+      "id": "C050",
+      "test": "test_an_empty_password_env_var_is_refused_not_treated_as_plaintext"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "An empty criterion that would WIDEN a destructive operation is refused; one that narrows (ids=[], id='', text_exact='') stays a no-op.",
+      "id": "C051",
+      "test": "test_an_empty_widening_criterion_is_refused"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "The ORDER is the guarantee; the revision NUMBERS are not.",
+      "id": "C052",
+      "test": "test_a_merged_chain_stays_chronological_even_though_revisions_repeat"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "The proxy passes its vault root; the CLI does not, because a person running `nanomem ingest` already has whatever the symlink points at.",
+      "id": "C053",
+      "test": "test_directory_ingest_without_a_root_is_unchanged"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "``confine_root`` refuses any entry that resolves outside that directory.",
+      "id": "C054",
+      "test": "test_directory_ingest_refuses_a_symlink_that_escapes_the_root"
+    },
+    {
+      "source": "nanomem/vault.py",
+      "claim": "phone numbers, addresses) are preserved in full and ORDERED chronologically, so current queries retrieve the latest state without deleting history.",
+      "id": "C055",
+      "test": "test_a_merged_chain_stays_chronological_even_though_revisions_repeat"
     }
   ]
 }

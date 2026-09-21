@@ -1,6 +1,6 @@
 # nanomem: competitive position
 
-**nanomem 0.5.0 / engine 3.2.0**, measured
+**nanomem 0.5.0 / engine 3.2.0 — not re-run against 0.7.21 / 3.4.6**, measured
 2026-09-16/17 on Mac16,11,
 12 logical CPUs, macOS-26.5-arm64-arm-64bit.
 Every number below comes out of a results JSON; the file it came from is named

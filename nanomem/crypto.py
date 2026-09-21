@@ -41,9 +41,17 @@ import numpy as np
 
 # --- labels -----------------------------------------------------------------
 CIPHER_LABEL_NONE = "none (plaintext)"
+# THE DISCLAIMER TRAVELS WITH THE LABEL. `stats()` returns this string and nothing
+# else security-bearing except `encrypted_at_rest` and `kdf`; the sentence "It has
+# not been independently audited or FIPS validated" lived only in THREAT_MODEL,
+# which `stats()` does not return. So `json.dumps(v.stats())` pasted into a
+# compliance questionnaire read as a positive assurance claim with the strongest
+# caveat stripped off. It is part of the label now, because that is the part that
+# gets copied.
 CIPHER_LABEL_SHAKE = (
     "SHAKE256-XOF stream + HMAC-SHA256 tag (encrypt-then-MAC), scrypt-derived keys; "
-    "stdlib construction, not AES, not a NIST AEAD"
+    "stdlib construction, not AES, not a NIST AEAD; "
+    "not independently audited, not FIPS validated"
 )
 
 THREAT_MODEL = """\

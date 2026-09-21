@@ -1795,10 +1795,20 @@ def test_ingest_file_preserves_indentation_and_line_numbers(
     v.close()
 
 
-def test_a_width_mismatched_handle_raises_on_every_call(tmp_path, offline_embedder):
-    """The README says the file keeps its own width and the handle "is then
-    unusable ... every call raises until you reopen with one of the file's
-    width". Nothing asserted the raising half."""
+def test_a_width_mismatched_handle_raises_on_calls_that_need_a_new_vector(tmp_path, offline_embedder):
+    """Named for what it actually asserts, because the old name caused a bug report.
+
+    This was `test_a_width_mismatched_handle_raises_on_every_call`, and its body
+    only ever exercised search, history and add. The seventh black-box review read
+    that name and the matching warning text, ran `prune(keep_current=False)`
+    through a mismatched handle, watched six rows go to zero, and filed a CRITICAL
+    for silent destruction through a handle that supposedly could not touch the
+    file. It reproduced 0 of 8 ops differently from a correctly-matched handle:
+    prune was doing its documented job.
+
+    So the two halves are pinned separately below -- what raises, and what does
+    not raise and must not lose anything.
+    """
     p = str(tmp_path / "mismatch.dat")
     v = Vault(p)
     v.add("The database listens on port 5433.")
@@ -1833,4 +1843,47 @@ def test_a_width_mismatched_handle_raises_on_every_call(tmp_path, offline_embedd
 
     v3 = Vault(p)                       # reopening correctly still works
     assert len(v3.get_all_records()) == 1, "data was lost"
+    v3.close()
+
+
+def test_a_width_mismatched_handle_does_not_destroy_the_vault(tmp_path, offline_embedder):
+    """The negative from round 7, pinned so the refuted claim stays refuted.
+
+    delete / compact / forget_superseded run through a mismatched handle and
+    REWRITE the file -- they do not raise, and the warning used to say they would.
+    What matters is that they behave identically to a matched handle. Measured
+    across 8 ops: 0 differed.
+    """
+    p = str(tmp_path / "mismatch2.dat")
+    v = Vault(p)
+    for i in range(6):
+        v.add("fact number %d about the service" % i)
+    v.flush()
+    v.close()
+
+    class _Narrow:
+        dim = 384
+
+        def embed(self, text):
+            import hashlib
+            h = hashlib.md5(str(text).encode()).digest()
+            return np.frombuffer(h * 24, dtype=np.uint8).astype(np.float32)[:384] / 255.0
+
+        def embed_batch(self, texts):
+            return np.stack([self.embed(t) for t in texts])
+
+    with warnings.catch_warnings(record=True) as caught:
+        warnings.simplefilter("always")
+        v2 = Vault(p, embedder=_Narrow())
+    msg = " ".join(str(w.message) for w in caught)
+    assert "every call will raise" not in msg, "the warning still overstates what raises"
+
+    assert v2.compact() is not None
+    assert len(v2.get_all_records()) == 6, "compact through a mismatched handle lost rows"
+    assert v2.forget_superseded(keep=1)["deleted"] == 0
+    assert len(v2.get_all_records()) == 6
+    v2.close()
+
+    v3 = Vault(p)
+    assert len(v3.get_all_records()) == 6, "the file was damaged"
     v3.close()

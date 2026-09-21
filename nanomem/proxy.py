@@ -182,7 +182,10 @@ class MemoryProxyHandler(BaseHTTPRequestHandler):
                 self.vault.flush()
                 self._send_json(200, {"status": "success", "type": "file", "path": file_path, "chunks_indexed": count})
             else:
-                stats = self.vault.ingest_directory(resolved)
+                # The root goes DOWN into the walk. Resolving the directory name
+                # alone proved nothing about what the walk would find inside it.
+                stats = self.vault.ingest_directory(
+                    resolved, confine_root=MemoryProxyHandler.vault_root)
                 self.vault.flush()
                 self._send_json(200, {"status": "success", "type": "directory", "path": dir_path, **stats})
         except Exception as e:

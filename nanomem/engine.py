@@ -931,16 +931,22 @@ class VaultEngine:
                                    readonly=self.read_only)
             h = self._cont.header
             if h.embed_dim != self.embed_dim:
-                # SAY WHAT HAPPENS NEXT, NOT JUST WHAT WAS IGNORED. The file
-                # keeps its width and nothing is corrupted, but the caller's
-                # encoder is still the one they named, so every search, history
-                # and add from here raises on the width mismatch. "ignored" read
-                # as "carried on at the file's width", which it does not.
+                # SAY WHICH CALLS RAISE, BECAUSE NOT ALL OF THEM DO. "every call
+                # will raise" was false and actively misleading: delete, prune,
+                # compact and forget_superseded all succeed through a mismatched
+                # handle AND REWRITE THE FILE. A reviewer read the old wording,
+                # watched prune() take a vault to zero, and reported silent
+                # destruction through a handle that supposedly could not touch it.
+                # It was prune doing its documented job -- identical through a
+                # matched handle -- but the warning is what made it look like a
+                # defect. Only calls needing a NEW vector raise.
                 warnings.warn(
                     f"{self.filepath} stores {h.embed_dim}-d vectors; requested "
-                    f"embed_dim={self.embed_dim} ignored. The file is unchanged, "
-                    f"but this handle cannot read or write it -- every call will "
-                    f"raise until you reopen with a {h.embed_dim}-d model.",
+                    f"embed_dim={self.embed_dim} ignored. The file is unchanged and "
+                    f"this handle can still READ it, and delete/prune/compact/"
+                    f"forget_superseded will rewrite it. Only calls that need a new "
+                    f"vector -- add, update(text=), search, history -- raise, until "
+                    f"you reopen with a {h.embed_dim}-d model.",
                     UserWarning, stacklevel=2)
                 self.embed_dim = int(h.embed_dim)
             self.block_capacity = int(h.block_capacity)

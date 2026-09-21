@@ -60,7 +60,8 @@ paragraph because little else here matters as much.
 
 Name the attribute and nanomem knows those three statements are one fact, so it
 keeps them as a chain. Leave it out and a lexical tagger guesses from the text —
-measured recall 70 of 100 on plainly-worded chains and **0 of 100 on narrative
+measured, on 100 chains per arm, every member of a chain got the same correct tag in
+70 of 100 plainly-worded chains and **0 of 100 on narrative
 phrasing**. In the example above it tags "I moved jobs, I now work at Initech."
 as `location` rather than `career`, because "moved" outweighs "work at", and the
 chain silently splits in two.
@@ -107,7 +108,7 @@ closed cleanly was never written.
 
 ---
 
-Package 0.7.20 · engine 3.4.6 · container format 3 · arena cache format 3.
+Package 0.7.21 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
 academic and open-source use, and for running internally on your own machines.
@@ -138,7 +139,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-705 tests, no network needed.
+782 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and
@@ -189,9 +190,14 @@ Point it anywhere with `base_url=` or `NANOMEM_EMBED_URL`. Pass `dim=` to
 `EmbeddingProvider` to skip the probe entirely (air-gapped installs). An
 existing vault's width always wins over the one you request, so you cannot
 silently corrupt a vault by naming a different model later — you get a warning
-and the file keeps its own width. That handle is then unusable: your encoder is
-still the model you named, so every call raises until you reopen with one of the
-file's width. Nothing is lost, but it does not quietly carry on.
+and the file keeps its own width. That handle is then only partly usable: your
+encoder is still the model you named, so every call that needs a NEW vector --
+`add`, `update(text=)`, `search`, `history` -- raises until you reopen with one of
+the file's width. Reads still work, and `delete`, `prune`, `compact` and
+`forget_superseded` still run and still rewrite the file, behaving exactly as they
+do through a matched handle (measured across 8 operations: 0 differed). This said
+"every call raises" through 0.7.20, which is what led a reviewer to read a normal
+`prune` as silent destruction. Nothing is lost, but it does not quietly carry on.
 
 **Without a daemon** there is a fallback, and it is worth knowing what it is:
 a deterministic *lexical* encoder at 768-d — words and character trigrams
@@ -244,9 +250,10 @@ not on by default (`evidence/staleness_calibration.json`).
 tell they are the same attribute, and that needs either a vocabulary or the
 query — five vocabulary-free signals were measured and all are at chance against
 sibling attributes like home-vs-office address
-(`evidence/grouping_signal_results.json`). With canonical phrasing the
-tagger groups 70 of 100 chains; with narrative phrasing ("ported the line over
-the weekend, reach me on …") it groups 0 of 100. **If your application knows its
+(`evidence/grouping_signal_results.json`). With canonical phrasing every member
+of a chain gets the same correct tag in 70 of 100 chains; with narrative phrasing
+("ported the line over the weekend, reach me on …") in 0 of 100
+(`evidence/temporal_drift_results.json`). **If your application knows its
 own attributes, declare them** — pass `metadata={"entity": "employer"}` on write
 — and set `group_floor_sim=0.45`, worth +19.0 points of top-1 on exactly the
 phrasing the tagger struggles with (`floor_retune_results.json`). Leave both

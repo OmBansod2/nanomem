@@ -6,16 +6,18 @@ run it is printed next to the claim. The rest is a number in a results file,
 reported with the machine it was measured on and where nanomem loses.
 
 ```bash
-pip download --no-deps --no-binary :all: nanomem==0.7.20
-tar xzf nanomem-0.7.20.tar.gz && cd nanomem-0.7.20
+pip download --no-deps --no-binary :all: nanomem==0.7.21
+tar xzf nanomem-0.7.21.tar.gz && cd nanomem-0.7.21
 pip install pytest && python -m pytest tests/ -q
-# 681 passed   -- no network, no API key, no fixtures to fetch
+# 765 passed, 17 skipped   -- no network, no API key, no fixtures to fetch.
+# The skips read measurement JSON and golden vaults that are not shipped in the
+# sdist; a repository checkout runs all 782 with nothing skipped.
 ```
 
 Every test named on this page runs from that download except one, which is
 called out where it appears.
 
-Everything here is nanomem **0.7.20 / engine 3.4.6**. This line read "0.7.9 /
+Everything here is nanomem **0.7.21 / engine 3.4.6**. This line read "0.7.9 /
 engine 3.4.1" through 0.7.17 -- nine releases stale, on the page the README calls
 "Evidence", while the download instructions above fetched a version from before
 half the fixes on it. Timings are an Apple M4

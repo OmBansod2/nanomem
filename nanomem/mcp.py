@@ -201,6 +201,14 @@ def _fmt_span(seconds):
     the most volatile thing in the vault, and it was the one case rendered as
     nothing.
     """
+    # A group admitted by min_revisions<=1 has ONE timestamp, so np.diff is empty
+    # and the engine honestly reports median_interval=None. This function had no
+    # None branch, so the tool raised TypeError and the server answered JSON-RPC
+    # -32603 for a value its own inputSchema declares as a plain integer.
+    # Rendered, not clamped: clamping min_revisions to 2 would silently ignore
+    # what the caller asked for.
+    if seconds is None:
+        return "n/a"
     s = max(0.0, float(seconds))
     if s < 90:
         return f"{s:.0f}s"
@@ -247,9 +255,18 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
             for i, h in enumerate(hits))
 
     if tool_name == "nanomem_history":
-        chain = vault.history(args.get("query", ""), max_len=args.get("max_len"))
-        if not chain:
+        # ASK FOR THE WHOLE CHAIN, THEN TRUNCATE HERE. Passing `max_len` down left
+        # this code guessing at whether truncation had happened, and the guess
+        # `len(chain) >= max_len` was wrong in exactly the cases where max_len
+        # EQUALS the true chain length -- the most natural call an agent makes.
+        # Measured over a 24-case grid: 4 wrong, every one of them announcing
+        # "there are earlier ones" about a chain being shown in full. Comparing
+        # against the full chain is 0 wrong over the same grid.
+        full = vault.history(args.get("query", ""))
+        if not full:
             return "Nothing in memory matches that."
+        _max_len = args.get("max_len")
+        chain = full[-int(_max_len):] if _max_len else full
         # "never changed" IS A CLAIM, AND max_len TRUNCATES. This keyed on
         # `len(chain) == 1` AFTER the caller's `max_len` had already cut the
         # chain, so `nanomem_history(max_len=1)` told the agent a fact "has never
@@ -257,12 +274,9 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         # is a model that cannot check, and the whole point of this tool is to
         # say what a value HAS BEEN.
         #
-        # The revision number of the oldest entry shown says which case this is:
-        # a genuine single-value fact starts at revision 1, a truncated view does
-        # not.
-        oldest_shown = int(chain[0].get("revision") or 1)
-        truncated = oldest_shown > 1 or (
-            args.get("max_len") is not None and len(chain) >= int(args["max_len"]))
+        # Truncation is now a FACT, not an inference: the rows shown against the
+        # rows the vault returned.
+        truncated = len(chain) < len(full)
         # "NEVER CHANGED" IS ONLY KNOWABLE FOR A DECLARED CHAIN. A one-entry
         # history can also mean the TAGGER did not group a restatement -- which
         # the README measures at 0/100 on narrative phrasing when no entity was
@@ -271,7 +285,32 @@ def dispatch(vault: Vault, tool_name: str, args: Dict[str, Any]) -> str:
         # `nanomem_changes` showing both, and this line saying the fact had never
         # changed.
         declared = bool((chain[0].get("metadata") or {}).get("entity_declared"))
+        # A DECLARED ANCHOR IS NOT A COMPLETE CHAIN. `entity_declared` says this
+        # RECORD named its entity. It cannot say that every OTHER write about the
+        # same fact was grouped with it, and that is the difference that bites: a
+        # vault where one write declared `entity` and the later restatements did
+        # not leaves those restatements ungrouped (measured here: `changes()`
+        # shows them with entity=None), so a one-entry chain with declared=True
+        # was printed above two newer values the vault still held, the oldest
+        # tagged [current].
+        #
+        # What IS knowable is narrower, and is what gets claimed now: every write
+        # that DECLARED this entity is in this chain. Writes that declared nothing
+        # are grouped by the tagger, which the README measures at 0 of 100 on
+        # narrative phrasing -- so when any such write exists, the unqualified
+        # sentence is not available. Counting them is one scan, on the only branch
+        # that asserts something about what does not exist.
+        undeclared = 0
         if len(chain) == 1 and not truncated and declared:
+            for r in vault.get_all_records():
+                if not (r.get("metadata") or {}).get("entity_declared"):
+                    undeclared += 1
+        if len(chain) == 1 and not truncated and declared and undeclared:
+            head = (f"This has one value, and no other write that DECLARED this "
+                    f"entity has changed it. {undeclared} write(s) in the vault "
+                    f"declared no entity and are grouped separately, so this may "
+                    f"not be every value -- use nanomem_changes to see every write:")
+        elif len(chain) == 1 and not truncated and declared:
             head = "This has one value and has never changed:"
         elif len(chain) == 1 and not truncated:
             head = ("One value is grouped under this. The entity was not declared, "

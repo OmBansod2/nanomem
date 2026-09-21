@@ -6,6 +6,254 @@ number below is from one of those files.
 
 ---
 
+## 0.7.21 — engine 3.4.6 (unchanged: nothing in the engine or in ranking moved)
+
+Seventh black-box review. It found that 0.7.20's own new guard had the defect
+0.7.20's changelog diagnosed, and that is the entry.
+
+### The guard held on one of six doors
+
+0.7.20 fixed `delete(where={})` and wrote this into its own changelog:
+
+> A library whose job is not losing data cannot have a validation rule that holds
+> on one of four doors.
+
+It then shipped that release's new guard on one of six. Measured on 0.7.20, each
+of these took a ten-record vault to zero:
+
+    delete(where={})                 raised ValueError   <- the one that was fixed
+    delete(text_contains='')         10 -> 0
+    delete(source='')                10 -> 0
+    export(where={}, purge=True)     10 -> 0
+    split({}, purge=True)            10 -> 0
+    split_by_doc('', purge=True)     10 -> 0   <- not in the report; found by looking
+    unmerge('')                      10 -> 0   <- no `purge` flag to decline
+
+`unmerge('')` is the worst of them. The other five need a caller to pass an empty
+value where a filter was meant; `unmerge` has no `purge=False` to fall back on,
+and `"" in [source_vault, project, basename]` is true for every record whose
+`source_vault` was never set -- which is every record a user added themselves.
+
+All six now pass through one function, and each raises under the parameter name
+the CALLER wrote: `split(filter_dict={})` used to say "where", because that is
+what it was forwarded as, which sends someone to the wrong line.
+
+**The rule is DIRECTION, not emptiness.** An empty value that narrows stays a
+no-op: `delete(ids=[])` means "remove these zero records", which is what a loop
+over an empty list should do, and raising there would be hostile. `ids=[]`,
+`id=''` and `text_exact=''` are deliberately not guarded, and are pinned as
+no-ops so that staying permissive is a decision. `export(where={})` WITHOUT purge
+is a full backup and stays allowed for the same reason.
+
+### Writing the generalisation as prose is what failed
+
+So it is applied as a test over the SURFACE.
+`tests/test_empty_criterion_safety.py` enumerates every criterion-shaped
+parameter on the public `Vault` API by introspection and requires each to carry a
+declared verdict -- REFUSES, NARROWS, READS or LABEL. A method added later, or a
+new parameter on an existing one, fails `test_every_criterion_parameter_is_declared`
+until a human drives it with an empty value and says which way it goes. That
+failure was demonstrated before the test was trusted: adding a
+`purge_everything_matching(where=None)` method made it fail by name.
+
+### And a test that generates the spellings nobody listed
+
+Enumerating the surface closes this class by METHOD. It cannot close it by SHAPE:
+it probes only the spellings someone wrote down, and four consecutive rounds have
+now found a spelling nobody wrote down.
+
+`tests/test_write_path_fuzz.py` drives random operation sequences against the
+vault and against a deliberately trivial reference model held in a dict, and
+after every operation asserts one invariant:
+
+    NO OPERATION MAY REMOVE A RECORD THE CALLER DID NOT NAME,
+    AND NO SURVIVING RECORD MAY CHANGE.
+
+Every write-path defect found in rounds 4 through 7 violated exactly that
+sentence. A failure prints the seed and the operation sequence that produced it.
+The suite runs 8 seeds; `scratch/refound/fuzz_write_paths.py` runs the same
+engine -- imported, not copied, so the two cannot drift -- at scale. On this
+release: **28,553 operations across 400 seeds, 0 failures**
+(`scratch/refound/fuzz_write_paths_results.json`).
+
+The fuzzer is itself tested. `test_the_fuzzer_would_catch_a_regression` asserts
+the invariant check FAILS on a vault that has lost a record, because a fuzzer
+that cannot fail proves nothing.
+
+### CRITICAL: two files with the same name shared row ids
+
+`ingest_file` minted `{basename}:{start}-{end}`, so the directory was dropped and
+`a/config.txt` and `b/config.txt` produced byte-identical ids for every chunk
+whose line span coincided -- which, at a fixed chunk size, is every chunk of every
+file of similar length. Measured: ingesting both gave 6 rows with 3 distinct ids,
+`delete(id="config.txt:1-50")` returned 2 and took 40 distinct source lines of the
+OTHER file with it, leaving that file intact on disk and its content unfindable by
+search.
+
+Worse, and with no destructive call involved: `get()` resolved the id through the
+arena index (last wins) and `update()` through a linear scan (first wins), so the
+same id READ from one file and WROTE to the other. A caller reading a chunk,
+editing it and writing it back moved content between files.
+
+The unique key was already being computed 45 lines above and stamped only as
+`parent_id`. Ids are now `{basename}@{digest}:{start}-{end}`.
+
+Ids minted before this release still resolve when they are UNAMBIGUOUS -- a bare
+`name:start-end` would otherwise have died silently, `get` returning None and
+`delete` returning 0, for every handle anyone had written down. When a bare id
+names chunks of two different files, that IS the collision this release fixed, and
+resolving it either way would reintroduce it: it raises, naming both files.
+
+### Two security findings
+
+**`NANOMEM_PASSWORD=""` created a plaintext vault silently.** `os.getenv(...) or
+None` swallowed the empty string, so a secret store that returned nothing, or a
+`${NANOMEM_PASSWORD:-}` default in a compose or systemd env file, produced
+`encrypted_at_rest=False` with the record text readable in the `.dat` bytes, while
+the operator believed a passphrase had been supplied. Now refused, with a message
+that says to UNSET the variable to mean "no encryption". This breaks deployments
+that deliberately export an empty string; that is the intended break.
+
+**The proxy's directory ingest followed symlinks out of its root.**
+`_resolve_content_path` realpath()s the name the client sent and requires the
+result to be inside the root -- correct, and why `{"file": "leak.txt"}` was
+refused, since that realpath is the link's target. For `{"directory": "."}` the
+realpath is the root itself, so the check passed and the walk then followed every
+link inside it. A repo shipping `docs/notes.md -> ~/.aws/credentials` had that
+file ingested and returned by `/v1/memory/search`; `/chat/completions` injects
+search hits into the upstream system prompt, so it left the machine too. The
+extension filter was applied to the LINK's name, so the target needed no extension
+at all. `ingest_directory` now takes `confine_root`, re-checks every file AND
+directory entry against it, and reports `skipped_outside_root`. The CLI passes no
+root: a person running `nanomem ingest` already has whatever the link points at.
+
+### Said more than it could know, again
+
+* **The CLI never got 0.7.19's fix.** `nanomem history <q> -n 1` on a four-value
+  chain printed "has one value and has never changed" above a value two years
+  stale. `mcp.py` was fixed in 0.7.19 and `cli.py:336` was the same line,
+  untouched. The CLI now asks for the whole chain and truncates for display, so
+  the count comes from what the vault holds and the head says when it is showing
+  less.
+* **The MCP tool fabricated the opposite claim.** Truncation was INFERRED from
+  `len(chain) >= max_len`, which is wrong in exactly the cases where `max_len`
+  equals the true chain length -- the most natural call an agent makes. Over a
+  24-case grid it was wrong 4 times, every one announcing "there are earlier ones"
+  about a chain being shown in full. It now compares the shown rows against the
+  returned rows: 0 wrong over the same grid.
+* **`entity_declared` was treated as proof that grouping was complete.** It says
+  this RECORD named its entity. When one write declares an entity and later
+  restatements do not, the undeclared ones are not grouped (`changes()` shows them
+  with `entity=None`), so a one-entry chain sat above newer values the vault still
+  held. The claim is now the narrower one that is actually knowable: every write
+  that DECLARED this entity is in this chain, and when undeclared writes exist it
+  says so and points at `nanomem_changes`.
+* **`stats()["cipher"]` read as an assurance claim.** The sentence "It has not
+  been independently audited or FIPS validated" lived only in `crypto.THREAT_MODEL`,
+  which `stats()` does not return -- so `json.dumps(v.stats())` pasted into a
+  compliance questionnaire carried the construction caveat and not the strongest
+  one. It is part of the label now, because the label is the part that gets copied.
+
+### Smaller
+
+* `nanomem split <typo>.dat` exited 0, printed "[nanomem] Copied 0 records into
+  '<target>'." on stdout naming a target that was never created, and CREATED the
+  typo'd source as a 256-byte vault. `split` and `merge` read their source
+  POSITIONALLY, so `_require_vault` -- which checks `--vault` -- could never have
+  covered them. They are guarded now, along with `rekey`, and `split` with no mode
+  flag fails through `_fail` instead of printing "Error:" to stdout and exiting 0.
+* `nanomem_volatility(min_revisions<=1)` raised `TypeError` over the wire as
+  JSON-RPC -32603. A group admitted by `min_revisions<=1` has one timestamp, so
+  the engine honestly reports `median_interval=None`, and `_fmt_span` had no None
+  branch. It renders "n/a" rather than clamping `min_revisions`, which would
+  silently ignore what the caller asked for.
+* `split_by_key` merged metadata values differing only in case into one file on
+  macOS and Windows while REPORTING two partitions: `{'Work': 2, 'work': 2}` with
+  a single `Work.dat` holding both. Nothing was lost; the returned dict described
+  a layout that did not exist. The collision test now compares filenames the way
+  the filesystem does.
+
+### Refuted, and pinned as refuted
+
+**"A width-mismatched handle destroys the vault" does not reproduce.** Reported
+as CRITICAL: `delete`/`prune`/`compact`/`forget_superseded` through a mismatched
+handle taking 6 rows to 0. Measured across 8 operations against a correctly
+matched control, 0 differed. The 6 -> 0 is `prune(older_than_days=0,
+keep_current=False)` selecting on age alone, which is what it documents, and it
+does the same through a matched handle. It cannot corrupt anything: `container.py`
+re-reads the width from the file header and ignores the handle's, so a wrong-width
+handle cannot mis-stride the vector region.
+
+What was real is the WARNING, which said "every call will raise" -- and the
+README said it too, and so did a test NAME,
+`test_a_width_mismatched_handle_raises_on_every_call`, whose body only ever
+exercised `search`, `history` and `add`. A reviewer read the name and the warning,
+ran a normal `prune`, and filed a critical. All three now say which calls raise
+and which run and rewrite the file. The test is renamed for what it asserts, and
+a second test pins the negative so the refuted claim stays refuted.
+
+The proposed fix -- refuse to open on a width mismatch -- was rejected. `Vault`
+sizes its engine from `embedder.dim`, and the dimension probe falls back to 768
+whenever no daemon answers, so it would hard-fail every air-gapped open of a
+384-d vault.
+
+### Also rejected: renumbering merged revisions
+
+`merge()` promised "monotonic revisions" and delivered `[1, 2, 1, 1, 3]` in time
+order when the incoming vault's timestamps interleave with this one's. Two fixes
+were considered and both rejected:
+
+* Renumbering the group chronologically would rewrite records the caller never
+  named -- the defect class 0.7.20 and this release exist to remove.
+* Assigning `max_existing_rev + 1` would be worse than the repeat.
+  `entities.temporal_order` lexsorts on `(revision, timestamp)` with REVISION
+  primary, so handing an older record the highest number makes a stale value the
+  `current` one. That is the 0.7.20 `update()` re-dating defect, rebuilt.
+
+The repeat is harmless because equal revisions tie and the timestamp breaks the
+tie. Measured on exactly that sequence: the chain comes back chronological, one
+value is `current`, it is the newest, and `forget_superseded(keep=1)` keeps it.
+The docstring now promises ORDER, which is what is true, instead of "monotonic
+revisions", which was not.
+
+### Documentation integrity
+
+`release_preflight.py` refused this release three times while it was being
+prepared -- for a missing changelog entry, for a claim naming the test that had
+just been renamed, and for four new claims not yet in the registry. That is the
+gate working.
+
+* **"70 of 100" and "0 of 100" were cited to a file that does not contain them.**
+  The numbers are real and live in `temporal_drift_results.json`, which was not
+  published. It is published now, as `evidence/temporal_drift_results.json`. The
+  metric was also mislabelled as "recall": it is the share of chains where every
+  member got the same correct tag.
+* **`evidence/INDEX.md` claimed every results file carries a `measured_on` block.**
+  3 of 59 do. Under `benchmarks/`, 13 of 13 do, and that is the one preflight
+  enforces. The paragraph now says which is which. Its file counts were wrong too
+  (116 and 74 against an actual 80).
+* **"arena cache format 3"** in the README and the developer manual, against an
+  actual `ARENA_CACHE_VERSION = 4`.
+* **Stale version stamps**: `SERVICES_AND_API_SPECIFICATION.md` and
+  `USER_MANUAL.md` still said 0.3.0 / engine 3.0.3. `COMPETITIVE_POSITION.md` is
+  genuinely from 0.5.0 / 3.2.0 and now says so rather than carrying a bare stale
+  stamp.
+* **Test counts**: the README and the developer manual said 705, `BENCHMARKS.md`
+  said 681. A checkout runs 782 with nothing skipped; the sdist runs 765 and skips
+  17, all of them reading measurement JSON and golden vaults that are not shipped
+  in a distribution. Both numbers are stated, with the reason.
+
+### Why the engine version does not move
+
+`ENGINE_VERSION` moves when the engine's observable behaviour or its layout on
+disk changes. The engine diff in this release is one warning string. The chunk-id
+format change is in `Vault.ingest_file`: no benchmark measures ingest ids, vaults
+written earlier still read, and old ids still resolve. Ranking, scoring and the
+container format are untouched, so the 13 benchmark results measured on 3.4.6
+remain valid, as they did across 0.7.19 and 0.7.20 for the same reason.
+
+---
+
 ## 0.7.20 — engine 3.4.6 (unchanged)
 
 Three write paths that lost data the caller had not asked to lose, and the
@@ -104,7 +352,7 @@ into it.
   different things -- a tag that is merely PLAUSIBLE is worse than none (59.2 %
   against 90.5 %, `evidence/temporal_bench_results.json`), and a tag the
   application is SURE of beats detection on the phrasing the tagger is worst at
-  (0 of 100 chains grouped, `evidence/grouping_signal_results.json`). The manual
+  (0 of 100 chains grouped, `evidence/temporal_drift_results.json`). The manual
   now says that instead of contradicting the README.
 * **"It returns what an exhaustive fp32 cosine scan returns" was stated
   unqualified**, immediately above a default (`decompose=True`) that splits a

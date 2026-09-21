@@ -89,6 +89,48 @@ OPENAI_COMPATIBLE_PORTS = frozenset({1234, 8000, 8080, 5000, 4891, 11435})
 MAX_SUB_QUERIES = 8
 
 
+_LEGACY_CHUNK_ID_PATTERN = r"^(?P<name>[^@]+):(?P<span>\d+-\d+)$"
+
+
+def _within(path: str, root: str) -> bool:
+    """True when `path` really lives under `root`, following every link first."""
+    rp = os.path.realpath(path)
+    return rp == root or rp.startswith(root + os.sep)
+
+
+def _legacy_chunk_matches(all_recs, wanted: str):
+    """Rows whose id is the 0.7.21 spelling of a bare ``{basename}:{start}-{end}``.
+
+    Ids minted before 0.7.21 carry no per-file digest, so a vault written then --
+    or an id a caller wrote down, cached or pasted from a runbook -- would simply
+    stop resolving, silently: `get` would return None, `exists` False, `delete` 0.
+    None of those raise, which is the worst way for a handle to die.
+
+    So a bare id is still accepted when it is UNAMBIGUOUS. When it names rows from
+    two different files, that is precisely the collision this release fixed, and
+    resolving it either way would reintroduce the defect -- it raises instead.
+    """
+    import re
+    m = re.match(_LEGACY_CHUNK_ID_PATTERN, str(wanted).strip())
+    if not m:
+        return []
+    prefix = m.group("name") + "@"
+    suffix = ":" + m.group("span")
+    hits = [r for r in all_recs
+            if str(r.get("id") or "").startswith(prefix)
+            and str(r.get("id") or "").endswith(suffix)]
+    files = {str((r.get("metadata") or {}).get("parent_id") or r.get("id")) for r in hits}
+    if len(files) > 1:
+        raise ValueError(
+            "id %r is ambiguous: it names chunks of %d different files (%s). Ids of "
+            "this shape stopped being unique before 0.7.21 -- that collision is the "
+            "defect this release fixed. Use the full id, which now carries a "
+            "per-file digest: %s"
+            % (wanted, len(files), ", ".join(sorted(files)),
+               ", ".join(sorted(str(r.get("id")) for r in hits)[:4])))
+    return hits
+
+
 def _chunk_index(chunk_id: str) -> int:
     """Where a chunk sits in its document, for ordering.
 
@@ -213,6 +255,47 @@ def _reject_reserved_metadata(meta) -> None:
             "caller: %s. Rename the field (for example %r -> %r). Filtering on "
             "these keys is still supported."
             % (", ".join(repr(k) for k in clash), why, clash[0], "my_" + clash[0]))
+
+
+def _reject_empty_criterion(method: str, **criteria) -> None:
+    """Refuse a criterion that was BUILT, came out empty, and now matches everything.
+
+    0.7.20 fixed this for `delete(where={})` and shipped the GENERALISATION as a
+    sentence in a changelog instead of as code. The seventh black-box round then
+    found the identical defect on five more doors, and measured each of them
+    taking a ten-record vault to zero: `delete(text_contains="")`,
+    `delete(source="")`, `export(where={}, purge=True)`,
+    `export(source_doc="", purge=True)` -- reached as `split({}, purge=True)` and
+    `split_by_doc("", purge=True)` -- and `unmerge("")`, which is the worst of
+    them because it has no `purge` flag a caller could decline to pass.
+
+    The rule is about DIRECTION, not emptiness. An empty value that NARROWS is
+    well defined and ordinary: `delete(ids=[])` means "remove these zero records",
+    which is exactly what a loop over an empty list should do, and raising there
+    would be hostile. An empty value that WIDENS is never what the caller meant,
+    because the spelling for "everything" is not "a constraint with nothing in
+    it". Only widening parameters are passed to this function, and every
+    destructive surface passes all of its widening parameters through it -- see
+    `tests/test_empty_criterion_safety.py`, which enumerates the SURFACES so a
+    ninth door fails that test until it is listed.
+    """
+    for param, value in criteria.items():
+        if value is None:
+            continue  # not supplied at all -- that is the documented no-op spelling
+        if isinstance(value, str) and not value.strip():
+            shape = "an empty string"
+        elif isinstance(value, dict) and not value:
+            shape = "an empty filter"
+        else:
+            continue
+        raise ValueError(
+            "%s(%s=%r) would match every record and destroy the whole vault. %s is "
+            "almost always a criterion that was built and came out empty, so this "
+            "is refused rather than obeyed. Pass a %s with at least one condition, "
+            "or if you really mean to remove everything, delete the vault file "
+            "itself."
+            % (method, param, value, shape[0].upper() + shape[1:],
+               "filter" if shape.endswith("filter") else "value"))
 
 
 def _doc_fingerprint(text: str) -> str:
@@ -377,7 +460,24 @@ class Vault:
         # NotEncryptedError against an existing plaintext target. Only an omitted
         # argument consults the environment.
         if password is _UNSET_PW:
-            self._password = os.getenv("NANOMEM_PASSWORD") or None
+            # `os.getenv(...) or None` swallowed the EMPTY string. A variable set
+            # but empty is what a secret store, a `${NANOMEM_PASSWORD:-}` default
+            # in a compose/systemd env file, or a failed lookup produces -- and the
+            # vault was then created PLAINTEXT with encrypted_at_rest=False, while
+            # the operator believed the passphrase had been supplied. Measured on
+            # 0.7.20: the record text was readable in the .dat bytes.
+            #
+            # Refused, not guessed. Absent (None) still means no encryption, which
+            # is the spelling that says so; `password=None` passed explicitly is
+            # untouched, because it takes the other branch.
+            env_pw = os.getenv("NANOMEM_PASSWORD")
+            if env_pw is not None and not env_pw:
+                raise ValueError(
+                    "NANOMEM_PASSWORD is set but EMPTY. An empty passphrase used to "
+                    "create a PLAINTEXT vault silently, so a lookup that returned "
+                    "nothing looked like success. UNSET the variable to mean 'no "
+                    "encryption', or pass password=None explicitly.")
+            self._password = env_pw
         else:
             self._password = password
         self.engine = VaultEngine(filepath=self.path, embed_dim=self.embedder.dim,
@@ -679,7 +779,23 @@ class Vault:
                 if chunk_text.strip():
                     start_line = start_idx + 1
                     end_line = min(start_idx + len(slice_lines), len(raw_lines))
-                    chunk_id = f"{basename}:{start_line}-{end_line}"
+                    # THE DIRECTORY USED TO BE DROPPED HERE. `basename` was the only
+                    # file-identifying part of a row id, so `a/config.txt` and
+                    # `b/config.txt` minted byte-identical ids for every chunk whose
+                    # line span coincided -- which, at a fixed chunk size, is every
+                    # chunk of every file of similar length. Measured on 0.7.20:
+                    # ingesting both gave 6 rows with 3 distinct ids;
+                    # `delete(id="config.txt:1-50")` returned 2 and took 40 distinct
+                    # source lines of the OTHER file with it, leaving that file on
+                    # disk and its content unfindable by search. `get()` and
+                    # `update()` on one id reached DIFFERENT files -- read last-wins
+                    # through the id index, write first-wins through the linear scan
+                    # -- so reading a chunk, editing it and writing it back moved
+                    # content between files with no destructive call involved.
+                    #
+                    # The unique key was already computed 45 lines above and only
+                    # stamped as `parent_id`. Using it here costs nothing.
+                    chunk_id = f"{basename}@{file_doc_id[4:]}:{start_line}-{end_line}"
 
                     if callable(metadata):
                         try:
@@ -730,14 +846,33 @@ class Vault:
         self,
         dir_path: str,
         extensions: Optional[List[str]] = None,
-        ignore_dirs: Optional[List[str]] = None
+        ignore_dirs: Optional[List[str]] = None,
+        confine_root: Optional[str] = None
     ) -> Dict[str, int]:
         """
         Recursively indexes an entire codebase or repository for coding agents.
         Skips build artifacts, git history, and caches automatically.
+
+        ``confine_root`` refuses any entry that resolves outside that directory.
+        The proxy passes its vault root; the CLI does not, because a person
+        running `nanomem ingest` already has whatever the symlink points at.
         """
         if not os.path.isdir(dir_path):
             raise NotADirectoryError(f"Directory not found: {dir_path}")
+
+        # CONFINEMENT HAS TO BE RE-CHECKED PER ENTRY. The proxy realpath()s the
+        # directory NAME the client sent and requires the result to be inside the
+        # root, which is correct and is why `{"file": "leak.txt"}` was refused --
+        # that realpath is the link's target. For `{"directory": "."}` the
+        # realpath is the root itself, so the check passed and the walk below then
+        # followed every link inside it. Measured: a repo shipping
+        # `docs/notes.md -> ~/.aws/credentials` had that file ingested and
+        # returned by /v1/memory/search, and /chat/completions injects search hits
+        # into the upstream system prompt, so it leaves the machine too. The
+        # extension filter is applied to the LINK's name, so the target needs no
+        # extension at all.
+        if confine_root is not None:
+            confine_root = os.path.realpath(os.path.abspath(confine_root))
 
         default_exts = {
             ".py", ".ts", ".js", ".tsx", ".jsx", ".rs", ".go", ".cpp", ".c", ".h", ".hpp",
@@ -759,12 +894,20 @@ class Vault:
 
         targets = []
         est_bytes = 0
+        skipped_outside_root = 0
         for root, dirs, files in os.walk(dir_path):
             dirs[:] = [d for d in dirs if d not in ignored and not d.startswith(".")]
+            if confine_root is not None:
+                # A directory symlink escapes just as well as a file one.
+                dirs[:] = [d for d in dirs
+                           if _within(os.path.join(root, d), confine_root)]
             for f in files:
                 ext = os.path.splitext(f)[1].lower()
                 if ext in allowed_exts and not f.startswith("."):
                     full_path = os.path.join(root, f)
+                    if confine_root is not None and not _within(full_path, confine_root):
+                        skipped_outside_root += 1
+                        continue
                     targets.append(full_path)
                     try:
                         est_bytes += os.path.getsize(full_path)
@@ -801,7 +944,13 @@ class Vault:
             except Exception:
                 continue
 
-        return {"files_indexed": total_files, "chunks_indexed": total_chunks}
+        out = {"files_indexed": total_files, "chunks_indexed": total_chunks}
+        if confine_root is not None:
+            # Reported rather than silent: a caller who pointed this at a tree with
+            # links out deserves to know something was declined, not to wonder why
+            # a file it can see is not in the index.
+            out["skipped_outside_root"] = skipped_outside_root
+        return out
 
     def add_batch(
         self,
@@ -1510,6 +1659,12 @@ class Vault:
         if rec is None:
             chunks = self._chunks_of(clean_id)
             if not chunks:
+                # An id minted before 0.7.21 carries no per-file digest. Accept it
+                # when it is unambiguous rather than returning None for a handle
+                # that was valid when it was written down.
+                legacy = _legacy_chunk_matches(self.get_all_records(), clean_id)
+                if len(legacy) == 1:
+                    return self.engine.get(str(legacy[0].get("id")))
                 return None
             # The whole document, not one chunk. Chunks carry a 40-word overlap
             # bridge, so they are joined by removing the real overlap between
@@ -1593,6 +1748,19 @@ class Vault:
             if r.get("id") == clean_id or (r.get("metadata") or {}).get("id") == clean_id:
                 target_idx = idx
                 break
+
+        if target_idx is None:
+            # A pre-0.7.21 chunk id, accepted only when it names one file. This
+            # is the WRITE path, so an ambiguous one raises rather than picking:
+            # first-wins here and last-wins in `get` is what moved content
+            # between two files in the first place.
+            legacy = _legacy_chunk_matches(all_recs, clean_id)
+            if len(legacy) == 1:
+                want = str(legacy[0].get("id"))
+                for idx, r in enumerate(all_recs):
+                    if str(r.get("id")) == want:
+                        target_idx = idx
+                        break
 
         if target_idx is None:
             # A parent id names a document, not a row. Replacing it means
@@ -1694,8 +1862,15 @@ class Vault:
         - incoming_project: Optionally tags all incoming records with a project namespace.
         - incoming_user_id: Optionally tags all incoming records with a user namespace.
         - Revision Reconciliation: Dynamic facts (e.g. phone numbers, addresses) are preserved
-          in full and ordered chronologically with monotonic revisions (Rev 1, Rev 2), ensuring
-          current queries retrieve the latest state without deleting history.
+          in full and ORDERED chronologically, so current queries retrieve the latest state
+          without deleting history. The ORDER is the guarantee; the revision NUMBERS are not.
+          A record merged in from a vault whose timestamps interleave with this one's keeps a
+          number that can repeat within a group -- backfilling two records between Rev 1 and
+          Rev 2 gives the sequence 1, 2, 1, 1, 3 in time order. Ordering is lexicographic on
+          ``(revision, timestamp)``, so the repeated numbers tie and the timestamp decides:
+          measured on exactly that sequence, the chain comes back chronological, one value is
+          `current`, it is the newest, and `forget_superseded(keep=1)` keeps it. This said
+          "monotonic revisions" through 0.7.20 and that was wrong.
         - Opt-In Deduplication: If explicitly set to `deduplicate=True`, exact matches within
           the SAME user and project scope will be deduplicated.
         Returns a summary dictionary: {"incoming": int, "added": int, "duplicates_skipped": int}.
@@ -1762,6 +1937,27 @@ class Vault:
                 if inc_ts >= max_existing_ts:
                     inc["revision"] = max_existing_rev + 1
                 else:
+                    # AN OLDER RECORD CANNOT BE GIVEN A NUMBER BELOW THE CHAIN,
+                    # because `revision` is a dense counter with no gaps to slot
+                    # into: `max(1, 1 - 1)` pins to 1 and repeats the existing
+                    # Rev 1. Two fixes were considered and both rejected.
+                    #
+                    # Renumbering the whole group chronologically would rewrite
+                    # records the caller never asked to rewrite, which is the
+                    # defect class 0.7.20 and 0.7.21 exist to remove.
+                    #
+                    # Assigning `max_existing_rev + 1` instead would be WORSE than
+                    # the repeat: `entities.temporal_order` lexsorts on
+                    # `(revision, timestamp)` with REVISION primary, so handing an
+                    # older record the highest number makes a stale value the
+                    # `current` one -- the 0.7.20 `update()` re-dating defect,
+                    # rebuilt.
+                    #
+                    # The repeat is harmless because equal revisions tie and the
+                    # timestamp breaks the tie correctly. Measured on the
+                    # interleaved case: chain chronological, one current value, it
+                    # is the newest, forget_superseded(keep=1) keeps it. The
+                    # docstring above now says ORDER rather than "monotonic".
                     min_existing_rev = min(r.get("revision", 1) for r in existing_for_ent)
                     inc["revision"] = max(1, min_existing_rev - 1)
 
@@ -1825,6 +2021,14 @@ class Vault:
         if ids is not None:
             target_ids.update(str(x).strip() for x in ids if str(x).strip())
 
+        # Pre-0.7.21 bare ids: unambiguous ones still delete, ambiguous ones raise.
+        # `delete` is where the collision did its damage, so this must never guess.
+        if target_ids:
+            known = {str(r.get("id") or "") for r in all_recs}
+            for wanted in sorted(target_ids - known):
+                for hit in _legacy_chunk_matches(all_recs, wanted):
+                    target_ids.add(str(hit.get("id")))
+
         # A document `add()` split is stored as `{parent}_chunk_N` rows, and no
         # single row holds the text the caller handed us -- so `text_exact` with
         # that text matched nothing and returned 0, on a mode the docstring
@@ -1873,21 +2077,14 @@ class Vault:
                     if " ".join(rebuilt.split()) == " ".join(want.split()):
                         text_ids.add(pid)
 
-        # AN EMPTY FILTER IS A PROGRAMMING ERROR, NOT "EVERYTHING".
-        # `_matches_filter(meta, {})` is vacuously true, so `delete(where={})`
-        # erased the whole vault -- and an empty dict is what you get when the
-        # filter was BUILT and every condition dropped out. `delete()` with no
-        # arguments already deletes nothing; this is the same intent expressed
-        # through a variable, and it must not be the one spelling that wipes the
-        # file. Refused loudly rather than ignored, because a caller who really
-        # means "remove everything" should say so in a way that reads like it.
-        if where is not None and not where:
-            raise ValueError(
-                "delete(where={}) would match every record and erase the whole "
-                "vault. An empty filter is almost always a filter that was built "
-                "and came out empty. Pass a filter with at least one condition, "
-                "or if you really mean to remove everything, delete the vault "
-                "file itself.")
+        # AN EMPTY CRITERION IS A PROGRAMMING ERROR, NOT "EVERYTHING".
+        # 0.7.20 guarded `where` here and nowhere else; `text_contains=""` and
+        # `source=""` reached the same outcome through a substring test that is
+        # vacuously true, and both erased a ten-record vault. All three widening
+        # parameters now go through one check. `ids=[]`, `id=""` and
+        # `text_exact=""` are NOT passed: they narrow, and remain no-ops.
+        _reject_empty_criterion(
+            "delete", where=where, text_contains=text_contains, source=source)
 
         kept = []
         deleted_count = 0
@@ -2013,6 +2210,14 @@ class Vault:
         ``target_password=None`` to write a plaintext target on purpose, or a
         string to use a different passphrase.
         """
+        # `purge=True` makes this a MOVE, so an empty criterion here does not
+        # merely over-copy -- it empties the source. Guarded only in that
+        # direction: `export(where={})` without purge is a full backup, which is
+        # a real thing to want, and is pinned as such by the surface test.
+        if purge:
+            _reject_empty_criterion(
+                "export", where=where, source_doc=source_doc)
+
         all_recs = self.get_all_records(include_embeddings=True)
         if not all_recs:
             return 0
@@ -2055,6 +2260,8 @@ class Vault:
         Divides this vault by exporting records matching filter_dict into a new .dat vault file.
         If `purge=True`, performs a real split by deleting matching records from this vault.
         """
+        if purge:
+            _reject_empty_criterion("split", filter_dict=filter_dict)
         return self.export(target_vault_path=target_vault_path, where=filter_dict, purge=purge)
 
     def split_by_doc(self, filename: str, target_vault_path: str, purge: bool = False) -> int:
@@ -2062,6 +2269,8 @@ class Vault:
         Extracts all chunks belonging to a specific document or file into a standalone vault.
         If `purge=True`, removes the extracted document chunks from this vault (Option 2).
         """
+        if purge:
+            _reject_empty_criterion("split_by_doc", filename=filename)
         return self.export(target_vault_path=target_vault_path, source_doc=filename, purge=purge)
 
     def unmerge(self, vault_name_or_project: str, target_vault_path: Optional[str] = None) -> int:
@@ -2069,6 +2278,12 @@ class Vault:
         Cleanly detaches a previously merged vault or project with zero data misplacement.
         Extracts all matching records to target_vault_path (if provided) and purges them from this vault.
         """
+        # THIS METHOD ALWAYS PURGES. There is no `purge=False` to fall back on,
+        # so an empty key is refused before anything is read: `"" in [sv, proj,
+        # basename(sv)]` is true for every record whose `source_vault` was never
+        # set, which is every record a user added themselves.
+        _reject_empty_criterion("unmerge", vault_name_or_project=vault_name_or_project)
+
         all_recs = self.get_all_records(include_embeddings=True)
         if not all_recs:
             return 0
@@ -2167,7 +2382,15 @@ class Vault:
                 safe_name = re.sub(r"[^\w\-_]", "_", key).strip("_")
                 if not safe_name:
                     safe_name = "value"
-                if safe_name in used.values():
+                # CASE-INSENSITIVELY, because that is how macOS and Windows
+                # compare them. A case-sensitive membership test said 'Work' and
+                # 'work' were distinct partitions, returned {'Work': 2, 'work': 2},
+                # and wrote ONE file holding both -- so a caller opening work.dat
+                # got the other team's records on macOS and nothing on Linux.
+                # Nothing was lost, but the returned dict described a layout that
+                # did not exist.
+                taken = {os.path.normcase(n).casefold() for n in used.values()}
+                if os.path.normcase(safe_name).casefold() in taken:
                     safe_name = "%s-%s" % (
                         safe_name,
                         _hashlib.md5(key.encode("utf-8")).hexdigest()[:6])
