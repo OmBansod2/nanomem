@@ -47,4 +47,5 @@ prune nanomem.egg-info
 include server.py
 include chat.py
 include demo.py
+include demo_stale.py
 include release_preflight.py

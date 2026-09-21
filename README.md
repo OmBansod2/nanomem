@@ -210,8 +210,16 @@ resolved.
 
 ```bash
 cd nanomem_standalone
-python3 demo.py
+python3 demo.py          # stores, updates, searches, prints real stats()
+python3 demo_stale.py    # the one worth seeing: a fact going stale over 8 months
 ```
+
+`demo_stale.py` is eight months of ordinary work sessions where nobody ever
+announces a change — the team fact arrives twice, both times inside a question
+about something else. Then the assistant writes a bio, similarity puts the
+*old* team first because the question is worded like the old job, and nanomem
+hands it over marked `SUPERSEDED - replaced 4 months ago`. Every line it prints
+is computed; edit the sessions at the top and re-run it.
 
 It stores a few facts, updates one of them to show revision handling, searches
 with citations, and prints the vault's real `stats()` — document count, file
