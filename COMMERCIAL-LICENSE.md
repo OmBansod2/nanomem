@@ -1,5 +1,27 @@
 # Commercial licensing for nanomem
 
+> **NO LONGER NEEDED — kept so that older links resolve.**
+
+From package 0.7.23 nanomem is licensed under the **Apache License 2.0** (see
+`LICENSE`). Apache-2.0 permits commercial use, modification, distribution,
+private use and redistribution inside a proprietary product, with no obligation
+to release your own source and no fee. **There is nothing left for a commercial
+licence to unlock, so none is offered.**
+
+If you are using a copy of nanomem from 0.6.0 through 0.7.22, that copy is under
+the AGPL (`LICENSE.agpl-3.0-or-later.md`) and the dual-licensing arrangement
+described below applied to it. The terms you received with a copy continue to
+apply to that copy; you may also simply upgrade to 0.7.23 or later and take the
+Apache terms instead, which are strictly more permissive.
+
+What Apache-2.0 requires of you, in full: keep the `LICENSE` and `NOTICE` files
+with any redistribution, state significant changes you made, and do not use the
+project's name or the author's name to endorse your product. That is all.
+
+---
+
+## Historical: the dual-licensing offer that applied to 0.6.0 - 0.7.22
+
 nanomem is **dual-licensed**. You may use it under either:
 
 1. the **GNU Affero General Public License v3.0 or later** (`LICENSE`), at no

@@ -1,0 +1,23 @@
+nanomem
+Copyright 2025-2026 Om Yadorao Bansod
+
+This product includes software developed by Om Yadorao Bansod.
+
+Licensed under the Apache License, Version 2.0 (the "License"); you may not use
+this file except in compliance with the License. You may obtain a copy of the
+License at
+
+    http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software distributed
+under the License is distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR
+CONDITIONS OF ANY KIND, either express or implied. See the License for the
+specific language governing permissions and limitations under the License.
+
+---
+
+nanomem was licensed under the GNU Affero General Public License v3.0 or later
+from package 0.6.0 through 0.7.22, and under an earlier preview licence before
+that. Both texts are retained in this distribution -- LICENSE.agpl-3.0-or-later.md
+and LICENSE.preview-v1.0.md -- because copies were distributed under them and
+their recipients keep those terms. Neither governs 0.7.23 or later.

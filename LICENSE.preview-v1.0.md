@@ -5,9 +5,10 @@
 > it and recipients of those copies need to be able to read the terms they
 > received. It does NOT govern current versions.
 >
-> From 0.6.0 onward nanomem is licensed under the GNU Affero General Public
-> License v3.0 or later (see `LICENSE`), with a commercial licence available as
-> an alternative (see `COMMERCIAL-LICENSE.md`).
+> From 0.6.0 through 0.7.22 nanomem was licensed under the GNU Affero General
+> Public License v3.0 or later, with a commercial licence available as an
+> alternative; that text is kept in `LICENSE.agpl-3.0-or-later.md`. From 0.7.23
+> onward nanomem is licensed under the Apache License 2.0 (see `LICENSE`).
 >
 > Note for the record: the wheels built under this file simultaneously declared
 > `License-Expression: Apache-2.0` in their metadata, which contradicted these

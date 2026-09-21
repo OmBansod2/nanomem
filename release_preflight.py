@@ -126,11 +126,20 @@ def check_metadata(offline):
                 bad(f"project.urls {label} is not reachable: {url}")
     if re.search(r"^\s*(TODO|FIXME)", tml, re.M):
         bad("a TODO/FIXME is left in packaging metadata")
-    if 'license = "AGPL-3.0-or-later"' not in tml:
-        bad("pyproject.toml does not declare AGPL-3.0-or-later")
+    if 'license = "Apache-2.0"' not in tml:
+        bad("pyproject.toml does not declare Apache-2.0")
     lic = read("LICENSE")
-    if "GNU AFFERO GENERAL PUBLIC LICENSE" not in lic:
-        bad("LICENSE is not the AGPL text")
+    if "Apache License" not in lic or "Grant of Patent License" not in lic:
+        bad("LICENSE is not the Apache-2.0 text")
+    # The superseded texts must keep shipping: copies were distributed under
+    # them and their recipients keep those terms.
+    for superseded in ("LICENSE.agpl-3.0-or-later.md", "LICENSE.preview-v1.0.md"):
+        if not os.path.exists(os.path.join(HERE, superseded)):
+            bad(f"{superseded} is missing -- a licence copies were shipped "
+                f"under must stay readable")
+    if not os.path.exists(os.path.join(HERE, "NOTICE")):
+        bad("NOTICE is missing -- Apache-2.0 section 4(d) requires it to travel "
+            "with redistributions")
     if "All Rights Reserved" in lic:
         bad("LICENSE still says All Rights Reserved -- this contradicted the "
             "wheel metadata once already")
@@ -223,8 +232,8 @@ def check_wheel(ver):
             names = z.namelist()
             meta = next((n for n in names if n.endswith("METADATA")), None)
             text = z.read(meta).decode() if meta else ""
-            if "AGPL-3.0-or-later" not in text:
-                bad(f"{os.path.basename(w)} does not declare AGPL-3.0-or-later")
+            if "Apache-2.0" not in text:
+                bad(f"{os.path.basename(w)} does not declare Apache-2.0")
             if not any("assets/write_classifier.npz" in n for n in names):
                 bad(f"{os.path.basename(w)} is missing the classifier asset")
             if any(n.endswith("model.bin") for n in names):
@@ -235,12 +244,12 @@ def check_wheel(ver):
         # passing line while doing nothing -- which this file had, for 370 lines,
         # in `check_claims`. A report you cannot read the absence of is not a
         # report.
-        NOTES.append("%s declares AGPL-3.0-or-later, carries the classifier "
+        NOTES.append("%s declares Apache-2.0, carries the classifier "
                      "asset and ships no model.bin" % os.path.basename(w))
 
 
 def check_sdist(ver):
-    """The sdist is the AGPL "corresponding source" and what conda-forge,
+    """The sdist is the complete source and what conda-forge,
     Debian and Homebrew actually build from -- they run the suite out of the
     tarball. There was none at all until 0.6.3, and the setuptools default
     (`packages = ["nanomem"]` and nothing else) would have shipped no tests,
@@ -259,9 +268,9 @@ def check_sdist(ver):
             names = {m.name.split("/", 1)[-1] for m in members}
             pkg = next((m for m in members if m.name.endswith("PKG-INFO")), None)
             text = t.extractfile(pkg).read().decode() if pkg else ""
-            if "AGPL-3.0-or-later" not in text:
-                bad(f"{base} does not declare AGPL-3.0-or-later")
-            for need in ("LICENSE", "CHANGELOG.md", "MANIFEST.in",
+            if "Apache-2.0" not in text:
+                bad(f"{base} does not declare Apache-2.0")
+            for need in ("LICENSE", "NOTICE", "CHANGELOG.md", "MANIFEST.in",
                          "nanomem/assets/write_classifier.npz",
                          "tests/data/adjacent_attributes.npz"):
                 if need not in names:

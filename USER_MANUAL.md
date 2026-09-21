@@ -15,7 +15,7 @@ the whole sentence; `decompose=False` scans the string as one query. There is no
 release and no fixed millisecond guarantee. Every number below comes from a
 results JSON produced by a script in this repository, and the file is named.
 
-* Package version 0.7.22, engine `ENGINE_VERSION` 3.4.6, container format 3, arena cache format 4.
+* Package version 0.7.23, engine `ENGINE_VERSION` 3.4.6, container format 3, arena cache format 4.
 * Embeddings: `nomic-embed-text` (768-d) through a local Ollama-compatible daemon.
 * Measurements on Apple M4 Pro, macOS 26.5, Python 3.12, numpy 2.5.3.
 * Every `evidence/…` path in these documents is relative to the
@@ -348,7 +348,8 @@ python3 -m nanomem.cli stats --vault company.dat
 7. **`durable="full"` (F_FULLFSYNC) is implemented but unmeasured.**
 8. **An MCP server DOES ship**, and this line used to say the opposite.
    `nanomem/mcp.py` is in both the wheel and the sdist and exposes 7 tools over
-   stdio (`nanomem_add`, `nanomem_search`, `nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats`). Run it with `python -m nanomem.mcp --vault memory.dat`.
+   stdio (`nanomem_add`, `nanomem_search`, `nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats`). Run it with `nanomem-mcp` (or `python -m nanomem.mcp`). The vault defaults to
+   `~/.nanomem/memory.dat`; override with `NANOMEM_VAULT` or `--vault`.
    The claim was false from the release that added the module until 0.7.18.
 
 ---

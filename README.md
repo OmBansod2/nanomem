@@ -15,6 +15,56 @@ how it compares to FAISS, sqlite-vec and Chroma (including where it loses), what
 happens when the process is killed mid-write, and the pytest command that
 re-runs most of those claims on the copy you just installed.
 
+## Quickstart — give your assistant a memory that knows what changed
+
+```bash
+pip install nanomem
+```
+
+Add this to your MCP client's config. On macOS `claude_desktop_config.json`
+lives in `~/Library/Application Support/Claude/`:
+
+```json
+{
+  "mcpServers": {
+    "nanomem": {
+      "command": "nanomem-mcp"
+    }
+  }
+}
+```
+
+That is the whole configuration. The vault defaults to `~/.nanomem/memory.dat`;
+set `NANOMEM_VAULT`, or pass `--vault /some/path.dat`, to put it elsewhere.
+
+Restart the client and tell it something that will change later:
+
+> *"Remember that I work at Acme Corp."*
+> *(a week later)* *"Actually I moved — I'm at Globex now."*
+> *"Where do I work? And where did I work before?"*
+
+It answers **Globex**, and can tell you it used to be Acme — not because the
+second sentence was worded closer to the question, but because nanomem kept the
+chain and knows which end of it is current. Ask it *"what did I believe about
+this in March?"* and it can answer that too.
+
+Seven tools: `nanomem_add`, `nanomem_search`, `nanomem_history`,
+`nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`, `nanomem_stats` — so
+the assistant can ask what a fact USED to be, what the memory believed at a past
+moment, what changed last week, and which of its own beliefs have gone stale.
+
+The vault is an ordinary file. Point the CLI or a Python script at the same path
+to read what the assistant wrote — a write is on disk before its reply is sent,
+so another process sees it immediately and stopping the server cannot lose it.
+
+Through 0.7.17 that was not true: the server flushed only on a clean exit, and an
+MCP client stops its servers with SIGTERM. Twenty `nanomem_add` calls, each
+answered `"Stored …"`, then SIGTERM, left **zero rows** in the vault. If you ran
+an earlier version, anything the assistant "remembered" in a session that was not
+closed cleanly was never written.
+
+## Or use it from Python
+
 ```bash
 pip install nanomem
 ```
@@ -70,53 +120,25 @@ So if your application has attributes of its own, declare them. Everything
 nanomem does that a vector store does not rests on knowing which statements are
 about the same thing — and you know that, while the tagger is guessing.
 
-## Use it from Claude, Cursor or Zed (MCP)
-
-```bash
-pip install nanomem
-```
-
-Then add this to your MCP client's config — `claude_desktop_config.json` on
-macOS lives at `~/Library/Application Support/Claude/`:
-
-```json
-{
-  "mcpServers": {
-    "nanomem": {
-      "command": "python3",
-      "args": ["-m", "nanomem.mcp", "--vault", "/absolute/path/to/memory.dat"]
-    }
-  }
-}
-```
-
-Restart the client. It gains seven tools: `nanomem_add`, `nanomem_search`,
-`nanomem_history`, `nanomem_as_of`, `nanomem_changes`, `nanomem_volatility`,
-`nanomem_stats` — so the assistant can ask what a fact USED to be, what the
-memory believed at a past moment, what changed last week, and which of its own
-beliefs have gone stale.
-
-The vault is an ordinary file. Point the CLI or a Python script at the same path
-to read what the assistant wrote — a write is on disk before its reply is sent,
-so another process sees it immediately and stopping the server cannot lose it.
-
-Through 0.7.17 that was not true: the server flushed only on a clean exit, and an
-MCP client stops its servers with SIGTERM. Twenty `nanomem_add` calls, each
-answered `"Stored …"`, then SIGTERM, left **zero rows** in the vault. If you ran
-an earlier version, anything the assistant "remembered" in a session that was not
-closed cleanly was never written.
-
 ---
 
-Package 0.7.22 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.7.23 · engine 3.4.6 · container format 3 · arena cache format 4.
 
-**Licence: AGPL-3.0-or-later, or a commercial licence.** Free for personal,
-academic and open-source use, and for running internally on your own machines.
-If you offer nanomem to users over a network, AGPL section 13 requires you to
-offer them your source — see [COMMERCIAL-LICENSE.md](https://github.com/OmBansod2/nanomem/blob/main/COMMERCIAL-LICENSE.md) for
-the alternative. Up to 0.6.0 the wheel metadata said Apache-2.0 while the
-LICENSE file said All Rights Reserved; that contradiction is resolved here and
-the superseded terms are kept in `LICENSE.preview-v1.0.md`.
+**Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
+closed-source product — keep the `LICENSE` and `NOTICE` files with any
+redistribution, say what you changed, and do not use the project's or the
+author's name to endorse yours. That is the whole obligation.
+
+nanomem was AGPL-3.0-or-later from 0.6.0 through 0.7.22, with a commercial
+licence alongside it. That combination protected something worth less than the
+users it was turning away: most companies ban AGPL by policy and many developers
+skip it without reading it. Copies distributed under the old terms keep them, and
+both superseded texts still ship —
+[LICENSE.agpl-3.0-or-later.md](https://github.com/OmBansod2/nanomem/blob/main/LICENSE.agpl-3.0-or-later.md)
+and [LICENSE.preview-v1.0.md](https://github.com/OmBansod2/nanomem/blob/main/LICENSE.preview-v1.0.md).
+Up to 0.6.0 the wheel metadata said Apache-2.0 while the LICENSE file said All
+Rights Reserved; that contradiction was resolved in 0.6.0 and has stayed
+resolved.
 
 
 ---
@@ -139,7 +161,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-786 tests, no network needed.
+797 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

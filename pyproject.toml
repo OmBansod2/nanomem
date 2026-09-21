@@ -31,9 +31,14 @@ keywords = ["embedded-database", "vector-search", "memory", "single-file",
 # The floor is now the lowest version the package can actually be built and
 # tested on, and CI tests it on every push.
 requires-python = ">=3.9"
-license = "AGPL-3.0-or-later"
-license-files = ["LICENSE", "COMMERCIAL-LICENSE.md",
-                 "LICENSE.preview-v1.0.md"]
+# Apache-2.0 from 0.7.23. It was AGPL-3.0-or-later from 0.6.0 through 0.7.22,
+# and the point of the change is adoption: most companies ban AGPL by policy, so
+# the licence was refusing the users the project wants more than it was
+# protecting anything worth protecting. Both superseded texts still ship,
+# because copies were distributed under them.
+license = "Apache-2.0"
+license-files = ["LICENSE", "NOTICE", "COMMERCIAL-LICENSE.md",
+                 "LICENSE.agpl-3.0-or-later.md", "LICENSE.preview-v1.0.md"]
 authors = [
     { name = "Om Yadorao Bansod", email = "ombansod123@gmail.com" }
 ]
@@ -50,6 +55,11 @@ dependencies = [
 
 [project.scripts]
 nanomem = "nanomem.cli:main"
+# THE MCP SERVER IS THE FRONT DOOR. Nobody installs a library and feels
+# anything; they install an MCP server and immediately watch an assistant stop
+# repeating a fact that stopped being true. `python -m nanomem.mcp` already
+# worked, but an MCP client config wants one command on PATH.
+nanomem-mcp = "nanomem.mcp:main"
 
 # Every URL here is checked for a 200 by release_preflight.py before publish.
 # Until 0.6.3 this block carried Homepage = https://nanomem.dev (does not

@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 56,
-    "with_test": 42,
+    "total": 57,
+    "with_test": 43,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -355,6 +355,12 @@
       "claim": "phone numbers, addresses) are preserved in full and ORDERED chronologically, so current queries retrieve the latest state without deleting history.",
       "id": "C055",
       "test": "test_a_merged_chain_stays_chronological_even_though_revisions_repeat"
+    },
+    {
+      "source": "README.md",
+      "claim": "The vault defaults to `~/.nanomem/memory.dat`; set `NANOMEM_VAULT`, or pass `--vault /some/path.dat`, to put it elsewhere.",
+      "id": "C056",
+      "test": "test_vault_path_resolution_order"
     }
   ]
 }

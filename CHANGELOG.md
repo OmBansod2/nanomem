@@ -6,6 +6,81 @@ number below is from one of those files.
 
 ---
 
+## 0.7.23 — engine 3.4.6 (unchanged). Apache-2.0, and the MCP server is the front door.
+
+No defect fixes. Two decisions about who this is for.
+
+### Licence: AGPL-3.0-or-later -> Apache-2.0
+
+The AGPL was protecting something worth less than the users it was turning away.
+Most companies ban it by policy and many developers skip it without reading it,
+so in practice the licence was refusing the people the project wants most, in
+exchange for dual-licensing leverage on revenue that was never the goal.
+
+Apache-2.0 from this release. Keep `LICENSE` and `NOTICE` with a redistribution,
+state significant changes, do not use the project's or the author's name to
+endorse yours. That is the whole obligation.
+
+Apache rather than MIT was chosen deliberately and with the cost stated: section
+3 grants every user a perpetual, royalty-free licence to the contributor's patent
+claims embodied in this work, and there are patent filings behind parts of this
+code. MIT would have avoided that express grant while leaving patent rights
+merely ambiguous. The clarity was judged worth more than the reservation.
+
+**The superseded texts still ship**, because copies were distributed under them
+and their recipients keep those terms:
+
+    LICENSE                          Apache-2.0, from 0.7.23
+    LICENSE.agpl-3.0-or-later.md     AGPL, 0.6.0 - 0.7.22, retained in full
+    LICENSE.preview-v1.0.md          the preview licence, before 0.6.0
+    NOTICE                           new; Apache-2.0 section 4(d)
+
+A licence a recipient can no longer read is the failure this guards against, so
+`tests/test_licence_and_mcp_entrypoint.py` asserts the AGPL TEXT is preserved
+rather than merely referred to, and `release_preflight.py` refuses a release that
+drops any of them or ships without a NOTICE.
+
+`COMMERCIAL-LICENSE.md` is kept so older links resolve, and now says there is
+nothing left for a commercial licence to unlock. The relicensing was done by the
+sole copyright holder: every commit touching this package is authored by one
+person, so no other party's agreement was required.
+
+### The MCP server gets its own command
+
+Nobody installs a library and feels anything. They install an MCP server and
+watch an assistant stop repeating a fact that stopped being true. So the server
+is what the README opens with now, and it has an entry point:
+
+    nanomem-mcp
+
+An MCP client config is one line -- `"command": "nanomem-mcp"` -- where it used
+to be a python invocation with an absolute vault path spliced into `args`.
+
+**Two things that were wrong for this use, fixed with it:**
+
+* **`NANOMEM_VAULT` was ignored.** The server read `--vault` and nothing else,
+  while an MCP client config sets `env` far more naturally than it edits `args`.
+  This cost real debugging time inside this project: a reader process pointed at
+  the env var saw an empty vault while the server was writing elsewhere, and the
+  conclusion drawn from that was wrong. Resolution order is now `--vault`, then
+  `NANOMEM_VAULT`, then the default. An env var set to whitespace does not win.
+* **The default vault was `memory.dat`, relative.** An MCP server does not choose
+  its working directory -- the client launches it, often from `/` or an app
+  bundle -- so a relative default wrote memory somewhere nobody could find. It is
+  `~/.nanomem/memory.dat` now, and the parent directory is created.
+
+`python -m nanomem.mcp` keeps working; it is in shipped documentation and a test
+pins it.
+
+Verified end to end from a clean wheel install in a fresh venv, with the server
+launched from `cwd=/` and configured only by `NANOMEM_VAULT`, the way a client
+does it: `initialize` returns `nanomem-mcp 0.7.23`, `tools/list` returns all
+seven, two `nanomem_add` calls a year apart, `nanomem_search` answers with the
+newer value, `nanomem_history` reports the chain with the older one `superseded`,
+and SIGTERM exits 0 with both rows on disk.
+
+---
+
 ## 0.7.22 — engine 3.4.6 (unchanged)
 
 The first defect found by the fuzzer instead of by a reviewer, and it was in the

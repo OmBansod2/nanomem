@@ -17,10 +17,11 @@ beliefs have gone stale.
 """
 
 import json
+import os
 import sys
 from typing import Any, Dict
 
-from . import __version__
+from . import __version__, ENGINE_VERSION
 from .vault import Vault
 
 TOOLS = [
@@ -465,8 +466,56 @@ def run_mcp_server(vault_path: str = "memory.dat"):
         vault.close()
 
 
-if __name__ == "__main__":
+DEFAULT_VAULT = os.path.join(os.path.expanduser("~"), ".nanomem", "memory.dat")
+
+
+def resolve_vault_path(explicit=None):
+    """Where the server keeps memory, in the order a caller can reason about.
+
+    `--vault`, then ``NANOMEM_VAULT``, then ``~/.nanomem/memory.dat``.
+
+    The env var is supported because an MCP client config sets ``env`` far more
+    naturally than it splices a path into ``args`` -- and because this server
+    silently IGNORED ``NANOMEM_VAULT`` before, which cost real debugging time:
+    a reader process pointed at the env var saw an empty vault while the server
+    was writing somewhere else entirely.
+
+    The default is under the home directory rather than ``memory.dat`` in the
+    current directory, because an MCP server does not choose its own working
+    directory -- the client launches it, often from ``/`` or an app bundle --
+    so a relative default writes memory somewhere nobody can find, or fails.
+    """
+    if explicit:
+        return explicit
+    env = os.environ.get("NANOMEM_VAULT")
+    if env and env.strip():
+        return env.strip()
+    return DEFAULT_VAULT
+
+
+def main(argv=None):
+    """Console entry point: ``nanomem-mcp``."""
     import argparse
-    p = argparse.ArgumentParser(description="nanomem Model Context Protocol (MCP) server")
-    p.add_argument("--vault", type=str, default="memory.dat", help="Path to memory vault")
-    run_mcp_server(vault_path=p.parse_args().vault)
+    p = argparse.ArgumentParser(
+        prog="nanomem-mcp",
+        description="nanomem Model Context Protocol (MCP) server -- temporal "
+                    "memory for an assistant, over stdio.")
+    p.add_argument("--vault", type=str, default=None,
+                   help="Path to the memory vault (default: $NANOMEM_VAULT, "
+                        "else ~/.nanomem/memory.dat)")
+    p.add_argument("--version", action="store_true", help="Print version and exit")
+    args = p.parse_args(argv)
+    if args.version:
+        print("nanomem-mcp %s (engine %s)" % (__version__, ENGINE_VERSION))
+        return 0
+
+    path = resolve_vault_path(args.vault)
+    parent = os.path.dirname(os.path.abspath(path))
+    if parent and not os.path.isdir(parent):
+        os.makedirs(parent, exist_ok=True)
+    run_mcp_server(vault_path=path)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
