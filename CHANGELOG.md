@@ -6,7 +6,10 @@ number below is from one of those files.
 
 ---
 
-## 0.8.1 — engine 3.4.6 (unchanged: this adds fields, it does not re-rank)
+## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.
+
+### A search hit now says whether it is still true
+
 
 A search hit now says whether it is still true.
 
@@ -80,9 +83,7 @@ keys failed it. That is the test doing its job -- adding a key to a documented
 result shape is a decision, not a convenience -- and it was updated deliberately
 rather than loosened.
 
----
-
-## 0.8.0 — engine 3.4.6 (unchanged). The first release meant to be found.
+### Why the version is 0.8.0
 
 The library is what 0.7.24 was. The minor version moves for three reasons that
 are real rather than ceremonial, and one check is added.

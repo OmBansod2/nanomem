@@ -14,7 +14,7 @@ from nanomem.engine import (VaultEngine, matches_filter, legacy_score,
 
 # The EXACT key set of a search hit. This is a contract, and the equality below
 # is deliberate: adding a key is a decision, not a convenience. `superseded` and
-# `superseded_at` were added in 0.8.1 -- a hit now says whether a LATER record in
+# `superseded_at` were added in 0.8.0 -- a hit now says whether a LATER record in
 # its own group replaced it, which a timestamp cannot express.
 RESULT_KEYS = {"id", "doc_id", "text", "source", "metadata", "score", "cosine",
                "timestamp", "revision", "superseded", "superseded_at"}
