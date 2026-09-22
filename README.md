@@ -3,6 +3,8 @@
 # nanomem
 
 [![CI](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml/badge.svg)](https://github.com/OmBansod2/nanomem/actions/workflows/ci.yml)
+[![Listed on mcpservers.org](https://mcpservers.org/badge.svg)](https://mcpservers.org/servers/ombansod2/nanomem)
+[![MCP Registry](https://img.shields.io/badge/MCP%20Registry-io.github.OmBansod2%2Fnanomem-0b7285)](https://registry.modelcontextprotocol.io/?search=nanomem)
 
 **An embedded store for facts that change.**
 
