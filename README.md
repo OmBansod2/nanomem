@@ -189,7 +189,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.8.1 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.2 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
@@ -236,7 +236,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-837 tests, no network needed.
+839 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

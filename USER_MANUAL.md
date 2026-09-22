@@ -15,7 +15,7 @@ the whole sentence; `decompose=False` scans the string as one query. There is no
 release and no fixed millisecond guarantee. Every number below comes from a
 results JSON produced by a script in this repository, and the file is named.
 
-* Package version 0.8.1, engine `ENGINE_VERSION` 3.4.6, container format 3, arena cache format 4.
+* Package version 0.8.2, engine `ENGINE_VERSION` 3.4.6, container format 3, arena cache format 4.
 * Embeddings: `nomic-embed-text` (768-d) through a local Ollama-compatible daemon.
 * Measurements on Apple M4 Pro, macOS 26.5, Python 3.12, numpy 2.5.3.
 * Every `evidence/…` path in these documents is relative to the

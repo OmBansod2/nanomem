@@ -6,6 +6,52 @@ number below is from one of those files.
 
 ---
 
+## 0.8.2 — engine 3.4.6 (unchanged). The MCP server never worked on Windows.
+
+### `nanomem-mcp` died at startup on Windows, and had since 0.7.18
+
+The handler registration read:
+
+    for _sig in (_signal.SIGTERM, _signal.SIGINT, _signal.SIGHUP):
+        try:
+            _signal.signal(_sig, _shutdown)
+        except (ValueError, OSError, AttributeError):
+            # Not the main thread, or the platform has no such signal.
+            pass
+
+Windows has no `SIGHUP`. The tuple is a LITERAL, evaluated before the `try`, so
+the `AttributeError` was raised outside the handler written to catch it -- with
+`AttributeError` named in that `except`, and a comment describing precisely this
+case. The guard could not reach the failure it was written for.
+
+So `run_mcp_server` raised at startup on Windows from 0.7.18 onward. A Windows
+user following the README's client config got a server that died immediately,
+while this project's own listing claims a Windows badge.
+
+The signals are looked up with `getattr` now, and a missing one is skipped. Two
+tests: one deletes `signal.SIGHUP` and asserts the server still starts, and one
+asserts `SIGTERM` and `SIGINT` are STILL installed -- because a Windows fix that
+quietly stopped registering handlers everywhere would be worse than the bug,
+given this server's durability depends on flushing when a client stops it.
+
+### Two of this project's own tests depended on the machine they were written on
+
+`test_truncation_signal.py` hard-coded `min_score=0.6`. That is a cosine
+threshold tuned to one embedder. CI has no embedding endpoint, so it runs the
+built-in lexical encoder, whose scores sit on a different scale: the searches
+returned nothing and both tests failed on every platform.
+
+A test of the truncation SIGNAL must not depend on which encoder answered, so
+the floor is now measured from the corpus under test rather than guessed.
+
+### How this was missed, and what changed
+
+The suite was run on a machine with a local embedder. It is now also run the way
+CI runs it -- `NANOMEM_EMBED_URL` pointed at nothing -- and both paths pass: 839
+with an embedder, 837 and 2 skipped without one.
+
+---
+
 ## 0.8.1 — engine 3.4.6 (unchanged). Listed in the MCP Registry.
 
 No library change. `modelcontextprotocol/servers` has retired its README list of

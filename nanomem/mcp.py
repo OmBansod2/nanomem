@@ -430,12 +430,22 @@ def run_mcp_server(vault_path: str = "memory.dat"):
         finally:
             raise SystemExit(0)
 
-    for _sig in (_signal.SIGTERM, _signal.SIGINT, _signal.SIGHUP):
+    # LOOK THE SIGNAL UP, DO NOT NAME IT. This was a tuple literal
+    # `(_signal.SIGTERM, _signal.SIGINT, _signal.SIGHUP)`, which is evaluated
+    # BEFORE the `try` below -- so on Windows, where `signal.SIGHUP` does not
+    # exist, the AttributeError was raised outside the handler written to catch
+    # it and `run_mcp_server` died at startup. The comment named the case and
+    # the code could not reach it. Windows CI caught this only once other tests
+    # began driving the server; the server itself had been unusable there since
+    # the handlers were added in 0.7.18.
+    for _name in ("SIGTERM", "SIGINT", "SIGHUP"):
+        _sig = getattr(_signal, _name, None)
+        if _sig is None:
+            continue          # the platform has no such signal
         try:
             _signal.signal(_sig, _shutdown)
-        except (ValueError, OSError, AttributeError):
-            # Not the main thread, or the platform has no such signal.
-            pass
+        except (ValueError, OSError):
+            pass              # not the main thread
 
     try:
         for line in sys.stdin:

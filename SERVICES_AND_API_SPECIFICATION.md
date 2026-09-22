@@ -1,6 +1,6 @@
 # nanomem — Services and REST API Specification
 
-Package 0.8.1 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.2 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 nanomem is an embedded memory engine: one `.dat` file per vault, no daemon,
 `numpy` as the only third-party runtime dependency. Two optional HTTP services

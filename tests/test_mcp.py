@@ -367,3 +367,49 @@ def test_capabilities_do_not_claim_resources_or_prompts(monkeypatch, vault_path,
     caps = replies[0]["result"]["capabilities"]
     assert "tools" in caps
     assert "resources" not in caps and "prompts" not in caps
+
+
+def test_the_server_starts_on_a_platform_without_sighup(monkeypatch, vault_path,
+                                                        offline_embedder):
+    """Windows has no SIGHUP, and the server died at startup because of it.
+
+    The registration loop read `(signal.SIGTERM, signal.SIGINT, signal.SIGHUP)`
+    -- a tuple literal, evaluated BEFORE the `try` that was written to catch
+    exactly this, with `AttributeError` even listed in its `except`. So the
+    guard could never run, and `run_mcp_server` raised at startup on Windows
+    from 0.7.18 until it was found by CI here.
+    """
+    import signal as real_signal
+    monkeypatch.delattr(real_signal, "SIGHUP", raising=False)
+    replies = _serve(monkeypatch, vault_path, [
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                               "clientInfo": {"name": "windows", "version": "1"}}}),
+    ])
+    assert replies[0]["result"]["serverInfo"]["name"] == "nanomem-mcp"
+
+
+def test_the_signals_that_do_exist_are_still_installed(monkeypatch, vault_path,
+                                                       offline_embedder):
+    """Tolerating a missing signal must not mean skipping the present ones.
+
+    The durability of this server rests on flushing when a client stops it, so
+    a fix for Windows that quietly stopped registering SIGTERM everywhere would
+    be worse than the bug.
+    """
+    import signal as real_signal
+    installed = []
+    real_setter = real_signal.signal
+
+    def _record(sig, handler):
+        installed.append(sig)
+        return real_setter(sig, handler)
+
+    monkeypatch.setattr(real_signal, "signal", _record)
+    _serve(monkeypatch, vault_path, [
+        json.dumps({"jsonrpc": "2.0", "id": 1, "method": "initialize",
+                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
+                               "clientInfo": {"name": "c", "version": "1"}}}),
+    ])
+    assert real_signal.SIGTERM in installed
+    assert real_signal.SIGINT in installed

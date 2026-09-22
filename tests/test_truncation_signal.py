@@ -63,10 +63,26 @@ def test_top_k_zero_still_returns_nothing(corpus):
 
 # --------------------------------------------------------------------------
 # the counts
+def a_floor_that_admits(vault, query, n):
+    """A min_score that at least `n` records clear, derived from THIS corpus.
+
+    The first version of these tests hard-coded `min_score=0.6`, which is a
+    cosine threshold tuned to the embedder on one machine. CI has no embedding
+    endpoint, so it runs the built-in lexical encoder, whose scores sit on a
+    different scale entirely -- the searches returned nothing and two tests
+    failed on every platform. A test of the truncation SIGNAL must not depend
+    on which encoder answered, so the floor is measured rather than guessed.
+    """
+    scored = vault.search(query, top_k=500, min_score=0.0, decompose=False)
+    assert len(scored) > n, "corpus too small to derive a floor"
+    return float(scored[n]["cosine"])
+
+
 # --------------------------------------------------------------------------
 def test_n_above_floor_counts_what_cleared_the_floor(corpus):
-    r = corpus.search("revenue of every company every year", min_score=0.6,
-                      top_k=3, decompose=False)
+    q = "revenue of every company every year"
+    floor = a_floor_that_admits(corpus, q, 8)
+    r = corpus.search(q, min_score=floor, top_k=3, decompose=False)
     assert r.n_above_floor is not None
     assert r.n_above_floor > len(r), "nothing was reported as left behind"
     assert r.returned == len(r) == 3
@@ -74,8 +90,9 @@ def test_n_above_floor_counts_what_cleared_the_floor(corpus):
 
 
 def test_raising_top_k_past_the_matches_reports_complete(corpus):
-    r = corpus.search("revenue of every company every year", min_score=0.6,
-                      top_k=200, decompose=False)
+    q = "revenue of every company every year"
+    r = corpus.search(q, min_score=a_floor_that_admits(corpus, q, 8),
+                      top_k=500, decompose=False)
     assert r.truncated is False
     assert r.explain() == ""
 
@@ -149,14 +166,16 @@ def test_the_returned_records_are_unchanged(corpus, decompose, k):
 # --------------------------------------------------------------------------
 def test_the_mcp_search_tool_appends_the_note_only_when_cut(corpus):
     from nanomem import mcp
+    q = "revenue of every company every year"
+    floor = a_floor_that_admits(corpus, q, 8)
     cut = mcp.dispatch(corpus, "nanomem_search",
-                       {"query": "revenue of every company every year",
-                        "top_k": 2, "min_score": 0.6})
+                       {"query": q, "top_k": 2, "min_score": floor})
     assert "This answer is incomplete" in cut
 
+    # Same floor, but a budget bigger than what clears it: nothing is cut, so
+    # the tool must say nothing.
     whole = mcp.dispatch(corpus, "nanomem_search",
-                         {"query": "what port does staging use",
-                          "top_k": 3, "min_score": 0.6})
+                         {"query": q, "top_k": 500, "min_score": floor})
     assert "This answer is incomplete" not in whole
 
 
