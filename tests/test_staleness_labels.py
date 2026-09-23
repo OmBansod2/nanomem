@@ -11,6 +11,9 @@ guess which one held -- the failure this library's README opens on, committed at
 the last possible moment before the answer is written.
 """
 
+import os
+import subprocess
+import sys
 import time
 
 import pytest
@@ -19,6 +22,7 @@ from nanomem import Vault, mcp
 from nanomem.vault import staleness_label
 
 DAY = 86400
+PKG_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
 @pytest.fixture()
@@ -204,3 +208,25 @@ def test_search_and_history_agree_about_what_was_replaced(tmp_path, meta_a, meta
     assert old["superseded"] is (chain_len > 1), (
         "history() says chain=%d but search() says superseded=%s"
         % (chain_len, old["superseded"]))
+
+
+def test_the_label_does_not_come_from_the_embedding_model(tmp_path):
+    """README's caption under the recording says the SUPERSEDED line survives
+    with no embedding endpoint reachable. Check that, by running the shipped
+    demo with nothing listening.
+
+    It holds because supersession is computed from revision order inside the
+    group, not from similarity -- so an air-gapped install gets the label too.
+    Written after the caption first claimed, wrongly, that the recording itself
+    had been made with no model running: the machine that made it was running
+    Ollama on the default port all along, which `NANOMEM_EMBED_URL` being unset
+    does not prevent. The claim is true of the demo; it was not true of that
+    recording, and only a test keeps the two from drifting apart again.
+    """
+    env = dict(os.environ, NANOMEM_EMBED_URL="http://127.0.0.1:9/none",
+               PYTHONPATH=PKG_ROOT)
+    r = subprocess.run(
+        [sys.executable, os.path.join(PKG_ROOT, "demo_stale.py"), "--brief"],
+        capture_output=True, text=True, timeout=300, cwd=str(tmp_path), env=env)
+    assert r.returncode == 0, r.stderr
+    assert "SUPERSEDED - replaced" in r.stdout, r.stdout

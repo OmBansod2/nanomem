@@ -6,10 +6,12 @@ arbitrary files when a path came in over the wire.
 """
 import json
 import os
+import queue
 import shutil
 import signal
 import subprocess
 import sys
+import threading
 import time
 import urllib.error
 import urllib.request
@@ -29,19 +31,73 @@ def _rows(vault_path):
 
 
 class _McpClient:
+    """A stdio JSON-RPC client whose every read is bounded.
+
+    THIS CLASS USED A BARE `self.p.stdout.readline()`. That blocks forever when
+    the server dies at startup or answers nothing, and the call is made from
+    `__init__`, i.e. before the caller's `try/finally` exists, so not even the
+    `kill()` ran. On Windows that is not hypothetical: it is how the CI job sat
+    in `Test` for two and a half hours per run and then reported nothing worth
+    reading. A hang cannot be debugged; a failure carrying the server's stderr
+    can. `select` cannot poll a pipe on Windows, so the bound is a reader
+    thread and a queue, which behave identically on both platforms.
+    """
+
+    TIMEOUT = 60
+
     def __init__(self, vault_path, cwd):
         self.p = subprocess.Popen(
             [sys.executable, "-m", "nanomem.mcp", "--vault", vault_path],
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
             text=True, cwd=cwd, env=dict(os.environ, PYTHONPATH=PKG_ROOT))
+        self._lines = queue.Queue()
+        threading.Thread(target=self._pump, daemon=True).start()
         self.call({"jsonrpc": "2.0", "id": 1, "method": "initialize",
                    "params": {"protocolVersion": "2024-11-05", "capabilities": {},
                               "clientInfo": {"name": "t", "version": "1"}}})
 
+    def _pump(self):
+        try:
+            for line in self.p.stdout:
+                self._lines.put(line)
+        except Exception:
+            pass
+        finally:
+            self._lines.put(None)                      # EOF sentinel
+
+    def _stderr(self):
+        """Whatever the server complained about, without blocking on the pipe."""
+        got = []
+        t = threading.Thread(target=lambda: got.append(self.p.stderr.read()),
+                             daemon=True)
+        t.start()
+        t.join(30)
+        return (got[0] if got else "") or ""
+
+    def _fail(self, what):
+        self.p.kill()
+        try:
+            self.p.wait(timeout=30)
+        except Exception:
+            pass
+        raise AssertionError(
+            "%s within %ss (returncode=%r)\n--- server stderr ---\n%s"
+            % (what, self.TIMEOUT, self.p.returncode,
+               self._stderr().strip() or "<empty>"))
+
     def call(self, obj):
-        self.p.stdin.write(json.dumps(obj) + "\n")
-        self.p.stdin.flush()
-        line = self.p.stdout.readline()
+        try:
+            self.p.stdin.write(json.dumps(obj) + "\n")
+            self.p.stdin.flush()
+        except (BrokenPipeError, OSError):
+            self._fail("the server closed stdin on %r" % obj.get("method"))
+        try:
+            line = self._lines.get(timeout=self.TIMEOUT)
+        except queue.Empty:
+            self._fail("the server never answered %r" % obj.get("method"))
+        if line is None:
+            self._fail("the server closed stdout without answering %r"
+                       % obj.get("method"))
         return json.loads(line) if line.strip() else None
 
     def add(self, text, i=0):

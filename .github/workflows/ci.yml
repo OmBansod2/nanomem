@@ -20,6 +20,10 @@ jobs:
   test:
     name: ${{ matrix.os }} / py${{ matrix.python }}
     runs-on: ${{ matrix.os }}
+    # A hung job used to run to GitHub's 6 h default. The Windows jobs did
+    # exactly that -- twice -- while the slowest healthy job here takes under
+    # four minutes. Fail in 25 and leave a log worth reading.
+    timeout-minutes: 25
     strategy:
       fail-fast: false
       matrix:
@@ -56,6 +60,7 @@ jobs:
   preflight:
     name: preflight (ubuntu / py3.12)
     runs-on: ubuntu-latest
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5

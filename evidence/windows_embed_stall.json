@@ -1,0 +1,46 @@
+{
+  "label": "windows_embed_stall",
+  "engine_version": "3.4.6",
+  "package_version": "0.8.2",
+  "question": "Why does the Windows CI job take 2h35m when every other platform finishes in under 4 minutes?",
+  "finding": "EmbeddingProvider.embed_batch dialled the configured endpoint on every call and kept no memory of failure. A refused connection is instant on Linux and macOS, so the waste was invisible there. On the Windows runner the SYN is dropped rather than refused and each attempt costs seconds.",
+  "measured_directly": {
+    "host": "macOS, Apple M4 Pro, Python 3.12",
+    "how": "urllib.request.urlopen counted inside nanomem.embed for one full pytest run with NANOMEM_EMBED_URL pointed at a closed port (http://127.0.0.1:9/none)",
+    "suite_size_at_measurement": 840,
+    "network_dials_before_fix": 2267,
+    "network_dials_after_fix": 16,
+    "remote_embed_batch_invocations_after_fix": 2261,
+    "note": "invocations barely move; what changes is how many of them reach the network. 16 rather than 1 because tests use several distinct base_url values and the 30 s cooldown expires during a ~69 s run."
+  },
+  "observed_ci": {
+    "source": "github.com/OmBansod2/nanomem actions run 35692860335, commit 87df5cd",
+    "windows_py39_seconds": 9325,
+    "windows_py313_seconds": 9354,
+    "macos_py313_seconds": 219,
+    "ubuntu_py39_seconds": 73,
+    "ubuntu_py311_seconds": 63,
+    "ubuntu_py313_seconds": 68,
+    "all_jobs_passed": true
+  },
+  "derived": {
+    "seconds_per_dial_on_windows": 4.02,
+    "how_derived": "(windows_py39_seconds - macos_py313_seconds) / network_dials_before_fix = (9325 - 219) / 2267",
+    "IMPORTANT": "This is an INFERENCE from wall clock, not a measurement of a Windows connect() call. No Windows machine was available; the per-dial cost was never timed directly. It explains the observed duration almost exactly, which is evidence, not proof. The claim that survives either way is the one that was measured directly: 2267 network dials became 16.",
+    "projected_windows_dial_cost_after_fix_seconds": 64.3
+  },
+  "fix": {
+    "what": "per-endpoint cooldown on EmbeddingProvider (_down_until / DOWN_COOLDOWN = 30 s), cleared by any success and by forget_unreachable_endpoints()",
+    "not_tripped_by": "urllib.error.HTTPError -- the daemon answered, so it is alive and asking again is free",
+    "tests": "tests/test_endpoint_backoff.py",
+    "engine_version_unchanged": "3.4.6: vectors, on-disk layout and ranking are all identical. The only behaviour change is that a daemon started mid-process is noticed after the cooldown rather than instantly."
+  },
+  "mechanism_measured_directly": {
+    "how": "5 real Vault.add() calls on macOS against a BLACK-HOLED endpoint (http://10.255.255.1:11434/api/embed), which drops packets instead of refusing -- the same condition as the Windows runner. BASE_TIMEOUT lowered to 2.0 s and PER_TEXT_TIMEOUT to 0.0 to keep the run short; the shape is what matters, not the constant.",
+    "retry_every_call_seconds_total": 10.0,
+    "retry_every_call_seconds_per_add": 2.0,
+    "cooldown_seconds_total": 0.0016,
+    "cooldown_seconds_per_add": 0.0003,
+    "note": "2.0 s per add is exactly the connect timeout, paid again on every single call. This measures the MECHANISM directly on this machine; only the per-dial magnitude on Windows (~4 s) remains an inference from CI wall clock."
+  }
+}

@@ -14,6 +14,17 @@ and returns whichever one is worded closer to the question, which is how an
 assistant ends up confidently repeating an address you left two years ago.
 nanomem keeps the chain and knows which end of it is current.
 
+![nanomem labelling a fact that went stale](https://raw.githubusercontent.com/OmBansod2/nanomem/main/assets/nanomem-demo.gif)
+
+Eight months of ordinary chat; the team fact changed once, in passing.
+Similarity still ranks the *old* one first, because the question is worded
+like the old job — so nanomem hands it over labelled rather than pretending
+otherwise. A real run of `demo_stale.py` against a local Ollama
+(`nomic-embed-text`); regenerate it with `python3 assets/record_demo.py`. The
+label does not come from the model: run the same demo with no embedding
+endpoint reachable at all and the `SUPERSEDED` line is still there, because it
+is computed from revision order rather than similarity.
+
 **[Evidence](https://github.com/OmBansod2/nanomem/blob/main/BENCHMARKS.md)** —
 how it compares to FAISS, sqlite-vec and Chroma (including where it loses), what
 happens when the process is killed mid-write, and the pytest command that
@@ -189,7 +200,7 @@ about the same thing — and you know that, while the tagger is guessing.
 
 ---
 
-Package 0.8.2 · engine 3.4.6 · container format 3 · arena cache format 4.
+Package 0.8.3 · engine 3.4.6 · container format 3 · arena cache format 4.
 
 **Licence: Apache-2.0.** Use it commercially, modify it, ship it inside a
 closed-source product — keep the `LICENSE` and `NOTICE` files with any
@@ -218,6 +229,9 @@ python3 demo.py          # stores, updates, searches, prints real stats()
 python3 demo_stale.py    # the one worth seeing: a fact going stale over 8 months
 ```
 
+Add `--brief` to either one to drop the explanatory prose and keep only the
+computed lines; that is what the recording at the top of this file shows.
+
 `demo_stale.py` is eight months of ordinary work sessions where nobody ever
 announces a change — the team fact arrives twice, both times inside a question
 about something else. Then the assistant writes a bio, similarity puts the
@@ -236,7 +250,7 @@ default it is not).
 python3 -m pytest -q
 ```
 
-839 tests, no network needed.
+845 tests, no network needed.
 
 There is no `test_security.py`. Earlier versions of this README told you to run
 one to "prove that zero plaintext exists on disk"; that file never existed, and

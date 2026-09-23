@@ -1,7 +1,7 @@
 {
   "summary": {
-    "total": 62,
-    "with_test": 48,
+    "total": 63,
+    "with_test": 49,
     "waived_not_a_claim": 14,
     "still_unmapped": 0
   },
@@ -391,6 +391,13 @@
       "claim": "It cannot say whether it is still *true* \u2014 a fact written ten years ago can be current, and one written last week can already be dead.",
       "id": "C061",
       "test": "test_a_ten_year_old_fact_that_never_changed_is_not_stale"
+    },
+    {
+      "source": "README.md",
+      "claim": "The label does not come from the model: run the same demo with no embedding endpoint reachable at all and the `SUPERSEDED` line is still there, because it is computed from revision order rather than similarity.",
+      "id": "C062",
+      "test": "test_the_label_does_not_come_from_the_embedding_model",
+      "waived": null
     }
   ]
 }

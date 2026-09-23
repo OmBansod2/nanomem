@@ -9,10 +9,12 @@ weights -- see `EmbeddingProvider` and `_offline_encode_batch`.
 
 import os
 import json
+import time
+import urllib.error
 import urllib.request
 import warnings
 import numpy as np
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 from .errors import EmbeddingWidthError
 
@@ -47,6 +49,23 @@ class EmbeddingProvider:
     last_backend: str = "model"
     #: One warning per process, not one per call.
     _fallback_announced: bool = False
+    #: Endpoints that did not answer -> the monotonic time to dial them again.
+    #: CLASS level, so one outage is learned once for the whole process rather
+    #: than re-discovered by every Vault, every call.
+    _down_until: Dict[str, float] = {}
+    #: How long to stop dialling an endpoint that refused or timed out.
+    #:
+    #: WHY THIS EXISTS. `embed_batch` dialled the endpoint on EVERY call and
+    #: remembered nothing, so an install with no daemon paid the full connect
+    #: cost per add() and per search(). Where a refused connection is instant
+    #: -- Linux, macOS -- that is invisible, and it stayed invisible for as
+    #: long as nobody measured a platform where it is not. On the Windows CI
+    #: runner the SYN is dropped rather than refused and each attempt costs
+    #: ~4 s: 2,267 attempts in one test run, 2 h 35 m of wall clock against
+    #: under 4 minutes everywhere else, and the same ~4 s on every single
+    #: add() and search() for any Windows user without a daemon. Measured in
+    #: evidence/windows_embed_stall.json.
+    DOWN_COOLDOWN = 30.0
 
 
     def __init__(self, model: str = DEFAULT_MODEL, base_url: Optional[str] = None,
@@ -102,6 +121,18 @@ class EmbeddingProvider:
     PER_TEXT_TIMEOUT = 1.0
     MAX_TIMEOUT = 120.0
 
+    @classmethod
+    def forget_unreachable_endpoints(cls) -> None:
+        """Dial every endpoint again on the next call, cooldown or not.
+
+        An endpoint that stops answering is not tried again for
+        `DOWN_COOLDOWN` seconds. That is the right default for a process that
+        would otherwise pay the connect cost forever, and the wrong one the
+        moment you have just started the daemon yourself and want this run to
+        use it. Call this then, rather than waiting the cooldown out.
+        """
+        cls._down_until.clear()
+
     def _remote_embed_batch(self, texts: List[str]):
         """The daemon call alone. ``None`` when it does not answer usefully.
 
@@ -111,6 +142,8 @@ class EmbeddingProvider:
         Those vectors are not comparable, and a half-and-half document would be
         worse than a wholly lexical one because the failure would be invisible.
         """
+        if time.monotonic() < EmbeddingProvider._down_until.get(self.base_url, 0.0):
+            return None                 # still cooling off; do not dial again
         if len(texts) > self.REMOTE_BATCH:
             out = []
             for i in range(0, len(texts), self.REMOTE_BATCH):
@@ -125,8 +158,22 @@ class EmbeddingProvider:
         req = urllib.request.Request(
             self.base_url, data=req_data,
             headers={"Content-Type": "application/json"})
-        with urllib.request.urlopen(req, timeout=timeout) as resp:
-            data = json.loads(resp.read().decode("utf-8"))
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                data = json.loads(resp.read().decode("utf-8"))
+        except urllib.error.HTTPError:
+            # The endpoint ANSWERED -- wrong model, bad request, whatever. That
+            # is not an outage, it costs nothing to ask again, and tripping the
+            # breaker on it would hide a daemon that is plainly alive.
+            raise
+        except OSError as exc:
+            # Refused, unroutable, timed out, DNS gone. `urllib.error.URLError`
+            # and `socket.timeout` are both OSError, so this is the whole
+            # family of "nothing answered".
+            EmbeddingProvider._down_until[self.base_url] = (
+                time.monotonic() + self.DOWN_COOLDOWN)
+            raise exc
+        EmbeddingProvider._down_until.pop(self.base_url, None)
         if "embeddings" not in data:
             return None
         vecs = np.array(data["embeddings"], dtype=np.float32)

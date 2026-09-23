@@ -6,6 +6,92 @@ number below is from one of those files.
 
 ---
 
+## 0.8.3 — engine 3.4.6 (unchanged). Every call dialled a daemon that was not there.
+
+### A Windows install paid ~4 seconds on every add() and every search()
+
+`EmbeddingProvider.embed_batch` asked the configured endpoint on EVERY call and
+remembered nothing between them. The only state it kept was
+`_fallback_announced`, which makes the *warning* fire once; the network attempt
+behind it still happened every time.
+
+On Linux and macOS a refused connection returns in 0.000 s, so the waste is
+invisible -- which is why this survived every review this project has had. It
+is not invisible everywhere. On the Windows CI runner the SYN is dropped rather
+than refused, and one test run made **2,267** network attempts.
+
+    windows-latest / py3.9    9,325 s      (2 h 35 m)
+    windows-latest / py3.13   9,354 s      (2 h 35 m)
+    macos-latest   / py3.13     219 s
+    ubuntu-latest  / py3.9       73 s
+
+`(9325 - 219) / 2267 = 4.02 s` per attempt. That is an inference from wall
+clock, not a timed Windows `connect()` -- no Windows machine was available --
+but it accounts for the observed duration almost exactly. The number that WAS
+measured directly is the dial count, and it is the one the fix is judged on.
+
+It was never only a CI problem. A Windows user with no daemon running paid that
+same cost on every `add()` and every `search()`, which is precisely the
+"works with no model at all" install this project recommends.
+
+An endpoint that fails to connect is now left alone for `DOWN_COOLDOWN` (30 s).
+Measured on the same harness: **2,267 network dials became 16**, while
+`_remote_embed_batch` is still entered 2,261 times -- what changed is how many
+of those reach the network. 16 rather than 1 because the suite uses several
+distinct `base_url` values and the cooldown expires during a 69-second run.
+
+A cooldown, not a disable: daemons get started. Any success clears it, and
+`EmbeddingProvider.forget_unreachable_endpoints()` clears it on demand for the
+case where you have just started Ollama yourself and do not want to wait.
+
+`urllib.error.HTTPError` does NOT trip it. A 404 or a 500 means the daemon
+ANSWERED, so it is alive and asking again costs nothing; backing off from a
+server that is plainly there would hide it. Five tests in
+`tests/test_endpoint_backoff.py` pin that, the dial-once behaviour, the
+expiry, and that a success clears an earlier outage.
+
+Engine stays 3.4.6: vectors, on-disk layout and ranking are untouched. The only
+behaviour change is that a daemon started mid-process is noticed after the
+cooldown instead of instantly.
+
+Measured in `evidence/windows_embed_stall.json`.
+
+### A hung test could burn six hours and report nothing
+
+`tests/test_server_surfaces.py` drove the MCP server with a bare
+`self.p.stdout.readline()`. That blocks forever if the server dies at startup or
+answers nothing, and it was called from `_McpClient.__init__` -- before the
+caller's `try/finally` existed, so not even the `kill()` ran. With no
+`timeout-minutes` in the workflow, a hung job ran to GitHub's 6-hour default.
+
+Every read is now bounded, and a timeout kills the server and raises with its
+stderr attached, because a hang cannot be debugged and a failure can. `select`
+cannot poll a pipe on Windows, so the bound is a reader thread and a queue.
+Both CI jobs also gained `timeout-minutes: 25`, against a slowest healthy job of
+under four minutes.
+
+### The README claimed a recording was made with no embedding model
+
+The caption under `assets/nanomem-demo.gif` said the run had no embedding model
+running. It did have one. `NANOMEM_EMBED_URL` being unset does not mean "no
+embedder" -- it falls back to `DEFAULT_OLLAMA_URL`, and the machine that made
+the recording was running Ollama on the default port. The recording used
+`nomic-embed-text` throughout.
+
+The caption now says so, and makes the claim that is actually true and now
+tested: the `SUPERSEDED` line appears with no endpoint reachable at all,
+because supersession is computed from revision order rather than similarity
+(`test_the_label_does_not_come_from_the_embedding_model`, registry C062).
+
+### Also
+
+`demo_stale.py` gained `--brief` and `NANOMEM_DEMO_PAUSE`, which change only
+what is printed around the results and how fast. Colour is emitted only to a
+tty, so redirected output is byte-identical to what it always was.
+`assets/record_demo.py` regenerates the recording from a real run.
+
+---
+
 ## 0.8.2 — engine 3.4.6 (unchanged). The MCP server never worked on Windows.
 
 ### `nanomem-mcp` died at startup on Windows, and had since 0.7.18
